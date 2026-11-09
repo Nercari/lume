@@ -1,0 +1,3 @@
+# Private manifests, case files, annotations and score sheets. Never commit.
+private/
+node_modules/

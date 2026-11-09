@@ -1,0 +1,209 @@
+{
+  "manifest_version": 1,
+  "cases": [
+    {
+      "id": "case-synth01",
+      "split": "tuning",
+      "page_count": 900,
+      "slices": [
+        "long-record",
+        "scans"
+      ],
+      "annotation": {
+        "reviewer": "rev-synth01",
+        "completed_before_evaluation": true,
+        "decisive_facts": [
+          {
+            "id": "F1",
+            "statement": "Synthetic decisive fact F1",
+            "sources": [
+              {
+                "doc": "doc-001",
+                "page": 1
+              }
+            ]
+          }
+        ],
+        "contradictions": [],
+        "gaps": [
+          {
+            "id": "G1",
+            "description": "Synthetic gap"
+          }
+        ],
+        "inventory": [
+          {
+            "doc": "doc-001",
+            "pages": 1100,
+            "kind": "text",
+            "readable": true
+          },
+          {
+            "doc": "doc-002",
+            "pages": 100,
+            "kind": "scan",
+            "readable": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "case-synth02",
+      "split": "tuning",
+      "page_count": 40,
+      "slices": [
+        "attachments",
+        "contradictions"
+      ],
+      "annotation": {
+        "reviewer": "rev-synth01",
+        "completed_before_evaluation": true,
+        "decisive_facts": [
+          {
+            "id": "F1",
+            "statement": "Synthetic decisive fact F1",
+            "sources": [
+              {
+                "doc": "doc-001",
+                "page": 1
+              }
+            ]
+          }
+        ],
+        "contradictions": [
+          {
+            "id": "C1",
+            "description": "Synthetic contradiction",
+            "sources": [
+              {
+                "doc": "doc-001",
+                "page": 3
+              },
+              {
+                "doc": "doc-002",
+                "page": 2
+              }
+            ]
+          }
+        ],
+        "gaps": [
+          {
+            "id": "G1",
+            "description": "Synthetic gap"
+          }
+        ],
+        "inventory": [
+          {
+            "doc": "doc-001",
+            "pages": 30,
+            "kind": "text",
+            "readable": true
+          },
+          {
+            "doc": "doc-002",
+            "pages": 10,
+            "kind": "attachment",
+            "readable": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "case-synth03",
+      "split": "held-out",
+      "page_count": 25,
+      "slices": [
+        "inventory-change"
+      ],
+      "annotation": {
+        "reviewer": "rev-synth01",
+        "completed_before_evaluation": true,
+        "decisive_facts": [
+          {
+            "id": "F1",
+            "statement": "Synthetic decisive fact F1",
+            "sources": [
+              {
+                "doc": "doc-001",
+                "page": 1
+              }
+            ]
+          }
+        ],
+        "contradictions": [],
+        "gaps": [
+          {
+            "id": "G1",
+            "description": "Synthetic gap"
+          }
+        ],
+        "inventory": [
+          {
+            "doc": "doc-001",
+            "pages": 20,
+            "kind": "text",
+            "readable": true
+          },
+          {
+            "doc": "doc-002",
+            "pages": 5,
+            "kind": "text",
+            "readable": true,
+            "added_late": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "case-synth04",
+      "split": "held-out",
+      "page_count": 12,
+      "slices": [
+        "unreadable-restricted"
+      ],
+      "annotation": {
+        "reviewer": "rev-synth01",
+        "completed_before_evaluation": true,
+        "decisive_facts": [
+          {
+            "id": "F1",
+            "statement": "Synthetic decisive fact F1",
+            "sources": [
+              {
+                "doc": "doc-001",
+                "page": 1
+              }
+            ]
+          }
+        ],
+        "contradictions": [],
+        "gaps": [
+          {
+            "id": "G1",
+            "description": "Synthetic gap"
+          }
+        ],
+        "inventory": [
+          {
+            "doc": "doc-001",
+            "pages": 10,
+            "kind": "text",
+            "readable": true
+          },
+          {
+            "doc": "doc-002",
+            "pages": 2,
+            "kind": "scan",
+            "readable": false
+          }
+        ]
+      }
+    }
+  ],
+  "pending_slices": [
+    {
+      "slice": "late-decisive-evidence",
+      "reason": "No supplied case has this slice yet"
+    }
+  ]
+}

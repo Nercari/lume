@@ -1,0 +1,15 @@
+{
+  "private": true,
+  "type": "module",
+  "description": "Private real-case intake: manifest validator, public-content linter, rubric scorer.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "for f in src/*.mjs; do node --check \"$f\" || exit 1; done",
+    "test": "node --test test/*.test.mjs",
+    "lint:public": "node src/lint-public.mjs docs schema src test package.json .gitignore",
+    "validate": "node src/manifest.mjs",
+    "score": "node src/rubric.mjs"
+  }
+}
