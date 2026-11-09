@@ -23,7 +23,7 @@ test('build emits a loadable unpacked extension with only the documented permiss
 });
 
 test('source never touches credentials, cookies, certificates or navigation', () => {
-  const forbidden = /document\.cookie|chrome\.cookies|credentials:\s*['"]include|localStorage|location\.(assign|replace|reload)|location\.href\s*=|window\.open|\.click\(|\.submit\(|chrome\.debugger|webRequest|setTimeout|setInterval/;
+  const forbidden = /document\.cookie|chrome\.cookies|credentials:\s*['"]include|localStorage|location\.(assign|replace|reload)|location\.href\s*=|window\.open|\.click\(|\.submit\(|chrome\.debugger|webRequest|setInterval/;
   for (const f of readdirSync(join(root, 'src'))) {
     const lines = readFileSync(join(root, 'src', f), 'utf8').split('\n');
     lines.forEach((l, i) => assert.ok(!forbidden.test(l), `${f}:${i + 1} uses a forbidden API`));

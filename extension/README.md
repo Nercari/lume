@@ -36,4 +36,6 @@ The content script fetches with `credentials: 'same-origin'` from the page's own
 - The selectors in `src/core.js` (`PROFILE`) are **UNVERIFIED placeholders**. Nobody has seen a permitted real case yet. Calibrate them through the #3 route and #5 before live use. An unknown page fails the layout check and stops.
 - Only `pje1g` is matched. The second instance (`pje2g`) is out of scope.
 - The content script runs in the top frame only.
-- For a document, the adapter checks the status and content type. It does not read the body.
+- For a document, the adapter checks the status and content type. It cancels the body of a non-HTML response (for example a PDF) unread. It reads an HTML response in full, to detect a login page. The size of an HTML response has no limit.
+- The panel ignores a state from an older epoch of the same page load. A new page load has a new load ID, so its states always show. A tab navigation clears the panel. The panel then asks the new page, and a page outside PJe leaves the panel clear.
+- DOM changes are debounced (250 ms) before the visible case is checked again. Each read checks the visible case itself before it uses a response.

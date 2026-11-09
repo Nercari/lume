@@ -194,12 +194,13 @@ async function fetchItem(item, get, p) {
 
 // Binds reading to the visible case. Any change of case or navigation state starts a new epoch,
 // aborts the run, and drops its inventory, so no case ever reuses another case's context.
-export function createTracker({ getDoc, getUrl, fetchPage, publish, profile: p = PROFILE }) {
+// load identifies one content-script instance (one page load); the epoch counts only inside it.
+export function createTracker({ getDoc, getUrl, fetchPage, publish, profile: p = PROFILE, load = crypto.randomUUID() }) {
   let epoch = 0;
   let view = visibleState(getDoc(), getUrl(), p);
   let run = null;
   let inventory = null;
-  const status = () => ({ epoch, view: { status: view.status, caseNumber: view.caseNumber }, inventory });
+  const status = () => ({ load, epoch, view: { status: view.status, caseNumber: view.caseNumber }, inventory });
   const refresh = () => {
     const next = visibleState(getDoc(), getUrl(), p);
     if (next.status === view.status && next.caseNumber === view.caseNumber && next.print === view.print) return false;
@@ -235,4 +236,41 @@ export function createTracker({ getDoc, getUrl, fetchPage, publish, profile: p =
     });
   };
   return { status, refresh, start, stop: () => run?.abort('user') };
+}
+
+// Panel side: decides which tracker states to show. A full page load starts a new tracker whose
+// epoch restarts at 0, so epochs are compared only inside one load. A tab navigation unbinds.
+export function createPanelSync() {
+  let tabId = null;
+  let load = null;
+  let epoch = -1;
+  const reset = (id) => { tabId = id; load = null; epoch = -1; };
+  return {
+    bind: reset,
+    navigated: (id) => (id === tabId ? (reset(id), true) : false),
+    accept(id, state) {
+      if (id !== tabId || !state) return false;
+      if (state.load === load && state.epoch < epoch) return false;
+      load = state.load;
+      epoch = state.epoch;
+      return true;
+    },
+  };
+}
+
+// What the panel shows for a tracker state, or for no state (the tab is not a PJe case page).
+export function panelView(state) {
+  if (!state) return { caseNumber: null, statusKey: 'not_pje', stop: false, counts: summarize(null), items: [], canStart: false, canStop: false };
+  const { view } = state;
+  // Show an inventory only if it belongs to the case that is visible now.
+  const inv = state.inventory?.caseNumber === view.caseNumber ? state.inventory : null;
+  return {
+    caseNumber: view.caseNumber,
+    statusKey: view.status !== 'case' ? view.status : inv ? (inv.stopReason ?? inv.status) : 'case',
+    stop: inv?.status === 'stopped' || view.status !== 'case',
+    counts: summarize(inv),
+    items: inv?.items ?? [],
+    canStart: view.status === 'case' && inv?.status !== 'reading',
+    canStop: inv?.status === 'reading',
+  };
 }

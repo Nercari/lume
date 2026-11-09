@@ -18,8 +18,13 @@ const tracker = createTracker({
   publish: (state) => chrome.runtime.sendMessage({ type: 'lume:state', state }).catch(() => {}),
 });
 
-// shortcut: refresh() re-parses the list on every DOM mutation; debounce it if PJe pages turn out to mutate often.
-new MutationObserver(() => tracker.refresh()).observe(document, { subtree: true, childList: true, characterData: true, attributes: true });
+// Debounced: a burst of DOM changes costs one re-parse. Reads stay safe in the gap because
+// readCase calls refresh() itself before it uses each response.
+let pending = null;
+new MutationObserver(() => {
+  clearTimeout(pending);
+  pending = setTimeout(() => tracker.refresh(), 250);
+}).observe(document, { subtree: true, childList: true, characterData: true, attributes: true });
 addEventListener('popstate', () => tracker.refresh());
 addEventListener('hashchange', () => tracker.refresh());
 
