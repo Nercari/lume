@@ -38,16 +38,21 @@ function parseBound(doc, url, profile) {
   const caseNumber = readCaseNumber(doc, profile);
   if (!list) throw new Stop('incompatible_layout', { role: 'docList', profileId: profile.id });
   if (!caseNumber) throw new Stop('incompatible_layout', { role: 'caseNumber', profileId: profile.id });
+  const idAttr = profile.docIdAttr || 'data-id';
+  const versionAttr = profile.versionAttr || 'data-versao';
+  const pagesAttr = profile.pagesAttr || 'data-paginas';
+  const kindAttr = profile.kindAttr || 'data-tipo';
+  const parentAttr = profile.parentAttr || 'data-pai';
   const items = safeQueryAll(list, profile.docRow).map((row) => {
-    const id = row.getAttribute('data-id');
+    const id = row.getAttribute(idAttr);
     // A row we cannot identify would vanish from the inventory, so stop instead.
     if (!id) throw new Stop('incompatible_layout', 'document row without id');
-    const pages = Number.parseInt(row.getAttribute('data-paginas') ?? '', 10);
+    const pages = Number.parseInt(row.getAttribute(pagesAttr) ?? '', 10);
     return {
       id,
-      version: row.getAttribute('data-versao'),
-      kind: row.getAttribute('data-tipo') === 'anexo' ? 'attachment' : 'document',
-      parentId: row.getAttribute('data-pai'),
+      version: row.getAttribute(versionAttr),
+      kind: row.getAttribute(kindAttr) === 'anexo' ? 'attachment' : 'document',
+      parentId: row.getAttribute(parentAttr),
       expectedPages: Number.isFinite(pages) ? pages : null,
       href: abs(safeQuery(row, profile.openLink)?.getAttribute('href'), base),
     };

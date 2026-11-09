@@ -47,6 +47,31 @@ export function sanitizeClassToken(raw) {
   return s;
 }
 
+// URL pattern for a calibration file: digit runs become N, query values are dropped,
+// parameter names stay. The path is what a later profile can turn into a named rule.
+export function urlPattern(raw) {
+  if (typeof raw !== 'string' || !raw || raw.length > 2000) return null;
+  let url;
+  try { url = new URL(raw, 'https://pje.invalid'); } catch { return null; }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+  const path = url.pathname.replace(/\d+/g, 'N');
+  const keys = [];
+  for (const key of url.searchParams.keys()) {
+    const name = key.replace(/\d+/g, 'N');
+    if (name && !keys.includes(name)) keys.push(name);
+  }
+  return keys.length ? `${path}?${keys.join('&')}` : path;
+}
+
+export function sizeBucket(value) {
+  const size = Number(value);
+  if (!Number.isFinite(size) || size <= 0) return '0';
+  if (size < 10_000) return 'lt-10k';
+  if (size < 100_000) return 'lt-100k';
+  if (size < 1_000_000) return 'lt-1m';
+  return 'ge-1m';
+}
+
 export function scrubTree(value) {
   if (typeof value === 'string') return maskDigitRuns(scrubPatterns(value), 4);
   if (Array.isArray(value)) return value.map(scrubTree);

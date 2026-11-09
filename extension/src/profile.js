@@ -3,6 +3,7 @@
 // a calibration file; case-number text stays in the inventory the panel already shows.
 
 import { sameOriginDocuments } from './calibrate.js';
+import { URL_RULE_IDS } from './url-rules.js';
 
 export const CNJ_RE = /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/;
 export const ROLES = ['layoutMarker', 'docList', 'docRow', 'openLink', 'caseNumber', 'pagination', 'login'];
@@ -17,7 +18,9 @@ export const ERROR_COPY = {
   pagination: 'Não encontrei a paginação da lista.',
 };
 
-export const CALIBRATION_HINT = 'Abra o Modo calibração para gravar a estrutura da página, sem conteúdo do processo, e envie o JSON ao mantenedor. Alternativa: use o PDF completo do processo (Download dos autos).';
+export const CALIBRATION_HINT = 'Abra Calibrar PJe para gravar a estrutura da página, sem conteúdo do processo, e envie o JSON ao Grok. Alternativa: use o PDF completo do processo (Download dos autos).';
+
+const DOWNLOAD_AUTOS = ['a[href*="downloadAutos"]', 'a[href*="gerarPdf"]', 'a[href*="downloadDosAutos"]', '#linkDownloadAutos'];
 
 const PLACEHOLDER = {
   id: 'trf1-placeholder-unverified',
@@ -29,6 +32,7 @@ const PLACEHOLDER = {
   caseNumber: [{ selector: '.numero-processo', mode: 'text' }],
   pagination: [{ nextPage: 'a.proxima', firstPage: 'a.primeira', pageInfo: '.paginacao' }],
   login: ['#loginForm'],
+  downloadAutos: DOWNLOAD_AUTOS,
 };
 
 // Public shape of PJe 1g (JSF / RichFaces). Not checked against a permitted case.
@@ -50,6 +54,7 @@ const RICHFACES = {
     { nextPage: '.rich-datascr-button-dsnext', firstPage: '.rich-datascr-button-dsfirst', pageInfo: '.rich-datascr' },
   ],
   login: ['#loginForm', '#login', 'form[id*="login"]'],
+  downloadAutos: DOWNLOAD_AUTOS,
 };
 
 const AUTOS_TABLE = {
@@ -66,10 +71,12 @@ const AUTOS_TABLE = {
   ],
   pagination: [{ nextPage: 'a.proxima', firstPage: 'a.primeira', pageInfo: '.paginacao' }],
   login: ['#loginForm', 'form[id*="login"]'],
+  downloadAutos: DOWNLOAD_AUTOS,
 };
 
 export const PROFILES = [PLACEHOLDER, RICHFACES, AUTOS_TABLE];
 
+const ATTR_RE = /^[A-Za-z_:][\w:.-]{0,40}$/;
 const TOO_BROAD = new Set(['*', 'div', 'span', 'body', 'html', 'td', 'a', 'input', 'form', 'table', 'p']);
 const SELECTOR_RE = /^[A-Za-z0-9_#.:\s>[\]="*^$~|+\-/(),]+$/;
 const ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
@@ -151,13 +158,32 @@ function copyPagination(value) {
   return { list: out };
 }
 
+function copyAttr(input, key) {
+  if (!Object.prototype.hasOwnProperty.call(input, key)) return { value: undefined };
+  if (typeof input[key] !== 'string' || !ATTR_RE.test(input[key])) return { error: `${key} inválido.` };
+  return { value: input[key] };
+}
+
+function copyUrlRules(input) {
+  if (!Object.prototype.hasOwnProperty.call(input, 'urlRules')) return { list: undefined };
+  const value = input.urlRules;
+  if (!Array.isArray(value) || value.length === 0 || value.length > URL_RULE_IDS.length) return { error: 'urlRules inválidas.' };
+  const out = [];
+  for (const id of value) {
+    if (typeof id !== 'string' || !URL_RULE_IDS.includes(id) || out.includes(id)) return { error: 'urlRules inválidas.' };
+    out.push(id);
+  }
+  return { list: out };
+}
+
 export function validateStoredProfile(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return { ok: false, error: 'O perfil precisa ser um objeto JSON.' };
-  const allowed = ['id', 'unverified', 'layoutMarker', 'docList', 'docRow', 'openLink', 'caseNumber', 'pagination', 'login'];
+  const required = ['id', 'unverified', 'layoutMarker', 'docList', 'docRow', 'openLink', 'caseNumber', 'pagination', 'login'];
+  const optional = ['downloadAutos', 'docIdAttr', 'versionAttr', 'pagesAttr', 'kindAttr', 'parentAttr', 'urlRules'];
   for (const key of Object.keys(input)) {
-    if (!allowed.includes(key)) return { ok: false, error: `Campo desconhecido: ${key}.` };
+    if (!required.includes(key) && !optional.includes(key)) return { ok: false, error: `Campo desconhecido: ${key}.` };
   }
-  for (const key of allowed) {
+  for (const key of required) {
     if (!Object.prototype.hasOwnProperty.call(input, key)) return { ok: false, error: `Campo obrigatório: ${key}.` };
   }
   if (typeof input.id !== 'string' || !ID_RE.test(input.id)) return { ok: false, error: 'id inválido.' };
@@ -170,6 +196,20 @@ export function validateStoredProfile(input) {
   if (caseNumber.error) return { ok: false, error: caseNumber.error };
   const pagination = copyPagination(input.pagination);
   if (pagination.error) return { ok: false, error: pagination.error };
+  let downloadAutos;
+  if (Object.prototype.hasOwnProperty.call(input, 'downloadAutos')) {
+    const err = checkSelectorList(input.downloadAutos, 'downloadAutos');
+    if (err) return { ok: false, error: err };
+    downloadAutos = input.downloadAutos.slice();
+  }
+  const attrs = {};
+  for (const key of ['docIdAttr', 'versionAttr', 'pagesAttr', 'kindAttr', 'parentAttr']) {
+    const copied = copyAttr(input, key);
+    if (copied.error) return { ok: false, error: copied.error };
+    if (copied.value) attrs[key] = copied.value;
+  }
+  const urlRules = copyUrlRules(input);
+  if (urlRules.error) return { ok: false, error: urlRules.error };
   return {
     ok: true,
     profile: {
@@ -182,6 +222,9 @@ export function validateStoredProfile(input) {
       caseNumber: caseNumber.list,
       pagination: pagination.list,
       login: input.login.slice(),
+      ...(downloadAutos ? { downloadAutos } : {}),
+      ...attrs,
+      ...(urlRules.list ? { urlRules: urlRules.list } : {}),
     },
   };
 }
@@ -240,6 +283,13 @@ export function resolveBinding(doc, profiles) {
         pageInfo: page.pageInfo,
         loginMarker: login[0] ?? null,
         loginSelectors: login,
+        docIdAttr: profile.docIdAttr || 'data-id',
+        versionAttr: profile.versionAttr || 'data-versao',
+        pagesAttr: profile.pagesAttr || 'data-paginas',
+        kindAttr: profile.kindAttr || 'data-tipo',
+        parentAttr: profile.parentAttr || 'data-pai',
+        downloadAutos: (profile.downloadAutos ?? []).slice(),
+        urlRules: profile.urlRules ? profile.urlRules.slice() : null,
       },
     };
   }
