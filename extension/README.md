@@ -1,54 +1,52 @@
-# Lume extension (MV3 adapter, #4)
+# Lume extension (one click on the open PJe case)
 
-A Chrome MV3 extension. It reads the document inventory of the PJe case that is open in the current tab (TRF1/SJDF, first instance). It reads only through the browser's own session. It does not navigate, click, log in or export anything.
+A Chrome MV3 extension. Pedro opens a case in PJe (already signed in) and clicks **Lume: Estudar processo** on that page. Lume reads every timeline document through that browser session, turns it into text on this computer (including Portuguese OCR), and opens the same PJe address with `#lume-autos` so the ChatGPT side panel can read the case. It does not attach files to chatgpt.com.
+
+The selector profiles in `src/profile.js` are **UNVERIFIED**. Nobody has checked them against a live PJe page. **Calibrar PJe** records only page structure and URL patterns. Load the resulting profile with **Carregar perfil** after it is reviewed. Until then, a miss stops and names the role or the URL rule. Nothing is skipped quietly.
+
+The panel shows three steps: open the case, click **Estudar processo**, read the PJe tab in the ChatGPT side panel. Portuguese OCR uses `dist/manual/ocr/por.traineddata.gz` from the extension package. The worker, the wasm, and that model are loaded with `chrome.runtime.getURL`. They are not fetched from a CDN.
+
+The manual PDF page stays as the fallback: **Gerar pacote do caso**.
+
+A private directory of `.html`, `.pdf`, and `.png` files can be timed without printing their contents:
+
+```
+npm run bench:fixture -- <dir> --latency 150
+```
 
 ## Build and test
 
 ```
 cd extension
-npm install      # no dependencies
+npm install
 npm run build    # writes dist/, a loadable unpacked extension
-npm test         # node:test, small DOM mocks, no network
+npm test         # node:test, then one Playwright run against local fixtures
 ```
 
-Load `extension/dist/` in `chrome://extensions` with "Load unpacked". The build copies `manual/dist/` to `dist/manual/`. If that directory is missing, the build runs `npm --prefix ../manual ci` and `npm --prefix ../manual run build`. If that fails, run those two commands from the extension directory and build again.
+`npm test` needs the Chromium build that `npx playwright-core install chromium` downloads. The Playwright test does not open a real court site: it answers the PJe host with local HTML.
+
+Load `extension/dist/` in `chrome://extensions` with "Load unpacked". The build copies `manual/dist/` to `dist/manual/` (pdf.js worker and the OCR files). If that directory is missing, the build runs the manual package build first.
+
+## What one click does
+
+1. The content script, on `pje1g` or `pje2g` only, fetches with `credentials: 'same-origin'`. The browser attaches the PJe session. Lume never reads cookies, tokens or certificates, and it does not write files during the read.
+2. The default profile targets the `listAutosDigitais` timeline (UNVERIFIED until calibration). Each entry's id comes from the row, its onclick, or its document URL, in that order. Named URL rules in `src/url-rules.js` decide which links are documents. A link that matches none is listed and is not fetched. The study fetches each document's own PDF or image in memory, in timeline order, and OCRs that binary. It does not open a download dialog and it does not use `chrome.downloads`. The full-autos PDF is optional: only a stored profile with `useDownloadAutos: true` fetches that endpoint instead. The default pause between document fetches is 300 ms. The panel checkbox **pausa entre documentos** turns that pause off.
+3. Bytes move to `study.html` on a `chrome.runtime.Port`, in 64 KiB slices (`src/chunks.js`). One `sendMessage` would have to clone the whole PDF. A port can show "Documento k de N", can be cancelled, and a missing slice is an error instead of a short file. The service worker only forwards slices.
+4. `study.html` uses the manual package's pdf.js and `manual/src/ocr.js` (tesseract.js, Portuguese `por.traineddata.gz` under `dist/manual/ocr/`). HTML and plain text become text directly. A PDF page with a text layer is read by pdf.js. A page with no text, and a jpeg/png/tiff document, go through local OCR. The case result keeps the timeline id. A document page number is kept only when the file says it.
+5. The extension splits the case at 350000 characters (about 100k tokens). The splitter is `renderCaseParts` in `src/case-view.js`. It does not import `manual/src/parts.js`. Each part is `lume-caso-parte-01-de-NN.md`. The file starts with front-matter `formato`, `processo`, `parte`, `total`, `ids`, and `origem: botao`, then the body. The PJe view shows that body in `article#lume-caso` (`data-formato="lume-caso/1"`, `data-origem="botao"`) and `pre[data-lume-texto]`. Part 1 carries the master index. The study page offers **Salvar partes** and **Copiar parte k**.
+6. The case page has a fixed button **Lume: Estudar processo** (`#lume-estudar`). Its label and the tab title show `Lume: estudando · k/N` while documents are read, `Lume: falhou · …` when the read stops, and the case tab shows `Lume: pronto · N docs · L lacunas · parte 1 de T` when the view is ready. The study opens the same PJe URL with `#lume-autos` and `attach=0` (no ChatGPT attach). The content script keeps that case's parts in the tab and will not paint a view whose page URL is different. The tab shows the full case in timeline order: process counts, an index (ID, tipo, data, páginas do documento, situação), the gap list, and each passage tagged `[ID X, pág. Y]` only when the document page is known. A long case is `Parte k de N`, with the index in part 1 and previous and next links, so the ChatGPT side panel can read one part at a time.
 
 ## Permissions
 
 | Item | Value | Why |
 |------|-------|-----|
-| `permissions` | `sidePanel`, `storage` | The panel sits next to the PJe tab. `storage` keeps one selector profile the user loads. It does not keep case contents. `chrome.tabs.create` for the PDF page needs no extra permission. |
-| `content_security_policy.extension_pages` | `script-src 'self' 'wasm-unsafe-eval'; object-src 'self'` | pdf.js compiles some PDF calculator functions with `WebAssembly.Module`. The default extension policy blocks that. `'wasm-unsafe-eval'` is the only extra source. There is no `'unsafe-eval'` and no `'unsafe-inline'`. |
-| `content_scripts.matches` | `https://pje1g.trf1.jus.br/*`, `https://pje2g.trf1.jus.br/*` | The content script runs only on TRF1 PJe (first and second instance). A static match gives the script same-origin access, so the manifest has no `host_permissions`. |
-| none | `tabs`, `cookies`, `downloads`, `webRequest`, `scripting` | Not requested. `chrome.tabs.sendMessage` and `chrome.tabs.create` need no permission. The calibration file is saved with an `<a download>` blob. Case persistence belongs to #7. |
+| `permissions` | `sidePanel`, `storage` | The panel and one selector profile. Case text is not stored there. |
+| `host_permissions` | none | The content script runs on the PJe hosts below. No ChatGPT host permission. |
+| content scripts | `https://pje1g.trf1.jus.br/*`, `https://pje2g.trf1.jus.br/*` | Read the open case and paint `#lume-autos`. |
+| CSP | `script-src 'self' 'wasm-unsafe-eval'` | pdf.js and tesseract. No remote script. |
 
-The content script fetches with `credentials: 'same-origin'` from the page's own origin. It never reads cookies, tokens or certificates. A cross-origin link stops the read. Requests run one at a time, with no rate inference.
+## Calibrar PJe
 
-## How a read works
+The link asks for one snapshot, then records each click (tag, masked id, classes, attribute names, URL pattern) until **Salvar calibração**. The download is `lume-calibracao.json`. The panel says to send that file to Grok. Digit runs in URLs become `N`. Query values are dropped. Parameter names stay. Resource sizes are buckets. A version token such as `2.4.1` may be kept. Text, names, CPF and case numbers are not.
 
-- The adapter binds every read to the visible case number and navigation state. A case switch or a navigation starts a new epoch, aborts in-flight work and drops the old inventory.
-- It walks the document list from page 1 to the last page, attachments included. For each row it records the ID, version, kind, parent ID and the expected page count when the list shows it.
-- Each item ends in one explicit state: `processed`, `restricted`, `missing`, `unsupported` or `failed`. Items the read did not reach stay `pending`. Nothing is dropped. `restricted` means the server answered HTTP 403, not a list flag.
-- `processed` means only that the document is reachable and has a supported type (PDF or HTML). Text extraction is #2.
-- A read stops safely on `session_expired`, `incompatible_layout`, `invalidated`, `inventory_changed` or `stopped_by_user`. At the end it reads page 1 again. A different list gives `inventory_changed`.
-
-## Limits
-
-- The selector profiles in `src/profile.js` are **UNVERIFIED**. Nobody has seen a permitted real case yet. The first profile that matches every role is used. If a role matches nothing, the panel names that role and stops. It does not guess.
-- The snapshot and the reader also look at same-origin iframes the top frame can open. A cross-origin frame is counted and not read. The content script itself stays in the top frame.
-- Row id, version and list attributes are still the placeholder names (`data-id`, `data-versao`, `data-sigilo`). A `data-sigilo` marker does not skip the row; only a real HTTP 403 yields `restricted`. A live list that uses other attribute names stops instead of dropping the row.
-- For a document, the adapter checks the status and content type. It cancels the body of a non-HTML response (for example a PDF) unread. It reads an HTML response in full, to detect a login page. The size of an HTML response has no limit.
-- The panel ignores a state from an older epoch of the same page load. A new page load has a new load ID, so its states always show. A tab navigation clears the inventory. The panel then asks the new page. Outside PJe it shows `not_pje`, **Gerar pacote do caso**, and the line "Baixe o processo completo no PJe (Download dos autos) e abra o PDF aqui." The inventory controls on a PJe tab are unchanged.
-- **Gerar pacote do caso** opens `manual/lume-pdf.html` in a new tab (`chrome.tabs.create` of `chrome.runtime.getURL`). **Modo calibração** is a secondary link. The toolbar icon opens the side panel on any tab. If the side panel cannot be armed, that click opens the same manual page.
-- The PDF page is the manual package build: one HTML file, `lume-pdf.js`, `pdf.worker.mjs`, and `ocr/` (tesseract worker, LSTM wasm, Portuguese traineddata). Scripts are external modules from the extension origin. The PDF worker is a module worker. OCR uses a classic worker and local files. Nothing is loaded from the network.
-- DOM changes are debounced (250 ms) before the visible case is checked again. Each read checks the visible case itself before it uses a response.
-
-## Calibração
-
-O botão **Modo calibração** pede ao content script um retrato só da estrutura da página aberta (e dos iframes de mesma origem que ele consegue abrir). Cada elemento guarda etiqueta, id com sequências longas de dígitos trocadas por `#` (por exemplo `j_id#`, `docs:#:link`), classes, nomes de atributos, quantidade de filhos e profundidade. Os únicos valores copiados são `role`, `type` e o caminho do `href`, sem consulta e sem dígitos longos. Não entram texto, valores de campo, `title`, `alt`, `aria-label` nem valores `data-*`. A captura para em 5000 nós e o painel diz quando isso acontece.
-
-O JSON não contém conteúdo do processo. Pode ser enviado ao mantenedor. **Baixar JSON de calibração** grava `lume-calibracao-<data>.json` por um link com `download` (sem permissão `downloads`). **Copiar** põe o mesmo JSON na área de transferência.
-
-Se a leitura não acha um papel, o painel diz qual foi — por exemplo «Não encontrei a lista de documentos» — e indica o Modo calibração ou o PDF completo do processo (Download dos autos).
-
-**Carregar perfil** instala um JSON em `chrome.storage.local`. Esse perfil passa a ser o primeiro candidato, sem gerar a extensão de novo. O objeto tem de ter exatamente estas chaves: `id`, `unverified` (booleano), e listas `layoutMarker`, `docList`, `docRow`, `openLink`, `login`, `caseNumber` (`{ "selector", "mode": "text" | "cnj" }`) e `pagination` (`nextPage`, `firstPage`, `pageInfo`). Seletores genéricos (`div`, `a`, `table`, …) são recusados. Um campo a mais ou a menos também.
+**Carregar perfil** stores a JSON profile in `chrome.storage.local`. It is tried before the built-in unverified profiles.

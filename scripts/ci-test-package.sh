@@ -72,6 +72,9 @@ pushd "$dir" >/dev/null
 if jq -e '.scripts.build' package.json >/dev/null 2>&1; then
   npm run build
 fi
+if [[ "$pkg" == "extension" ]]; then
+  npx playwright-core install --with-deps chromium
+fi
 npm test
 popd >/dev/null
 

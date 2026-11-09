@@ -3,7 +3,7 @@ export const MAX_BUNDLE_BYTES = 50 * 1024 * 1024;
 const BLOCKED_REL = [
   (rel) => rel.toLowerCase().endsWith('.pdf'),
   (rel) => /(?:^|\/)(private|lume-private)(?:\/|$)/.test(rel.replace(/\\/g, '/')),
-  (rel) => /(?:^|\/)lume-calibracao-[^/]+\.json$/i.test(rel.replace(/\\/g, '/')),
+  (rel) => /(?:^|\/)lume-calibracao(?:-[^/]+)?\.json$/i.test(rel.replace(/\\/g, '/')),
   (rel) => /(?:^|\/)private-eval[^/]*(?:\/|$)/i.test(rel.replace(/\\/g, '/')),
   (rel) => /^runtime\//i.test(rel.replace(/\\/g, '/')),
 ];

@@ -20,7 +20,7 @@ const PLANO_B =
 const PROJECT_FALLBACK =
   'Sem o app desktop: use a pasta plugin\\lume-jef-projeto num Projeto (instruções em COLE-NO-PROJETO.md).';
 const CALIBRATION =
-  'Se a página não for reconhecida, use o Modo calibração e envie o JSON ao mantenedor.';
+  'Se o painel não achar a lista, use Calibrar PJe, salve lume-calibracao.json e envie o arquivo ao mantenedor.';
 const PRIVACY = 'Nada além do ChatGPT sai do computador.';
 
 const PASTE_TOKEN = /paste\s+(your\s+)?(token|api\s*key|refresh)/i;

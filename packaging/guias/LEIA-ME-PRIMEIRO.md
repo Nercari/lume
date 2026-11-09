@@ -20,11 +20,12 @@ Descompacte o zip numa pasta fixa, por exemplo `Documentos\Lume` (botão direito
 
 Plano B: clique você no botão Lume: Estudar processo na página do processo. A aba e os próximos passos são os mesmos.
 Sem o app desktop: use a pasta plugin\lume-jef-projeto num Projeto (instruções em COLE-NO-PROJETO.md).
-Se a página não for reconhecida, use o Modo calibração e envie o JSON ao mantenedor.
+Se o painel não achar a lista, use Calibrar PJe, salve lume-calibracao.json e envie o arquivo ao mantenedor.
 Nada além do ChatGPT sai do computador.
 
 ## Desinstalar
 
-Remova a extensão em `chrome://extensions` e apague a pasta onde descompactou o zip.
+- **Windows:** `windows\desinstalar.bat` remove `%LOCALAPPDATA%\Lume`.
+- Remova a extensão em `chrome://extensions` e apague a pasta onde descompactou o zip.
 
 Não cole tokens nem chaves de API. O Lume não oferece fallback pago.

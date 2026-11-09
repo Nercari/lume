@@ -27,7 +27,7 @@ function isPrivateBundlePath(rel) {
   return (
     /(?:^|\/)(private|lume-private)(?:\/|$)/.test(norm) ||
     /(?:^|\/)private-eval[^/]*(?:\/|$)/i.test(norm) ||
-    /(?:^|\/)lume-calibracao-[^/]+\.json$/i.test(norm) ||
+    /(?:^|\/)lume-calibracao(?:-[^/]+)?\.json$/i.test(norm) ||
     norm.toLowerCase().endsWith('.pdf')
   );
 }
@@ -48,6 +48,7 @@ test('bundle guards refuse pdf, private paths, calibration exports, runtime, and
   assert.throws(() => assertBundlePathAllowed('docs/segredo.pdf', 1), /refused blocked/);
   assert.throws(() => assertBundlePathAllowed('private/x.txt', 1), /refused blocked/);
   assert.throws(() => assertBundlePathAllowed('lume-calibracao-2026.json', 1), /refused blocked/);
+  assert.throws(() => assertBundlePathAllowed('lume-calibracao.json', 1), /refused blocked/);
   assert.throws(() => assertBundlePathAllowed('eval/private-eval-run/out.json', 1), /refused blocked/);
   assert.throws(() => assertBundlePathAllowed('runtime/node/node.exe', 1), /refused blocked/);
   assert.throws(() => assertBundlePathAllowed('big.bin', MAX_BUNDLE_BYTES + 1), /50 MB/);
