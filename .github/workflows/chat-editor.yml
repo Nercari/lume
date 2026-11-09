@@ -1,0 +1,39 @@
+name: chat-editor
+
+on:
+  pull_request:
+    paths:
+      - 'chat-editor/**'
+      - 'analysis/src/**'
+      - 'analysis/test/fixtures.js'
+      - 'extraction/src/**'
+      - 'extraction/test/fixtures.js'
+      - 'extraction/package.json'
+      - 'extraction/package-lock.json'
+      - 'case-store/src/**'
+      - 'intake/src/**'
+      - '.github/workflows/chat-editor.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'chat-editor/**'
+      - '.github/workflows/chat-editor.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      # chat-editor imports analysis (#6), which imports extraction (#2); extraction loads pdfjs-dist at import time.
+      - run: npm ci --omit=optional
+        working-directory: extraction
+      - run: npm run build
+        working-directory: chat-editor
+      - run: npm test
+        working-directory: chat-editor
