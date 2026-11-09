@@ -10,8 +10,8 @@ Cada processo:
 
 1. Abra o processo no PJe, ja logado.
 2. Clique no icone da Lume.
-3. Clique Estudar processo. A Lume busca o PDF ou a imagem de cada documento na memoria e faz o OCR aqui.
-4. O ChatGPT abre com as partes anexadas. Leia o pedido e envie voce mesmo.
+3. Clique Estudar processo. A Lume busca o PDF ou a imagem de cada documento, na ordem da linha do tempo, na memoria.
+4. Abre uma aba do PJe com o texto integral (#lume-autos) para o painel do ChatGPT. Copiar tudo esta nessa aba. O anexo dos arquivos continua na pagina de estudo.
 
 Se nao anexar: na pagina de estudo, Anexar no ChatGPT ou Salvar partes.
 Se o painel nao achar a lista: Calibrar PJe, salve lume-calibracao.json, envie ao Grok.

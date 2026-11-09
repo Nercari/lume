@@ -40,7 +40,11 @@ function secretPage() {
     el('a', {
       id: 'abrir-99887766',
       href: `https://pje1g.trf1.jus.br/pje/documento/download/99887766?cpf=${CPF}&titulo=${encodeURIComponent(NAME)}`,
+      onclick: `mostrarDocumento('99887766')`,
     }, NAME),
+    el('span', { id: 'contadorDocs' }, '44 de 51'),
+    el('span', { id: 'contadorPags' }, '3 of 7'),
+    el('iframe', { id: 'pdfViewer', src: 'https://pje2g.trf1.jus.br/pje/pdfjs/web/viewer.html?file=/pje/documento/download/99887766' }),
     el('form', { action: `https://pje1g.trf1.jus.br/pje/downloadAutos.seam?numero=${CNJ}&nome=${encodeURIComponent(NAME)}` }),
     frame,
   );
@@ -73,6 +77,13 @@ test('calibration JSON from a page full of fake identifiers contains none of the
   assert.equal(snap.candidateLists[0].found, true);
   assert.equal(snap.candidateLists[0].rows, 2);
   assert.equal(snap.clicks[0].hrefPattern, '/pje/documento/download/N?cpf&titulo');
+  assert.ok(snap.onclickFns.includes('mostrarDocumento'));
+  assert.ok(snap.counters.some((counter) => counter.pattern === 'N de N'));
+  assert.ok(snap.counters.some((counter) => counter.pattern === 'N of N'));
+  assert.equal(json.includes('44 de 51'), false);
+  assert.equal(json.includes('3 of 7'), false);
+  assert.ok(snap.viewer.some((node) => node.id === 'pdfViewer'));
+  assert.equal(JSON.stringify(snap.viewer).includes('99887766'), false);
   assert.equal(JSON.stringify(snap.clicks).includes(NAME), false);
   assert.ok(snap.frameTree.iframes.length >= 1);
 });

@@ -1,12 +1,13 @@
 // The side panel is available on every tab. On PJe it shows the inventory; elsewhere it offers
 // the offline PDF page. The toolbar click opens the panel. If that panel cannot be armed, the
-// same click opens the PDF page. The worker holds no case text. It only relays study slices
-// and the part files the ChatGPT tab attaches.
+// same click opens the PDF page. The worker relays study slices and keeps the rendered case
+// view and the ChatGPT part files in memory for the open study. It does not write them to disk.
 const PDF_PAGE = 'manual/lume-pdf.html';
 let panelClickOpensPanel = false;
 let pjeTabId = null;
 const relays = new Map();
 let attach = { parts: null, studyId: null };
+let view = { parts: null, allText: '', pageUrl: null };
 
 function openPdfMode() {
   chrome.tabs.create({ url: chrome.runtime.getURL(PDF_PAGE) });
@@ -53,6 +54,10 @@ chrome.runtime.onConnect.addListener((port) => {
         attach = { parts: msg.parts, studyId: id };
         return;
       }
+      if (msg?.type === 'view') {
+        view = { parts: msg.parts ?? [], allText: msg.allText ?? '', pageUrl: msg.pageUrl ?? null };
+        return;
+      }
       slot.collect?.postMessage(msg);
     });
     for (const msg of slot.queue) port.postMessage(msg);
@@ -77,6 +82,17 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
   }
   if (msg?.type === 'lume:take-parts') {
     reply({ parts: attach.parts ?? [] });
+    return true;
+  }
+  if (msg?.type === 'lume:take-view') {
+    const parts = view.parts ?? [];
+    if (msg.all === true) {
+      reply({ allText: view.allText ?? '', total: parts.length });
+      return true;
+    }
+    const wanted = Number(msg.part) || 1;
+    const found = parts.find((item) => item.n === wanted) ?? null;
+    reply({ text: found?.text ?? '', part: found?.n ?? 0, total: parts.length });
     return true;
   }
   if (msg?.type === 'lume:attached') {

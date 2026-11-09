@@ -1,5 +1,7 @@
 // Turns collected bytes into the caseResult shape buildCasePack already reads.
-// Document ids are the PJe ids from the list. fl. is the page inside that document.
+// The document id is the timeline id. pág. do documento is set only when the
+// file says it (a footer, or a one-page HTML or image). The PDF page index is
+// separate and is never copied into the document page.
 
 import { classifyPiece } from '../../manual/src/classify.js';
 
@@ -20,11 +22,13 @@ export function htmlToText(html) {
 function pageRecord(doc, page, index, n) {
   const text = String(page.text ?? '').trim();
   const hasText = text.length > 0;
-  const pageInDoc = page.pageInDoc ?? index + 1;
+  const pageInDoc = page.pageInDoc ?? null;
+  const pdfPage = page.pdfPage ?? null;
   return {
     n,
     docId: String(doc.id),
     pageInDoc,
+    pdfPage,
     hasText,
     method: hasText ? (page.method === 'ocr' ? 'ocr' : 'text') : null,
     text,
@@ -53,7 +57,7 @@ export function caseFromDocuments(documents, extraGaps = []) {
         docId: String(doc.id),
         version: doc.version || '1',
         pageInDoc: record.pageInDoc,
-        pdfPage: n,
+        pdfPage: record.pdfPage,
         text: record.text,
         method: record.method,
         hasText: record.hasText,
@@ -64,7 +68,8 @@ export function caseFromDocuments(documents, extraGaps = []) {
           docId: String(doc.id),
           page: n,
           pageInDoc: record.pageInDoc,
-          detail: page.detail || 'sem texto',
+          pdfPage: record.pdfPage,
+          detail: page.detail || 'ilegível',
         });
       }
     });
@@ -77,6 +82,7 @@ export function caseFromDocuments(documents, extraGaps = []) {
       piece: classifyPiece(bodies.join('\n')),
       pages: docPages,
       version: doc.version || '1',
+      date: doc.date ?? null,
     });
   }
   for (const gap of extraGaps) gaps.push(gap);
@@ -122,7 +128,7 @@ export async function ingestOne(doc, deps) {
     const text = type === 'text/plain'
       ? new TextDecoder().decode(doc.bytes).trim()
       : htmlToText(new TextDecoder().decode(doc.bytes));
-    return { id: doc.id, version: doc.version || '1', pages: [{ pageInDoc: 1, text, method: 'text' }] };
+    return { id: doc.id, version: doc.version || '1', date: doc.date ?? null, pages: [{ pageInDoc: 1, pdfPage: 1, text, method: 'text', detail: text ? null : 'sem texto' }] };
   }
   if (type === 'application/pdf') {
     const segmented = await deps.segmentAutos(doc.bytes, {
@@ -134,12 +140,13 @@ export async function ingestOne(doc, deps) {
       },
     });
     const pages = (segmented.pages ?? []).map((page, index) => ({
-      pageInDoc: page.pageInDoc ?? index + 1,
+      pageInDoc: page.pageInDoc ?? null,
+      pdfPage: page.n ?? index + 1,
       text: page.text ?? '',
       method: page.method === 'ocr' ? 'ocr' : 'text',
-      detail: page.hasText ? null : 'sem texto',
+      detail: page.hasText ? null : 'ilegível',
     }));
-    return { id: doc.id, version: doc.version || '1', pages };
+    return { id: doc.id, version: doc.version || '1', date: doc.date ?? null, pages };
   }
   if (type === 'image/jpeg' || type === 'image/png' || type === 'image/tiff' || type === 'image/tif') {
     deps.onOcr?.({ page: 1, pages: 1, docId: doc.id });
@@ -148,9 +155,15 @@ export async function ingestOne(doc, deps) {
       text = String(await deps.ocrImage(doc.bytes) ?? '');
     } catch (error) {
       if (error?.name === 'AbortError') throw error;
-      return { id: doc.id, version: doc.version || '1', pages: [{ pageInDoc: 1, text: '', method: 'ocr', detail: 'OCR falhou' }] };
+      return { id: doc.id, version: doc.version || '1', date: doc.date ?? null, pages: [{ pageInDoc: 1, pdfPage: 1, text: '', method: 'ocr', detail: 'ilegível' }] };
     }
-    return { id: doc.id, version: doc.version || '1', pages: [{ pageInDoc: 1, text, method: 'ocr' }] };
+    const readable = text.trim();
+    return {
+      id: doc.id,
+      version: doc.version || '1',
+      date: doc.date ?? null,
+      pages: [{ pageInDoc: 1, pdfPage: 1, text: readable, method: 'ocr', detail: readable ? null : 'ilegível' }],
+    };
   }
   return {
     id: doc.id,

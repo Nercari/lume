@@ -80,7 +80,8 @@ test('a RichFaces-shaped page and an autos table fall through to later profiles'
 });
 
 test('a bad selector is skipped and the same-origin iframe is read', async () => {
-  const profiles = [{ ...PROFILES[0], layoutMarker: ['<<<', ...PROFILES[0].layoutMarker] }, ...PROFILES.slice(1)];
+  const placeholder = PROFILES.find((profile) => profile.id === 'trf1-placeholder-unverified');
+  const profiles = [{ ...placeholder, layoutMarker: ['<<<', ...placeholder.layoutMarker] }, ...PROFILES.filter((profile) => profile !== placeholder)];
   const found = resolveBinding(page1(), profiles);
   assert.equal(found.ok, true);
   assert.equal(found.profile.layoutMarker, '#autosDigitais');
@@ -119,7 +120,7 @@ test('a stored profile is tried first and rejected when the schema is wrong', ()
     setInstalledProfile(null);
   }
   setInstalledProfile({ id: 'Nope' });
-  assert.equal(activeProfiles()[0].id, 'trf1-placeholder-unverified');
+  assert.equal(activeProfiles()[0].id, 'trf1-list-autos-digitais-unverified');
   setInstalledProfile(null);
 
   const missingLogin = baseProfile();
