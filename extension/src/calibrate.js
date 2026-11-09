@@ -1,5 +1,6 @@
 // Structure-only snapshot of a PJe page. No text, no field values, no query values.
 import { sanitizeClassToken, sanitizeHref, sanitizeId, sanitizeToken, scrubTree, sizeBucket, urlPattern } from './sanitize.js';
+import { counterPattern, onclickFunctionNames } from './timeline.js';
 
 export const MAX_SNAPSHOT_NODES = 5000;
 const ALLOW_VALUE = new Set(['role', 'type', 'href']);
@@ -188,6 +189,7 @@ export function describeClick(el) {
     class: classesOf(el).map(sanitizeClassToken).filter(Boolean).slice(0, 40),
     attrs: attrNames(el).map((name) => sanitizeToken(name)).filter(Boolean).slice(0, 50).sort(),
     hrefPattern: urlPattern(href),
+    onclickFns: onclickFunctionNames(attr(el, 'onclick')).map((name) => sanitizeToken(name)).filter(Boolean),
   };
 }
 
@@ -243,6 +245,62 @@ export function candidateLists(root, profiles) {
   return out;
 }
 
+const VIEWER_RE = /pdfjs|pdfViewer|viewerContainer|viewer\.html/i;
+
+function shapeOf(el) {
+  return {
+    tag: tagOf(el),
+    id: sanitizeId(attr(el, 'id')),
+    class: classesOf(el).map(sanitizeClassToken).filter(Boolean).slice(0, 8),
+  };
+}
+
+export function collectOnclickFns(root) {
+  const names = [];
+  for (const doc of sameOriginDocuments(root)) {
+    for (const node of queryAll(doc, '[onclick]')) {
+      for (const name of onclickFunctionNames(attr(node, 'onclick'))) {
+        const token = sanitizeToken(name);
+        if (token && !names.includes(token)) names.push(token);
+      }
+    }
+  }
+  return names.slice(0, 40);
+}
+
+export function collectCounters(root) {
+  const out = [];
+  const seen = new Set();
+  for (const doc of sameOriginDocuments(root)) {
+    for (const node of queryAll(doc, 'span, div, p, td, output')) {
+      const pattern = counterPattern(node.textContent);
+      if (!pattern) continue;
+      const shape = shapeOf(node);
+      const key = `${shape.tag}|${shape.id}|${shape.class.join('.')}|${pattern}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ ...shape, pattern });
+      if (out.length >= 20) return out;
+    }
+  }
+  return out;
+}
+
+export function collectViewer(root) {
+  const containers = [];
+  for (const doc of sameOriginDocuments(root)) {
+    for (const node of queryAll(doc, 'iframe, div, embed')) {
+      const src = attr(node, 'src') || '';
+      const id = attr(node, 'id') || '';
+      const classes = classesOf(node).join(' ');
+      if (!VIEWER_RE.test(src) && !VIEWER_RE.test(id) && !VIEWER_RE.test(classes)) continue;
+      containers.push({ ...shapeOf(node), src: urlPattern(src) });
+      if (containers.length >= 20) return containers;
+    }
+  }
+  return containers;
+}
+
 export function versionStrings(root) {
   const out = [];
   for (const doc of sameOriginDocuments(root)) {
@@ -281,6 +339,7 @@ export function buildCalibration(root, extras = {}) {
       class: (described.class ?? []).map(sanitizeClassToken).filter(Boolean),
       attrs: (described.attrs ?? []).map((name) => sanitizeToken(name)).filter(Boolean),
       hrefPattern: described.hrefPattern,
+      onclickFns: (described.onclickFns ?? []).map((name) => sanitizeToken(name)).filter(Boolean),
     };
   }).filter(Boolean);
   return scrubTree({
@@ -293,6 +352,9 @@ export function buildCalibration(root, extras = {}) {
     resources: (extras.resources ?? []).map(resourceRecord),
     fetches: (extras.fetches ?? []).map(resourceRecord),
     clicks,
+    onclickFns: collectOnclickFns(root),
+    counters: collectCounters(root),
+    viewer: collectViewer(root),
     versions: versionStrings(root),
   });
 }

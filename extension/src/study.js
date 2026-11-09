@@ -2,6 +2,7 @@ import { createOcrSession, createTesseractWorker, renderPdfPage } from '../../ma
 import { segmentAutos, setWorkerSrc } from '../../manual/src/segment.js';
 import { joinChunks } from './chunks.js';
 import { DEFAULT_PROJECT_URL, projectUrlOrDefault } from './settings.js';
+import { caseViewUrl, renderCaseParts } from './case-view.js';
 import { processCollected } from './study-run.js';
 
 const $ = (id) => document.getElementById(id);
@@ -142,7 +143,7 @@ port.onMessage.addListener(async (msg) => {
         documents: documents.filter((doc) => doc.source !== 'download-autos'),
         autosDoc: documents.find((doc) => doc.source === 'download-autos') ?? null,
       };
-      const { parts } = await processCollected(bundle, {
+      const { caseResult, parts } = await processCollected(bundle, {
         signal: ctrl.signal,
         segmentAutos,
         ocrPdfPage: async (pdfPage) => (await session.recognize({ pdfPage })).text ?? '',
@@ -164,6 +165,12 @@ port.onMessage.addListener(async (msg) => {
       });
       listParts(parts);
       $('cancel').disabled = true;
+      const view = renderCaseParts(caseResult, msg.items ?? []);
+      port.postMessage({ type: 'view', pageUrl: msg.pageUrl ?? null, parts: view.parts, allText: view.allText });
+      const viewTarget = caseViewUrl(msg.pageUrl);
+      if (viewTarget) {
+        try { await chrome.tabs.create({ url: viewTarget }); } catch { /* the study page still lists the files */ }
+      }
       port.postMessage({ type: 'parts', parts: parts.map((part) => ({ name: part.name, text: part.text })) });
       const attached = new Promise((resolve) => {
         const timer = setTimeout(() => resolve({ ok: false, reason: 'timeout' }), 20000);
@@ -179,7 +186,9 @@ port.onMessage.addListener(async (msg) => {
       const result = await attached;
       $('retry').hidden = false;
       if (result.ok) {
-        outcome('attached', 'Anexado no ChatGPT. O texto do pedido já está no compositor. Revise e envie você mesmo. O Lume não enviou a mensagem.');
+        outcome('attached', 'A aba do PJe mostra o caso na ordem da linha do tempo, para o painel do ChatGPT. As partes também foram anexadas. Revise e envie você mesmo. O Lume não enviou a mensagem.');
+      } else if (viewTarget) {
+        outcome('view', 'A aba do PJe mostra o caso na ordem da linha do tempo. O anexo no ChatGPT não entrou. Use Anexar no ChatGPT ou Salvar partes.');
       } else {
         outcome('failed', attachFailure(result.reason));
       }

@@ -13,6 +13,7 @@ const CASES = [
   ['consulta-documento', 'https://pje1g.trf1.jus.br/pje/ConsultaDocumento/listView.seam?idDocumento=10', 'document'],
   ['consulta-list-view', 'https://pje1g.trf1.jus.br/pje/ConsultaDocumento/listView.seam', 'list'],
   ['doc-query-id', 'https://pje1g.trf1.jus.br/pje/doc?id=D1', 'document'],
+  ['list-autos-digitais', 'https://pje2g.trf1.jus.br/pje/Processo/ConsultaProcesso/Detalhe/listAutosDigitais.seam?idProcesso=1&ca=token', 'list'],
 ];
 
 test('every named URL rule matches its template and nothing else is silent', () => {

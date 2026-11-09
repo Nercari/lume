@@ -45,6 +45,12 @@ export const URL_RULES = Object.freeze([
     template: '/doc?id=<id>',
     test: (url) => /\/doc$/i.test(url.pathname) && hasKey(url, 'id'),
   }),
+  Object.freeze({
+    id: 'list-autos-digitais',
+    kind: 'list',
+    template: '/ConsultaProcesso/Detalhe/listAutosDigitais.seam',
+    test: (url) => url.pathname.toLowerCase().includes('/listautosdigitais.seam'),
+  }),
 ]);
 
 export const URL_RULE_IDS = Object.freeze(URL_RULES.map((rule) => rule.id));

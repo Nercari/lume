@@ -10,7 +10,7 @@ const src = join(root, 'src');
 const dist = join(root, 'dist');
 const manualDist = join(root, '..', 'manual', 'dist');
 const MANUAL_FILES = ['lume-pdf.html', 'lume-pdf.js', 'pdf.worker.mjs'];
-const INLINE = ['sanitize.js', 'url-rules.js', 'chunks.js', 'calibrate.js', 'profile.js', 'core.js', 'collect.js'];
+const INLINE = ['sanitize.js', 'url-rules.js', 'timeline.js', 'chunks.js', 'calibrate.js', 'profile.js', 'core.js', 'collect.js'];
 // Run from the extension directory when manual/dist is not already built.
 const MANUAL_BUILD = 'npm --prefix ../manual ci && npm --prefix ../manual run build';
 

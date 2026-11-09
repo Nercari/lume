@@ -32,7 +32,7 @@ test('html becomes text and the pack uses the PJe id and sheet', async () => {
 });
 
 test('an image-only PDF page is OCR and the text is kept under the list id', async () => {
-  const { parts } = await processCollected({
+  const { caseResult, parts } = await processCollected({
     mode: 'documents',
     documents: [
       { id: 'DOC2', version: '1', contentType: 'application/pdf', bytes: new Uint8Array([1]) },
@@ -57,6 +57,8 @@ test('an image-only PDF page is OCR and the text is kept under the list id', asy
   });
   assert.match(parts[0].text, /\[Id DOC2, fl\. 1\]/);
   assert.match(parts[0].text, /TOKENPDF/);
+  assert.equal(caseResult.pages[1].pageInDoc, null);
+  assert.equal(caseResult.pages[1].pdfPage, 2);
   assert.match(parts[0].text, /\[Id DOC2, fl\. 2\]/);
   assert.match(parts[0].text, /LAUDO/);
   assert.match(parts[0].text, /\[Id DOC3, fl\. 1\]/);
