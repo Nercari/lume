@@ -1,0 +1,17 @@
+{
+  "name": "lume-extraction",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Lume extraction: native PDF text and OCR passages with provenance, explicit gaps, coverage reconciliation and OCR error measurement",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "exports": "./src/index.js",
+  "scripts": {
+    "build": "node --check src/*.js && node -e \"import('./src/index.js').then(()=>console.log('build: syntax and imports ok'))\"",
+    "test": "node --test --test-reporter=spec test/*.test.js"
+  },
+  "dependencies": {
+    "pdfjs-dist": "6.4.299"
+  }
+}
