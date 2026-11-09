@@ -37,6 +37,19 @@ export const BINARY_THRESHOLDS = Object.freeze({
   nonLetterRatio: 0.85,
 });
 
+// A line inside a readable piece. Mostly-letter lines are kept and then stripped.
+export const LINE_BINARY_THRESHOLDS = Object.freeze({
+  minChars: 24,
+  controlRatio: 0.15,
+  nonLetterRatio: 0.9,
+  keepLetterRatio: 0.5,
+});
+
+const OMITTED_BINARY_LINE = Object.freeze({
+  reason: 'binary_span_omitted',
+  detail: 'trecho binário omitido',
+});
+
 const PLACEHOLDER_LINE = [
   /^\[?\s*imagem\s*\]?$/u,
   /^\[?\s*image\s*\]?$/u,
@@ -357,8 +370,9 @@ function materialize(docs, version) {
     for (const leaf of doc.leaves) {
       ordinal += 1;
       numbers.push(ordinal);
-      const placeholder = isPlaceholderBody(leaf.body);
-      const text = placeholder ? '' : leaf.body;
+      const body = classifyBody(leaf.body);
+      const placeholder = body.kind !== 'text';
+      const text = body.text;
       const passageId = textPassageId(doc.docId, version, leaf.pageInDoc, ordinal);
       const page = {
         n: ordinal,
@@ -382,7 +396,16 @@ function materialize(docs, version) {
         method: page.method,
         hasText: page.hasText,
       });
-      if (placeholder) {
+      if (body.kind === 'binary') {
+        gaps.push({
+          reason: TEXT_RULES.binaryUnreadable.reason,
+          page: ordinal,
+          docId: doc.docId,
+          pageInDoc: leaf.pageInDoc,
+          passageId,
+          detail: TEXT_RULES.binaryUnreadable.detail,
+        });
+      } else if (placeholder) {
         gaps.push({
           reason: 'image_no_text',
           page: ordinal,
@@ -390,6 +413,16 @@ function materialize(docs, version) {
           pageInDoc: leaf.pageInDoc,
           passageId,
           detail: TEXT_RULES.placeholder.detail,
+        });
+      } else if (body.dropped) {
+        gaps.push({
+          reason: OMITTED_BINARY_LINE.reason,
+          page: ordinal,
+          docId: doc.docId,
+          pageInDoc: leaf.pageInDoc,
+          passageId,
+          detail: OMITTED_BINARY_LINE.detail,
+          count: body.dropped,
         });
       }
     }
@@ -491,6 +524,43 @@ export function isBinaryBody(text) {
   if (scores.controlRatio >= BINARY_THRESHOLDS.controlRatio) return true;
   return scores.nonSpace >= BINARY_THRESHOLDS.minChars
     && scores.nonLetterRatio >= BINARY_THRESHOLDS.nonLetterRatio;
+}
+
+// C0 controls except tab and newline. Form feed is a page break before this runs.
+export function stripC0(text) {
+  return String(text ?? '').replace(/[\u0000-\u0008\u000B-\u001F]/g, '');
+}
+
+export function isBinaryLine(text) {
+  const scores = binaryScores(text);
+  if (scores.length < LINE_BINARY_THRESHOLDS.minChars) return false;
+  if (scores.controlRatio >= LINE_BINARY_THRESHOLDS.controlRatio) return true;
+  const letterRatio = scores.nonSpace ? scores.letters / scores.nonSpace : 0;
+  if (letterRatio >= LINE_BINARY_THRESHOLDS.keepLetterRatio) return false;
+  return scores.nonSpace >= LINE_BINARY_THRESHOLDS.minChars
+    && scores.nonLetterRatio >= LINE_BINARY_THRESHOLDS.nonLetterRatio;
+}
+
+function cleanPieceText(text) {
+  const kept = [];
+  let dropped = 0;
+  for (const line of String(text ?? '').split('\n')) {
+    if (!line.trim()) {
+      kept.push('');
+      continue;
+    }
+    if (isBinaryLine(line)) {
+      dropped += 1;
+      continue;
+    }
+    const cleaned = stripC0(line);
+    if (!cleaned.trim()) {
+      dropped += 1;
+      continue;
+    }
+    kept.push(cleaned);
+  }
+  return { text: kept.join('\n').replace(/\n{3,}/g, '\n\n').trim(), dropped };
 }
 
 function isBytes(input) {
@@ -636,10 +706,15 @@ function juntadaMeta(line, headerId) {
 
 function classifyBody(text) {
   const trimmed = String(text ?? '').trim();
-  if (!trimmed) return { kind: 'image', text: '' };
-  if (isBinaryBody(trimmed)) return { kind: 'binary', text: '' };
-  if (isPlaceholderBody(trimmed)) return { kind: 'image', text: '' };
-  return { kind: 'text', text: trimmed };
+  if (!trimmed) return { kind: 'image', text: '', dropped: 0 };
+  const cleaned = cleanPieceText(trimmed);
+  if (!cleaned.text) {
+    return isBinaryBody(trimmed) || cleaned.dropped
+      ? { kind: 'binary', text: '', dropped: cleaned.dropped }
+      : { kind: 'image', text: '', dropped: 0 };
+  }
+  if (isPlaceholderBody(cleaned.text)) return { kind: 'image', text: '', dropped: cleaned.dropped };
+  return { kind: 'text', text: cleaned.text, dropped: cleaned.dropped };
 }
 
 function sheetsOf(piece, fileRules) {
@@ -681,17 +756,22 @@ function materializePje(pieces, version, processNumber, fileRules) {
   for (const piece of pieces) {
     const sheets = sheetsOf(piece, fileRules);
     const numbers = [];
+    let omittedLines = 0;
+    let omittedAt = null;
     for (const sheet of sheets) {
       ordinal += 1;
       numbers.push(ordinal);
       const body = classifyBody(sheet.text);
-      if (body.kind === 'binary') {
-        piece.rules.add(TEXT_RULES.binaryUnreadable.id);
-        fileRules.add(TEXT_RULES.binaryUnreadable.id);
-      }
       const hasText = body.kind === 'text';
       const text = hasText ? body.text : '';
       const passageId = textPassageId(piece.docId, version, sheet.pageInDoc, ordinal);
+      if (body.kind === 'binary') {
+        piece.rules.add(TEXT_RULES.binaryUnreadable.id);
+        fileRules.add(TEXT_RULES.binaryUnreadable.id);
+      } else if (body.dropped) {
+        omittedLines += body.dropped;
+        if (!omittedAt) omittedAt = { page: ordinal, pageInDoc: sheet.pageInDoc, passageId };
+      }
       const page = {
         n: ordinal,
         hasText,
@@ -733,6 +813,17 @@ function materializePje(pieces, version, processNumber, fileRules) {
           detail: TEXT_RULES.binaryUnreadable.detail,
         });
       }
+    }
+    if (omittedLines > 0) {
+      gaps.push({
+        reason: OMITTED_BINARY_LINE.reason,
+        page: omittedAt.page,
+        docId: piece.docId,
+        pageInDoc: omittedAt.pageInDoc,
+        passageId: omittedAt.passageId,
+        detail: OMITTED_BINARY_LINE.detail,
+        count: omittedLines,
+      });
     }
     if (piece.mismatch) {
       gaps.push({

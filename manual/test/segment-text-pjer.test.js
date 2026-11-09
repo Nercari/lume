@@ -255,6 +255,55 @@ test('a binary body is a gap and its bytes are never emitted', () => {
   assert.match(pack, /binário\/ilegível/);
 });
 
+test('scattered C0 controls are stripped and the piece is kept', () => {
+  const prose = 'Texto sintetico da peca com controles esparsos no meio da frase longa.';
+  let dirty = '';
+  for (let index = 0; index < prose.length; index += 1) {
+    dirty += prose[index];
+    if (index % 7 === 6) dirty += '\u0003';
+  }
+  const fixture = makePjeExport({
+    pieces: [{ id: '100000001', fields: ['Despacho', 'Parte Fictícia'], raw: [dirty] }],
+  });
+  const result = segmentText(fixture.text);
+  assert.equal(result.documents.length, 1);
+  assert.equal(result.passages[0].hasText, true);
+  assert.equal(result.passages[0].text, prose);
+  assert.equal(/[\u0000-\u0008\u000B-\u001F]/.test(result.passages[0].text), false);
+  assert.equal(result.gaps.some((gap) => gap.detail === 'trecho binário omitido'), false);
+});
+
+test('binary lines inside a readable piece are omitted and counted', () => {
+  const prose = 'Texto sintetico da peca, longo o bastante para permanecer.';
+  const fixture = makePjeExport({
+    pieces: [{
+      id: '100000001',
+      fields: ['Despacho', 'Parte Fictícia'],
+      raw: [prose, '\u0003'.repeat(30), '$'.repeat(30), `${prose} fim`],
+    }],
+  });
+  const result = segmentText(fixture.text);
+  assert.equal(result.documents.length, 1);
+  const passage = result.passages[0];
+  assert.equal(passage.hasText, true);
+  assert.match(passage.text, /permanecer/);
+  assert.match(passage.text, /fim/);
+  assert.equal(passage.text.includes('\u0003'), false);
+  assert.equal(passage.text.includes('$'), false);
+  const note = result.gaps.find((gap) => gap.detail === 'trecho binário omitido');
+  assert.ok(note);
+  assert.equal(note.count, 2);
+  assert.equal(note.docId, '100000001');
+});
+
+test('a form feed still splits a page and is not emitted', () => {
+  const result = segmentText('Texto sintetico um.\fTexto sintetico dois.\u000c');
+  assert.equal(result.pages.length, 2);
+  assert.match(result.passages[0].text, /um/);
+  assert.match(result.passages[1].text, /dois/);
+  assert.equal(result.passages.some((passage) => passage.text.includes('\f')), false);
+});
+
 test('forty synthetic pieces keep every header, every citation and the cleaned text', () => {
   const fixture = makeForty();
   const result = segmentText(fixture.text);
