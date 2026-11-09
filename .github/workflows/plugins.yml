@@ -20,4 +20,4 @@ jobs:
       - name: Build logo and zip
         run: node plugins/scripts/build-zip.mjs
       - name: Test
-        run: node --test plugins/test/plugin.test.mjs
+        run: node --test plugins/test/

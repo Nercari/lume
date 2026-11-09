@@ -1,4 +1,4 @@
-import { readdir, readFile, writeFile, mkdir } from "node:fs/promises";
+import { readdir, readFile, writeFile, mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { writeLogo } from "./render-logo.mjs";
@@ -6,6 +6,14 @@ import { writeLogo } from "./render-logo.mjs";
 const scriptsDir = path.dirname(fileURLToPath(import.meta.url));
 export const pluginRoot = path.resolve(scriptsDir, "../lume-jef");
 export const zipPath = path.resolve(scriptsDir, "../dist/lume-jef-0.1.0.zip");
+export const projectDir = path.resolve(scriptsDir, "../dist/lume-jef-projeto");
+
+const projectPaste = `# Instruções do Project
+
+Cole este arquivo nas instruções do Project e anexe os outros .md desta pasta.
+
+Siga jef-director.md antes de analisar ou redigir. Leia o módulo do produto no arquivo da skill correspondente. O OCR fica no assistente Lume. Não use Tesseract nem o sandbox Python. Se a página vier como imagem, leia com visão, etiquete só com os localizadores recebidos, marque lido por visão e não adivinhe o ilegível.
+`;
 
 const DOS_TIME = 0;
 const DOS_DATE = ((2026 - 1980) << 9) | (11 << 5) | 9;
@@ -129,8 +137,43 @@ export function zipNames(bytes) {
   return names;
 }
 
+export async function buildProject() {
+  await rm(projectDir, { recursive: true, force: true });
+  await mkdir(projectDir, { recursive: true });
+  const skillsRoot = path.join(pluginRoot, "skills");
+  const skills = (await readdir(skillsRoot, { withFileTypes: true }))
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  const written = [];
+  for (const skill of skills) {
+    const skillDir = path.join(skillsRoot, skill);
+    const parts = [await readFile(path.join(skillDir, "SKILL.md"), "utf8")];
+    const refDir = path.join(skillDir, "references");
+    let refs = [];
+    try {
+      refs = (await readdir(refDir))
+        .filter((name) => name.endsWith(".md"))
+        .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+    } catch (error) {
+      if (!error || error.code !== "ENOENT") throw error;
+    }
+    for (const ref of refs) {
+      parts.push(`\n\n---\n\n# Referência: ${ref}\n\n`);
+      parts.push(await readFile(path.join(refDir, ref), "utf8"));
+    }
+    const fileName = `${skill}.md`;
+    await writeFile(path.join(projectDir, fileName), parts.join(""));
+    written.push(fileName);
+  }
+  await writeFile(path.join(projectDir, "COLE-NO-PROJETO.md"), projectPaste);
+  written.push("COLE-NO-PROJETO.md");
+  return written;
+}
+
 export async function buildZip() {
   await writeLogo();
+  await buildProject();
   const names = await listPluginFiles();
   const files = [];
   for (const name of names) {
@@ -150,6 +193,6 @@ const isMain =
 if (isMain) {
   const built = await buildZip();
   process.stdout.write(
-    `${built.zipPath} ${built.bytes.length} files ${built.names.length}\n`,
+    `${built.zipPath} ${built.bytes.length} files ${built.names.length}\n${projectDir}\n`,
   );
 }

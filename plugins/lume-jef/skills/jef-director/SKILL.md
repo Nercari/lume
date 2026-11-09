@@ -37,4 +37,6 @@ O bloco da seção 17 do contrato é o texto histórico de colagem. Neste plugin
 
 C9 e C10 não estão no plugin. Não os invente e não bloqueie o produto porque faltam.
 
+Controles locais citados no método (verificar_sessao.py, --revisao-esperada, tests/*.py) não acompanham este plugin. Quem confere é a revisão C8 do modelo.
+
 Não declare leitura integral sem o texto da seção. Não invente fato, ID, página ou autoridade.
