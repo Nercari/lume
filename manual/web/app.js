@@ -1,37 +1,49 @@
 import { GlobalWorkerOptions } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { checkAnswer } from '../src/check.js';
-import { buildChatGPTPackage, DOC_TYPE_OPTIONS } from '../src/prompt.js';
+import { createOcrSession, createTesseractWorker, ocrPaths, renderPdfPage } from '../src/ocr.js';
+import { buildCasePack, PACK_FILENAME } from '../src/pack.js';
 import { segmentAutos } from '../src/segment.js';
-
-const SIGNAL_LABEL = { footer: 'rodapé', outline: 'marcador', index: 'índice' };
+import { segmentText } from '../src/segment-text.js';
 
 const pdfInput = document.querySelector('#pdf');
-const docType = document.querySelector('#doc-type');
-const request = document.querySelector('#request');
-const limit = document.querySelector('#limit');
+const textInput = document.querySelector('#text-file');
+const paste = document.querySelector('#paste');
+const ocrToggle = document.querySelector('#ocr');
 const status = document.querySelector('#status');
 const progress = document.querySelector('#progress');
 const summary = document.querySelector('#summary');
-const counts = document.querySelector('#counts');
-const ocrNote = document.querySelector('#ocr-note');
-const docs = document.querySelector('#docs');
-const partsBox = document.querySelector('#parts');
+const packBox = document.querySelector('#pack');
 const report = document.querySelector('#report');
 const verify = document.querySelector('#verify');
+const cancel = document.querySelector('#cancel');
 
 let caseResult = null;
-let packaged = null;
+let packText = '';
+let runId = 0;
+let controller = null;
+let session = null;
+let pasteTimer = 0;
 
-for (const option of DOC_TYPE_OPTIONS) {
-  const node = document.createElement('option');
-  node.value = option.id;
-  node.textContent = option.label;
-  if (option.id === 'decisao') node.selected = true;
-  docType.append(node);
-}
+const STATUS_LABEL = {
+  exists: 'existe no pacote',
+  missing_document: 'id ausente',
+  missing_page: 'folha ausente nesse id',
+  unreadable: 'folha sem texto (lacuna)',
+};
 
 function setStatus(text) {
   status.textContent = text;
+}
+
+function showProgress(page, pageCount) {
+  progress.classList.remove('hidden');
+  progress.max = pageCount || 1;
+  progress.value = page;
+}
+
+function hideProgress() {
+  progress.classList.add('hidden');
+  cancel.classList.add('hidden');
 }
 
 async function prepareWorker() {
@@ -46,6 +58,103 @@ async function prepareWorker() {
       // pdf.js repeats the load on the main thread when the worker cannot start.
     }
   }
+}
+
+if (location.protocol === 'file:' || location.origin === 'null') {
+  const note = document.querySelector('#file-note');
+  note.textContent = 'Esta página está em file://. O worker de OCR muitas vezes não inicia daí. Abra o pacote pela extensão (chrome-extension://…/manual/lume-pdf.html) ou por um servidor local.';
+  note.classList.remove('hidden');
+}
+
+async function stopCurrent() {
+  controller?.abort();
+  const current = session;
+  session = null;
+  controller = null;
+  if (current) await current.cancel();
+}
+
+function showPack(result) {
+  caseResult = result;
+  packText = buildCasePack(result);
+  packBox.value = packText;
+  summary.classList.remove('hidden');
+  verify.disabled = false;
+  report.replaceChildren();
+  const missing = (result.gaps ?? []).filter((gap) => gap.reason === 'unreadable_page' || gap.reason === 'image_no_text' || gap.reason === 'corrupt_file').length;
+  setStatus(`Pacote pronto. ${result.documents.length} peça(s), ${missing} lacuna(s) sem texto.`);
+}
+
+async function runPdf(file) {
+  const id = ++runId;
+  await stopCurrent();
+  if (id !== runId) return;
+  summary.classList.add('hidden');
+  report.replaceChildren();
+  showProgress(0, 1);
+  cancel.classList.remove('hidden');
+  setStatus('Lendo o PDF neste computador…');
+  controller = new AbortController();
+  const paths = ocrPaths(import.meta.url);
+  if (ocrToggle.checked) {
+    session = createOcrSession({
+      signal: controller.signal,
+      renderPage: renderPdfPage,
+      createWorker: () => createTesseractWorker(paths),
+    });
+  }
+  let pageCount = 0;
+  try {
+    await prepareWorker();
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    if (id !== runId) return;
+    const result = await segmentAutos(bytes, {
+      signal: controller.signal,
+      onProgress({ page, pageCount: total }) {
+        pageCount = total;
+        showProgress(page, total);
+        setStatus(`Lendo página ${page} de ${total}…`);
+      },
+      ocr: session
+        ? async ({ pageNumber, pdfPage }) => {
+          setStatus(`OCR página ${pageNumber} de ${pageCount}`);
+          return session.recognize({ pageNumber, pdfPage });
+        }
+        : undefined,
+    });
+    if (id !== runId) return;
+    hideProgress();
+    if (result.gaps.some((gap) => gap.reason === 'corrupt_file')) {
+      setStatus('O arquivo não pôde ser lido como PDF.');
+      return;
+    }
+    showPack(result);
+  } catch (error) {
+    if (id !== runId) return;
+    hideProgress();
+    if (controller?.signal.aborted || error?.name === 'AbortError') setStatus('OCR cancelado.');
+    else setStatus('A leitura falhou neste computador. O arquivo não foi enviado.');
+  } finally {
+    if (id === runId) hideProgress();
+  }
+}
+
+function runText(text) {
+  const id = ++runId;
+  controller?.abort();
+  session?.cancel();
+  session = null;
+  controller = null;
+  hideProgress();
+  report.replaceChildren();
+  const result = segmentText(text);
+  if (id !== runId) return;
+  if (!result.documents.length && result.gaps.some((gap) => gap.reason === 'empty_text')) {
+    summary.classList.add('hidden');
+    setStatus('O texto está vazio.');
+    return;
+  }
+  showPack(result);
 }
 
 async function copyText(text, button) {
@@ -64,140 +173,45 @@ async function copyText(text, button) {
   setTimeout(() => { button.textContent = previous; }, 1200);
 }
 
-function addCount(term, value) {
-  const dt = document.createElement('dt');
-  dt.textContent = term;
-  const dd = document.createElement('dd');
-  dd.textContent = value;
-  counts.append(dt, dd);
-}
-
-function pieceCounts(result) {
-  const tally = new Map();
-  for (const doc of result.documents) {
-    tally.set(doc.piece, (tally.get(doc.piece) ?? 0) + 1);
-  }
-  if (!tally.size) return 'nenhum';
-  return [...tally.entries()].map(([piece, count]) => `${piece}: ${count}`).join('; ');
-}
-
-function renderPackage() {
-  if (!caseResult) return;
-  const charLimit = Number(limit.value);
-  try {
-    packaged = buildChatGPTPackage(caseResult, {
-      docType: docType.value,
-      request: request.value,
-      charLimit: Number.isInteger(charLimit) ? charLimit : 24_000,
-    });
-  } catch (error) {
-    packaged = null;
-    setStatus(error instanceof RangeError ? 'O limite de cada parte precisa ser um inteiro de pelo menos 500.' : 'Não foi possível montar o pacote.');
-    return;
-  }
-  partsBox.replaceChildren();
-  packaged.parts.forEach((part, index) => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'secondary';
-    button.textContent = packaged.parts.length === 1
-      ? 'Copiar arquivo do processo'
-      : `Copiar parte ${index + 1} de ${packaged.parts.length}`;
-    button.addEventListener('click', () => copyText(part, button));
-    partsBox.append(button);
-  });
-}
-
-function renderSummary(result) {
-  const ocrPages = result.gaps.filter((gap) => gap.reason === 'unreadable_page');
-  counts.replaceChildren();
-  addCount('Páginas', String(result.pageCount));
-  addCount('Páginas com texto', String(result.pages.filter((page) => page.hasText).length));
-  addCount('Documentos encontrados', String(result.documents.length));
-  addCount('Tipos de peça', pieceCounts(result));
-  addCount('Páginas que precisam de OCR', String(ocrPages.length));
-  ocrNote.replaceChildren();
-  if (ocrPages.length) {
-    const note = document.createElement('p');
-    note.className = 'warn';
-    note.textContent = `Precisa OCR nas páginas ${ocrPages.map((gap) => gap.page).join(', ')} do PDF. O texto delas não entrou no arquivo.`;
-    ocrNote.append(note);
-  }
-  docs.replaceChildren();
-  for (const doc of result.documents) {
-    const tr = document.createElement('tr');
-    for (const value of [
-      doc.docId,
-      doc.piece,
-      doc.startPage === doc.endPage ? String(doc.startPage) : `${doc.startPage}–${doc.endPage}`,
-      doc.signals.map((signal) => SIGNAL_LABEL[signal] ?? signal).join(', ') || '—',
-    ]) {
-      const td = document.createElement('td');
-      td.textContent = value;
-      tr.append(td);
-    }
-    docs.append(tr);
-  }
-  summary.classList.remove('hidden');
-  verify.disabled = false;
-  renderPackage();
-}
-
-pdfInput.addEventListener('change', async () => {
+pdfInput.addEventListener('change', () => {
   const file = pdfInput.files?.[0];
-  report.replaceChildren();
-  if (!file) return;
-  summary.classList.add('hidden');
-  progress.classList.remove('hidden');
-  progress.value = 0;
-  setStatus('Lendo o PDF neste computador…');
-  try {
-    await prepareWorker();
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    caseResult = await segmentAutos(bytes, {
-      onProgress({ page, pageCount }) {
-        progress.max = pageCount;
-        progress.value = page;
-        setStatus(`Lendo página ${page} de ${pageCount}…`);
-      },
-    });
-    progress.classList.add('hidden');
-    if (caseResult.gaps.some((gap) => gap.reason === 'corrupt_file')) {
-      setStatus('O arquivo não pôde ser lido como PDF.');
-      return;
-    }
-    setStatus(`Leitura local concluída. ${caseResult.pageCount} página(s).`);
-    renderSummary(caseResult);
-  } catch {
-    progress.classList.add('hidden');
-    setStatus('A leitura falhou neste computador. O arquivo não foi enviado.');
-  }
+  if (file) runPdf(file);
 });
 
-docType.addEventListener('change', renderPackage);
-request.addEventListener('input', renderPackage);
-limit.addEventListener('change', renderPackage);
+textInput.addEventListener('change', async () => {
+  const file = textInput.files?.[0];
+  if (!file) return;
+  setStatus('Lendo o texto neste computador…');
+  runText(await file.text());
+});
 
-document.querySelector('#copy-prompt').addEventListener('click', (event) => {
-  if (packaged) copyText(packaged.prompt, event.currentTarget);
+paste.addEventListener('input', () => {
+  clearTimeout(pasteTimer);
+  pasteTimer = setTimeout(() => {
+    if (paste.value.trim()) runText(paste.value);
+  }, 400);
+});
+
+cancel.addEventListener('click', () => {
+  runId += 1;
+  stopCurrent();
+  hideProgress();
+  setStatus('OCR cancelado.');
 });
 
 document.querySelector('#download').addEventListener('click', () => {
-  if (!packaged) return;
-  const blob = new Blob([packaged.caseFile], { type: 'text/plain;charset=utf-8' });
+  if (!packText) return;
+  const blob = new Blob([packText], { type: 'text/markdown;charset=utf-8' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = 'processo.txt';
+  link.download = PACK_FILENAME;
   link.click();
   URL.revokeObjectURL(link.href);
 });
 
-const STATUS_LABEL = {
-  exists: 'existe no PDF',
-  missing_document: 'id ausente',
-  missing_page: 'página ausente nesse id',
-  unreadable: 'página sem texto (precisa OCR)',
-};
+document.querySelector('#copy-pack').addEventListener('click', (event) => {
+  if (packText) copyText(packText, event.currentTarget);
+});
 
 verify.addEventListener('click', () => {
   if (!caseResult) return;
@@ -205,8 +219,8 @@ verify.addEventListener('click', () => {
   report.replaceChildren();
   const head = document.createElement('p');
   head.textContent = result.ok
-    ? 'Nenhuma citação apontou para fora do PDF, e nenhuma frase decisiva ficou sem citação. Isso não confirma o acerto do texto.'
-    : 'Há citação fora do PDF ou frase decisiva sem citação. Isso não confirma o acerto do que foi citado.';
+    ? 'Nenhuma citação apontou para id ou folha ausente, e nenhuma frase decisiva ficou sem citação. Isso não confirma o acerto do texto.'
+    : 'Há citação para id ou folha ausente, ou frase decisiva sem citação. Isso não confirma o acerto do que foi citado.';
   report.append(head);
   if (result.citations.length) {
     const list = document.createElement('ul');
@@ -218,7 +232,7 @@ verify.addEventListener('click', () => {
     report.append(list);
   } else {
     const none = document.createElement('p');
-    none.textContent = 'Nenhuma citação no formato [Id …, p. …].';
+    none.textContent = 'Nenhuma citação no formato [Id …, fl. …] ou [Id …, p. …].';
     report.append(none);
   }
   if (result.uncitedDecisive.length) {

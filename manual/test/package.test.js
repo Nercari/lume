@@ -26,12 +26,12 @@ test('the prompt adapts every default-method instruction and requires manual cit
   assert.match(DEFAULT_METHOD.instructions.at(-1), /no passage ids/i);
   const pkg = buildChatGPTPackage(sampleResult(), { docType: 'despacho', request: 'minuta de despacho' });
   assert.match(pkg.prompt, /neste computador/);
-  assert.match(pkg.prompt, /\[Id <docId>, p\. <n>\]/);
+  assert.match(pkg.prompt, /\[Id <docId>, fl\. <n>\]/);
   assert.match(pkg.prompt, /Tipo de peça: Despacho/);
   assert.match(pkg.prompt, /Determinação/);
   assert.doesNotMatch(pkg.prompt, /no passage ids/i);
   for (const line of ADAPTED_INSTRUCTIONS) assert.ok(pkg.prompt.includes(line));
-  assert.match(pkg.caseFile, /\[Id 1001, p\. 1\]/);
+  assert.match(pkg.caseFile, /\[Id 1001, fl\. 1\]/);
   assert.match(pkg.caseFile, /1001@1:p1/);
   assert.match(pkg.caseFile, /página do PDF: 2/);
   assert.match(pkg.gapsSummary, /precisa OCR/);
@@ -61,6 +61,9 @@ test('checkAnswer accepts a real citation and flags a missing id, a missing page
   const good = checkAnswer('Julgo procedente o pedido. [Id 1001, p. 1]', result);
   assert.equal(good.ok, true);
   assert.equal(good.citations[0].status, 'exists');
+  const sheet = checkAnswer('Julgo procedente o pedido. [Id 1001, fl. 1]', result);
+  assert.equal(sheet.ok, true);
+  assert.equal(sheet.citations[0].status, 'exists');
   assert.equal(good.uncitedDecisive.length, 0);
 
   const missing = checkAnswer('Texto. [Id 9999, p. 1]', result);
@@ -90,5 +93,5 @@ test('a segmented file round-trips into a package whose citation check passes', 
   const answer = `Relatorio.\n\nJulgo procedente. [Id 15, p. 1]`;
   const checked = checkAnswer(answer, segmented);
   assert.equal(checked.ok, true);
-  assert.match(pkg.caseFile, /\[Id 15, p\. 1\]/);
+  assert.match(pkg.caseFile, /\[Id 15, fl\. 1\]/);
 });

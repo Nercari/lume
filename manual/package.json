@@ -2,19 +2,24 @@
   "name": "lume-manual",
   "version": "0.0.0",
   "private": true,
-  "description": "Offline PJe PDF mode: segment a merged autos PDF and build a manual ChatGPT paste package. No network, no API, no tokens.",
+  "description": "Offline case pack: a merged PJe PDF or a PJe+R text export, local OCR, one Markdown file for ChatGPT. No network, no API, no tokens.",
   "license": "UNLICENSED",
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "exports": "./src/index.js",
   "scripts": {
     "build": "node scripts/build.mjs",
     "test": "node --test --test-reporter=spec test/*.test.js"
   },
   "dependencies": {
-    "pdfjs-dist": "6.4.299"
+    "@tesseract.js-data/por": "^1.0.0",
+    "pdfjs-dist": "6.4.299",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
-    "esbuild": "0.25.11"
+    "esbuild": "0.25.11",
+    "playwright": "^1.56.1"
   }
 }

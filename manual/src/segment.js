@@ -1,8 +1,10 @@
 // Segment one merged PJe autos PDF. Any subset of index, outline and footer may be present.
-// A page with no text layer becomes an unreadable_page gap ("precisa OCR"). OCR is an
-// injected callback; this package does not ship an OCR engine or language data.
+// A page with no text layer stays an unreadable_page gap unless options.ocr returns
+// enough letters. The callback is injected so tests can fake the engine. The page
+// wires tesseract.js; this module does not load it.
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist/legacy/build/pdf.mjs';
-import { classifyFromHeadings, classifyPiece, documentTypeSource } from './classify.js';
+import { classifyFromHeadings, classifyPiece } from './classify.js';
+import { ocrHasText } from './ocr-text.js';
 import {
   headingLinesFromPage,
   isIndexHeader,
@@ -77,6 +79,12 @@ function linesFromContent(content) {
 
 function charCount(lines) {
   return lines.reduce((sum, line) => sum + line.text.replace(/\s/g, '').length, 0);
+}
+
+function abortError() {
+  const error = new Error('cancelled');
+  error.name = 'AbortError';
+  return error;
 }
 
 async function readOutline(pdf) {
@@ -331,20 +339,26 @@ function buildDocuments(pages, owner, meta, version, gaps) {
 async function loadPages(pdf, options) {
   const pages = [];
   for (let n = 1; n <= pdf.numPages; n++) {
+    if (options.signal?.aborted) throw abortError();
     options.onProgress?.({ page: n, pageCount: pdf.numPages });
     const pdfPage = await pdf.getPage(n);
     const viewport = pdfPage.getViewport({ scale: 1 });
     let lines = linesFromContent(await pdfPage.getTextContent());
     let method = 'pdf-text';
+    let ocrInsufficient = false;
     if (charCount(lines) === 0 && options.ocr) {
+      if (options.signal?.aborted) throw abortError();
       try {
-        const result = await options.ocr({ pageNumber: n, pdfPage });
+        const result = await options.ocr({ pageNumber: n, pdfPage, pageCount: pdf.numPages });
         const text = String(result?.text ?? '').trim();
-        if (text) {
+        if (text && ocrHasText(text)) {
           lines = text.split(/\n/).map((row) => ({ y: null, text: row.trim() })).filter((row) => row.text);
           method = 'ocr';
+        } else if (text) {
+          ocrInsufficient = true;
         }
-      } catch {
+      } catch (error) {
+        if (error?.name === 'AbortError') throw error;
         lines = [];
       }
     }
@@ -356,6 +370,7 @@ async function loadPages(pdf, options) {
       chars,
       hasText: chars > 0,
       method: chars > 0 ? method : null,
+      ocrInsufficient,
       footer,
       height: viewport.height,
     });
@@ -425,7 +440,7 @@ async function segmentPdf(pdf, options) {
         docId: info.docId,
         pageInDoc: info.pageInDoc,
         passageId,
-        detail: 'precisa OCR',
+        detail: page.ocrInsufficient ? 'OCR insuficiente' : 'precisa OCR',
       });
     }
   }
@@ -451,7 +466,8 @@ export async function segmentAutos(input, options = {}) {
     } finally {
       await task.destroy();
     }
-  } catch {
+  } catch (error) {
+    if (error?.name === 'AbortError') throw error;
     await task.destroy().catch(() => {});
     return emptyResult(version, { reason: GAP.corrupt_file, page: null, detail: 'arquivo PDF ilegível' });
   }

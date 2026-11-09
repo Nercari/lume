@@ -1,7 +1,10 @@
-// Portuguese paste package for the user's own ChatGPT session.
-// Instructions follow the default drafting method one for one. The last method
-// rule forbids bracket citations because the source panel holds them. Manual mode
-// has no source panel, so that rule is replaced by [Id <docId>, p. <n>].
+// Portuguese instructions for the user's own ChatGPT session.
+// They follow the default drafting method one for one. The last method rule
+// forbids bracket citations because the source panel holds them. Manual mode
+// has no source panel, so that rule is replaced by [Id <docId>, fl. <n>].
+// The page attaches one case pack (see pack.js). This prompt stays so the
+// method text cannot drift from chat-editor.
+import { OCR_MARK } from './ocr-text.js';
 
 export const ADAPTED_INSTRUCTIONS = Object.freeze([
   'Use apenas os fatos do bloco de evidências do processo. Um bloco de estilo, se alguém o colar junto, mostra só tom e estrutura: nunca tire dele um fato, nome, número ou data.',
@@ -10,7 +13,7 @@ export const ADAPTED_INSTRUCTIONS = Object.freeze([
   'Trate cada contradição indicada no pedido e não a deixe de fora.',
   'Sem um resultado pedido, proponha a conclusão que as evidências sustentam, com o raciocínio e as passagens em que ela se apoia.',
   'Com um resultado pedido, mantenha a evidência contrária no raciocínio e diga onde ela é incompatível com o resultado. Não a omita nem a suavize.',
-  'Cite cada fato decisivo exatamente como [Id <docId>, p. <n>]. O n é a página dentro desse documento, a mesma do marcador [Id …, p. …] no arquivo. Não invente id nem página. Não use outra forma de citação.',
+  'Cite cada fato decisivo exatamente como [Id <docId>, fl. <n>]. O n é a folha dentro desse documento, a mesma do marcador [Id …, fl. …] no arquivo. Não invente id nem folha. Não use outra forma de citação.',
 ]);
 
 export const DOC_TYPE_OPTIONS = Object.freeze([
@@ -68,7 +71,8 @@ function renderCaseFile(caseResult) {
   if (!passages.length) blocks.push('Nenhuma passagem com texto.');
   for (const passage of passages) {
     const pageRef = passage.pageInDoc != null ? passage.pageInDoc : `PDF ${passage.pdfPage}`;
-    blocks.push(`[Id ${passage.docId}, p. ${pageRef}]\nid: ${passage.id}\npágina do PDF: ${passage.pdfPage}\n${String(passage.text).trim()}`);
+    const mark = passage.method === 'ocr' ? `\n${OCR_MARK}` : '';
+    blocks.push(`[Id ${passage.docId}, fl. ${pageRef}]\nid: ${passage.id}\npágina do PDF: ${passage.pdfPage}\n${String(passage.text).trim()}${mark}`);
   }
   return blocks.join('\n\n');
 }
@@ -110,7 +114,7 @@ export function buildChatGPTPackage(caseResult, { docType, request = '', charLim
     'Instruções do método padrão, adaptadas para citação manual:',
     ...ADAPTED_INSTRUCTIONS.map((line, index) => `${index + 1}. ${line}`),
     '',
-    'Forma da citação: [Id <docId>, p. <n>]. Exemplo: [Id 1001, p. 2]. O n é a página dentro do documento, não a página solta do arquivo PDF.',
+    'Forma da citação: [Id <docId>, fl. <n>]. Exemplo: [Id 1001, fl. 2]. O n é a folha dentro do documento, não a página solta do arquivo PDF.',
     '',
     'Lacunas conhecidas:',
     gapsSummary,
