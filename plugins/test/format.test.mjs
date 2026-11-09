@@ -19,7 +19,9 @@ test("formato.md is the shared reader contract", async () => {
   assert.match(reference, /Lume: pronto · N docs · L lacunas · parte 1 de T/);
   assert.match(reference, /Lume: falhou/);
   assert.match(reference, /Págs\. do documento/);
+  assert.match(reference, /\[ID X\]/);
   assert.match(reference, /\[ID X, pág\. Y\]/);
+  assert.match(reference, /não lacuna/);
   assert.match(reference, /pág\. PDF/);
   assert.match(reference, /imagem_sem_texto/);
   assert.match(reference, /ilegivel/);

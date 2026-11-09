@@ -49,6 +49,7 @@ const PAGE = "[1-9]\\d*";
 const TAG_BOTH = new RegExp(`^\\[ID ([A-Za-z0-9][A-Za-z0-9._:-]*), pág\\. (${PAGE}), pág\\. PDF (${PAGE})\\]$`);
 const TAG_DOC = new RegExp(`^\\[ID ([A-Za-z0-9][A-Za-z0-9._:-]*), pág\\. (${PAGE})\\]$`);
 const TAG_PDF = new RegExp(`^\\[ID ([A-Za-z0-9][A-Za-z0-9._:-]*), pág\\. PDF (${PAGE})\\]$`);
+const TAG_ID = /^\[ID ([A-Za-z0-9][A-Za-z0-9._:-]*)\]$/;
 const GAP_LINE = new RegExp(`^- ID ([A-Za-z0-9][A-Za-z0-9._:-]*)(?:, pág\\. (${PAGE}))?(?:, pág\\. PDF (${PAGE}))?: (imagem_sem_texto|ilegivel|binario|falha_busca)$`);
 const INDEX_HEADER = "ID | Tipo | Data | Págs. do documento | Situação";
 const COUNTS_RE = /^Contagens: (\d+) documentos, (\d+) trechos, (\d+) lacunas$/;
@@ -139,6 +140,8 @@ function parseTag(line) {
   if (doc) return { id: doc[1], docPage: Number(doc[2]), pdfPage: null };
   const pdf = TAG_PDF.exec(line);
   if (pdf) return { id: pdf[1], docPage: null, pdfPage: Number(pdf[2]) };
+  const bare = TAG_ID.exec(line);
+  if (bare) return { id: bare[1], docPage: null, pdfPage: null };
   return null;
 }
 

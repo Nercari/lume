@@ -61,11 +61,12 @@ Motivo, um destes: `imagem_sem_texto`, `ilegivel`, `binario`, `falha_busca`. `il
 
 ID, página do documento e página do PDF são distintos. Não os troque e não os estime. Não aceite `~`, `aprox.` nem página inventada para fechar um buraco.
 
-- `[ID X, pág. Y]` — Y é a página do documento.
+- `[ID X]` — nenhuma página conhecida. O trecho é texto, não lacuna. Exportação de texto do PJe+R e vista HTML nativa muitas vezes vêm assim. Não estime a página.
+- `[ID X, pág. Y]` — Y é a página do documento. Não acrescente página do PDF se ela não for conhecida.
 - `[ID X, pág. PDF Z]` — só a página do PDF é conhecida. Não transforme Z em página do documento.
-- `[ID X, pág. Y, pág. PDF Z]` — as duas são conhecidas. As duas entram, mesmo quando o número coincide.
+- `[ID X, pág. Y, pág. PDF Z]` — as duas são conhecidas. `pág. PDF` entra só nesse caso. As duas entram, mesmo quando o número coincide.
 
-Uma etiqueta sem página não conta como página. Um trecho `lido por visão` usa só o ID e a página que o usuário ou o helper já deram.
+Um trecho `lido por visão` usa só o ID e a página que o usuário ou o helper já deram. Se eles não deram página, a etiqueta é `[ID X]`.
 
 ## Cobertura
 
@@ -75,7 +76,7 @@ Antes de qualquer produto:
 2. Copie os IDs do índice, na ordem.
 3. Copie a linha `Ids:` de cada parte.
 4. A união, sem repetir ID, tem de ser o índice. Cada ID do índice aparece em exatamente uma parte. Se faltar parte, sobrar ID ou o mesmo ID estiver em duas partes, não comece: diga a parte ou o ID.
-5. Cada etiqueta `[ID X, pág. Y]` (e as formas com `pág. PDF`) cita um ID do índice, na parte que listou esse ID.
+5. Cada etiqueta `[ID X]`, `[ID X, pág. Y]` ou com `pág. PDF` cita um ID do índice, na parte que listou esse ID. `[ID X]` é texto sem página, não lacuna.
 6. Toda linha do índice que não esteja `lido` tem lacuna na parte 1. `lido` não tem lacuna. `parcial` tem trecho e lacuna.
 
 O corte de arquivo fica perto de 350000 caracteres por parte. Um único trecho pode passar disso; a parte não mistura dois trechos acima do corte. A ordem dentro da parte segue o índice.

@@ -2,7 +2,7 @@
 
 ## English summary
 
-Shared case package emitted by the Lume button (`origem: botao`) and by the ChatGPT Work skill (`origem: work`). The two origins are identical: same `#lume-autos` tab, same DOM, same body, same title. Work opens that tab by clicking the in-page button `#lume-estudar`. The ready title is `Lume: pronto · N docs · L lacunas · parte 1 de T`; a failure title starts `Lume: falhou`. One browser view and the part files `lume-caso-parte-kk-de-NN.md` carry the same body. Part 1 holds the master index and the gap list. Passages use `[ID X, pág. Y]` for a document page, `[ID X, pág. PDF Z]` for a PDF page, and both when both are known. The three locators (document id, document page, PDF page) stay distinct and are never estimated. Parts split near 350000 characters. Order is the PJe timeline. An optional `lume-caso.json` sidecar repeats documents, parts, and gaps for a machine check. Normative text below is Portuguese.
+Shared case package emitted by the Lume button (`origem: botao`) and by the ChatGPT Work skill (`origem: work`). The two origins are identical: same `#lume-autos` tab, same DOM, same body, same title. Work opens that tab by clicking the in-page button `#lume-estudar`. The ready title is `Lume: pronto · N docs · L lacunas · parte 1 de T`; a failure title starts `Lume: falhou`. One browser view and the part files `lume-caso-parte-kk-de-NN.md` carry the same body. Part 1 holds the master index and the gap list. Passages use `[ID X]` when no page is known (still text, not a gap), `[ID X, pág. Y]` for a document page, and `pág. PDF Z` only when a PDF page is known. The three locators (document id, document page, PDF page) stay distinct and are never estimated. Parts split near 350000 characters. Order is the PJe timeline. An optional `lume-caso.json` sidecar repeats documents, parts, and gaps for a machine check. Normative text below is Portuguese.
 
 ## 1. Escopo
 
@@ -116,7 +116,7 @@ Colunas, separadas por ` | ` (espaço, pipe, espaço):
 | ID | Id estável da peça no PJe. Não é a página. |
 | Tipo | Um rótulo da taxonomia já usada pelo classificador: `petição inicial`, `contestação`, `réplica`, `decisão`, `despacho`, `sentença`, `ato ordinatório`, `certidão`, `procuração`, `documento de identificação`, `laudo`, `ofício`, `manifestação`, `recurso/apelação`, `embargos`, `intimação/citação`, `outros`. |
 | Data | `AAAA-MM-DD` ou `—`. Não se inventa data. |
-| Págs. do documento | Páginas do documento efetivamente vistas: `1`, `1, 3` ou intervalo inclusivo `1-3`. `—` se nenhuma página do documento foi lida no arquivo. Não é a quantidade de páginas. Não é a página do PDF. Não se completa um intervalo com página não vista. |
+| Págs. do documento | Páginas do documento conhecidas: `1`, `1, 3` ou intervalo inclusivo `1-3`. `—` quando nenhuma página do documento é conhecida. O texto da peça pode existir mesmo assim. Não é a quantidade de páginas. Não é a página do PDF. Não se completa um intervalo com página não vista. |
 | Situação | `lido`, `parcial`, `ilegível`, `ausente`, `falhou`, `restrito`. |
 
 `lido`: todo o texto visto está legível; há ao menos um trecho; não há lacuna desse id. `parcial`: há trecho e há lacuna. `ilegível`, `ausente`, `falhou`, `restrito`: não há trecho; há ao menos uma lacuna.
@@ -144,9 +144,10 @@ texto do trecho
 
 Gramática da etiqueta, uma linha:
 
-- `[ID <id>, pág. <n>]` — página do documento.
-- `[ID <id>, pág. PDF <m>]` — só a página do PDF.
-- `[ID <id>, pág. <n>, pág. PDF <m>]` — as duas, obrigatória sempre que as duas forem conhecidas, mesmo se `<n>` for igual a `<m>`.
+- `[ID <id>]` — nenhuma página conhecida. O trecho continua texto. Exportação de texto do PJe+R e vista HTML nativa costumam chegar assim. Não viram lacuna e não recebem página estimada.
+- `[ID <id>, pág. <n>]` — página do documento. Sem `pág. PDF` quando a página do PDF não é conhecida.
+- `[ID <id>, pág. PDF <m>]` — só a página do PDF. Não se inventa a página do documento.
+- `[ID <id>, pág. <n>, pág. PDF <m>]` — as duas são conhecidas, mesmo se `<n>` for igual a `<m>`. `pág. PDF` só entra nesse caso, ou no caso em que só o PDF é conhecido.
 
 O texto do trecho vem nas linhas seguintes, até a linha em branco ou a próxima etiqueta. Não se corta um trecho no meio para caber no limite.
 
@@ -188,7 +189,7 @@ Opcional. Se o arquivo estiver na mesma pasta, tem de bater com as partes. Campo
 
 ## 6. Regras
 
-1. Três localizadores distintos: ID, página do documento, página do PDF. Nenhum recebe o valor de outro.
+1. Três localizadores distintos: ID, página do documento, página do PDF. Nenhum recebe o valor de outro. Página desconhecida omite-se. O trecho fica `[ID <id>]` e segue sendo texto.
 2. Página não estimada. Proibido `~`, `aprox` e `aproximadamente` no arquivo de parte e no sidecar. Proibido preencher página do documento com a posição do arquivo, com a página do PDF ou com um intervalo “até o fim”.
 3. Cada ID do índice aparece em exatamente uma parte (`ids` / `Ids:`). A concatenação, da parte 1 até a parte N, é o índice na mesma ordem.
 4. Cada etiqueta cita um ID do índice e fica na parte que listou esse ID.

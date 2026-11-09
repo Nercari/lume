@@ -112,6 +112,21 @@ test("broken index id in more than one part", async () => {
   }
 });
 
+test("a passage with no page stays text as [ID X]", async () => {
+  const dir = await copyValid();
+  try {
+    await rm(path.join(dir, "lume-caso.json"));
+    await edit(dir, "lume-caso-parte-01-de-02.md", (text) => text
+      .replace("[ID D1, pág. 1, pág. PDF 1]", "[ID D1]")
+      .replace("D1 | petição inicial | 2020-02-02 | 1 | lido", "D1 | petição inicial | 2020-02-02 | — | lido"));
+    const report = await validateDir(dir);
+    assert.equal(report.ok, true, JSON.stringify(report));
+    assert.equal(report.counts.tags, 2);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test("broken tag refers to an id outside the index", async () => {
   const dir = await copyValid();
   try {

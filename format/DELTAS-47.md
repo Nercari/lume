@@ -39,7 +39,7 @@ O índice e as lacunas já ficam só na parte 1 da vista. Manter isso. Acrescent
 - só a do PDF: `[ID X, pág. PDF Z]`
 - nenhuma: `[ID X]`
 
-Aplicar: se as duas páginas existem, sempre `[ID X, pág. Y, pág. PDF Z]`, mesmo quando os números coincidem. `pág.` sem a palavra `documento` é a página do documento. Não emitir `[ID X]` sem página: sem página conhecida, o item é lacuna, não trecho.
+Aplicar: sem página conhecida, a etiqueta é `[ID X]` e o trecho continua texto. Exportação de texto do PJe+R e vista HTML nativa muitas vezes não têm localizador; isso não vira lacuna. `[ID X, pág. Y]` é a página do documento. `pág. PDF Z` entra só quando a página do PDF é conhecida. Se as duas existem, `[ID X, pág. Y, pág. PDF Z]`, mesmo quando os números coincidem. `pág.` sem a palavra `documento` é a página do documento. Não estimar página.
 
 ## 6. Arquivos de parte
 
