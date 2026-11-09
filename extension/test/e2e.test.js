@@ -7,7 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { pngFromGray, renderWord } from '../../manual/test/bitmap.js';
 
 const dist = new URL('../dist/', import.meta.url);
-const CASE_URL = 'https://pje1g.trf1.jus.br/pje/Processo/ConsultaProcesso/Detalhe/listAutosDigitais.seam?idProcesso=1&ca=token';
+const CASE_A = 'https://pje1g.trf1.jus.br/pje/Processo/ConsultaProcesso/Detalhe/listAutosDigitais.seam?idProcesso=1&ca=token';
+const CASE_B = 'https://pje1g.trf1.jus.br/pje/Processo/ConsultaProcesso/Detalhe/listAutosDigitais.seam?idProcesso=2&ca=token';
 
 function textPdf(word) {
   const stream = `BT /F1 24 Tf 40 90 Td (${word}) Tj ET`;
@@ -32,18 +33,19 @@ function textPdf(word) {
   return Buffer.from(body);
 }
 
-function timeline(ids) {
+function timeline(ids, caseNumber) {
   const rows = ids.map((id) => `<div class="media"><a href="/pje/documento/download/${id}">ver</a><span class="data">01/01/2020</span></div>`).join('');
-  return `<!doctype html><html><body><span class="numero-processo">TEST-CASE-A</span><span id="viewerCount">3 of 7</span><div id="divTimeLine">${rows}</div></body></html>`;
+  return `<!doctype html><html><body><span class="numero-processo">${caseNumber}</span><span id="viewerCount">3 of 7</span><div id="divTimeLine">${rows}</div></body></html>`;
 }
 
-test('one click reads fifty timeline documents and opens the case on the PJe tab', { timeout: 300_000 }, async () => {
+test('the page button reads fifty documents, then a second case cannot paint over the first', { timeout: 300_000 }, async () => {
   const { chromium } = await import('playwright-core');
   const htmlIds = Array.from({ length: 40 }, (_, i) => `H${String(i + 1).padStart(2, '0')}`);
   const pdfIds = Array.from({ length: 5 }, (_, i) => `P${String(i + 1).padStart(2, '0')}`);
   const scanIds = Array.from({ length: 5 }, (_, i) => `S${String(i + 1).padStart(2, '0')}`);
   const ids = [...htmlIds, ...pdfIds, ...scanIds];
-  const pageHtml = timeline(ids);
+  const pageA = timeline(ids, 'TEST-CASE-A');
+  const pageB = timeline(['B01'], 'TEST-CASE-B');
   const pdf = textPdf('TEXTO');
   const png = pngFromGray(renderWord('LAUDO', 12, 48));
   const userData = await mkdtemp(join(tmpdir(), 'lume-e2e-'));
@@ -69,6 +71,7 @@ test('one click reads fifty timeline documents and opens the case on the PJe tab
       if (url.pathname.includes('/documento/download/')) {
         await new Promise((resolve) => setTimeout(resolve, 150));
         const id = url.pathname.split('/').pop();
+        if (id === 'B01') return route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: '<p>CASEBTXT</p>' });
         if (id.startsWith('H')) {
           return route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: `<p>${id}TXT</p>` });
         }
@@ -77,19 +80,20 @@ test('one click reads fifty timeline documents and opens the case on the PJe tab
         return route.fulfill({ status: 404, contentType: 'text/plain', body: 'missing' });
       }
       if (url.pathname.includes('listAutosDigitais')) {
-        return route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: pageHtml });
+        const body = url.searchParams.get('idProcesso') === '2' ? pageB : pageA;
+        return route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body });
       }
       return route.fulfill({ status: 404, contentType: 'text/plain', body: 'missing' });
     });
     const opened = [];
     context.on('page', (page) => opened.push(page));
     const pje = await context.newPage();
-    await pje.goto(CASE_URL, { waitUntil: 'domcontentloaded' });
+    await pje.goto(CASE_A, { waitUntil: 'domcontentloaded' });
     await pje.locator('#divTimeLine .media').nth(49).waitFor({ timeout: 15_000 });
-    const panel = await context.newPage();
-    await panel.goto(`chrome-extension://${extensionId}/panel.html`);
+    await pje.locator('#lume-estudar').waitFor({ timeout: 15_000 });
     const started = Date.now();
-    await panel.locator('#study').click({ timeout: 20_000 });
+    await pje.locator('#lume-estudar').click({ timeout: 20_000 });
+    await pje.waitForFunction(() => document.getElementById('lume-estudar')?.textContent.startsWith('Lume: estudando'));
     const study = await waitFor(opened, (page) => page.url().includes('study.html'));
     await study.locator('#result[data-state="view"], #result[data-state="failed"]').waitFor({ timeout: 240_000 });
     const totalMs = Date.now() - started;
@@ -104,8 +108,11 @@ test('one click reads fifty timeline documents and opens the case on the PJe tab
     assert.match(await study.locator('#parts').textContent(), /lume-caso-parte-01-de-01\.md/);
     assert.match(await study.locator('#parts').textContent(), /Copiar parte 1/);
     assert.equal(await study.locator('#save').textContent(), 'Salvar partes');
+    assert.ok(study.url().startsWith(`chrome-extension://${extensionId}/`));
+    assert.match(study.url(), /attach=0/);
+    assert.equal(await study.locator('#result').getAttribute('data-attach'), '0');
     const viewPage = await waitFor(opened, (page) => page.url().includes('#lume-autos') || page.url().startsWith('chrome-error://'));
-    await viewPage.goto(`${CASE_URL}#lume-autos`, { waitUntil: 'domcontentloaded' });
+    await viewPage.goto(`${CASE_A}#lume-autos`, { waitUntil: 'domcontentloaded' });
     await viewPage.locator('#lume-caso').waitFor({ timeout: 20_000 });
     const root = viewPage.locator('#lume-caso-root');
     assert.equal(await root.getAttribute('data-formato'), 'lume-caso/1');
@@ -113,6 +120,9 @@ test('one click reads fifty timeline documents and opens the case on the PJe tab
     const full = await viewPage.locator('#lume-caso').textContent();
     assert.match(full ?? '', /^---\nformato: lume-caso\/1\nprocesso: TEST-CASE-A\nparte: 1\ntotal: 1\norigem: botao\n---/);
     assert.match(full ?? '', /Índice/);
+    await viewPage.waitForFunction(() => document.title.startsWith('Lume: pronto'));
+    const gaps = Number(/Lacunas: (\d+)/.exec(full ?? '')?.[1]);
+    assert.equal(await viewPage.title(), `Lume: pronto · 50 docs · ${gaps} lacunas · parte 1 de 1`);
     assert.match(full ?? '', /Documentos: 50/);
     assert.match(full ?? '', /ID \| Tipo \| Data \| Págs\. do documento \| Situação/);
     assert.match(full ?? '', /H01 \| .* \| 01\/01\/2020 \| 1 \| legível/);
@@ -127,6 +137,27 @@ test('one click reads fifty timeline documents and opens the case on the PJe tab
     assert.equal(measure.ocrPerPage.length, 5);
     assert.ok(measure.fetchMs >= 50 * 140, `fetch ${measure.fetchMs}`);
     console.log(`MEASURE ${JSON.stringify({ totalSec: Number((totalMs / 1000).toFixed(2)), ...measure })}`);
+
+    const seen = new Set(opened);
+    const pjeB = await context.newPage();
+    await pjeB.goto(CASE_B, { waitUntil: 'domcontentloaded' });
+    await pjeB.locator('#lume-estudar').click({ timeout: 20_000 });
+    const studyB = await waitFor(opened, (page) => page.url().includes('study.html') && !seen.has(page));
+    await studyB.locator('#result[data-state="view"], #result[data-state="failed"]').waitFor({ timeout: 120_000 });
+    assert.equal(await studyB.locator('#result').getAttribute('data-state'), 'view');
+    const viewB = await waitFor(opened, (page) => !seen.has(page) && (page.url().includes('#lume-autos') || page.url().startsWith('chrome-error://')));
+    await viewB.goto(`${CASE_B}#lume-autos`, { waitUntil: 'domcontentloaded' });
+    await viewB.locator('#lume-caso').waitFor({ timeout: 20_000 });
+    const textB = await viewB.locator('#lume-caso').textContent();
+    assert.match(textB ?? '', /CASEBTXT/);
+    assert.match(textB ?? '', /processo: TEST-CASE-B/);
+    assert.equal(await viewB.title(), 'Lume: pronto · 1 docs · 0 lacunas · parte 1 de 1');
+    await viewPage.goto(`${CASE_A}#lume-autos`, { waitUntil: 'domcontentloaded' });
+    await viewPage.locator('#lume-caso').waitFor({ timeout: 20_000 });
+    const again = await viewPage.locator('#lume-caso').textContent();
+    assert.match(again ?? '', /processo: TEST-CASE-A/);
+    assert.equal((again ?? '').includes('CASEBTXT'), false);
+    assert.equal(await viewPage.title(), `Lume: pronto · 50 docs · ${gaps} lacunas · parte 1 de 1`);
   } finally {
     await context?.close();
     await rm(userData, { recursive: true, force: true });

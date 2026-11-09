@@ -8,9 +8,15 @@
 
 import { sameOriginDocuments } from './calibrate.js';
 import { parseListPage, Stop } from './core.js';
+import { DOCUMENT_PAUSE_MS } from './page-trigger.js';
 import { safeQueryAll } from './profile.js';
 import { urlPattern } from './sanitize.js';
 import { matchUrlRule, URL_RULE_IDS } from './url-rules.js';
+
+function wait(ms) {
+  if (!ms) return Promise.resolve();
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 const SUPPORTED = new Set([
   'application/pdf',
@@ -65,6 +71,7 @@ export async function collectCase({
   onProgress = () => {},
   onDocument = async () => {},
   profile = null,
+  pauseMs = DOCUMENT_PAUSE_MS,
 }) {
   const origin = new URL(startUrl).origin;
   const misses = [];
@@ -155,6 +162,7 @@ export async function collectCase({
     }
 
     let index = 0;
+    let documentFetches = 0;
     for (const item of items) {
       guard();
       index += 1;
@@ -179,6 +187,8 @@ export async function collectCase({
       item.rule = rule.id;
       let res;
       try {
+        if (documentFetches > 0) await wait(pauseMs);
+        documentFetches += 1;
         res = await get(item.href);
       } catch (error) {
         if (error instanceof Stop) throw error;

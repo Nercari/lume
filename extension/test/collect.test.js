@@ -4,7 +4,7 @@ import { collectCase } from '../src/collect.js';
 import { PROFILES } from '../src/profile.js';
 import { URL_RULE_IDS } from '../src/url-rules.js';
 import { doc, el } from './dom.js';
-import { ORIGIN, page1, page2, PAGE1, PAGE2 } from './fixtures.js';
+import { ORIGIN, listPage, page1, page2, row, PAGE1, PAGE2 } from './fixtures.js';
 
 function bytesOf(text) {
   return new TextEncoder().encode(text);
@@ -43,6 +43,7 @@ test('collection keeps every row and names what it could not read', async () => 
     startDoc: page1(),
     startUrl: PAGE1,
     fetchBytes: t.fetchBytes,
+    pauseMs: 0,
     onDocument: async (doc) => seen.push(doc.id),
   });
   assert.equal(result.status, 'complete');
@@ -68,7 +69,7 @@ test('a link that matches no URL rule is listed and not fetched', async () => {
     total: 1,
   });
   const t = transport({ [PAGE1]: () => ({ status: 200, contentType: 'text/html', doc: start, bytes: new Uint8Array() }) });
-  const result = await collectCase({ startDoc: start, startUrl: PAGE1, fetchBytes: t.fetchBytes });
+  const result = await collectCase({ startDoc: start, startUrl: PAGE1, fetchBytes: t.fetchBytes, pauseMs: 0 });
   assert.equal(result.items[0].state, 'failed');
   assert.match(result.items[0].detail, /nenhuma regra de URL/);
   for (const id of URL_RULE_IDS) assert.match(result.items[0].detail, new RegExp(id));
@@ -101,6 +102,7 @@ test('each document PDF is fetched even when a full-autos link is on the page', 
     startDoc: start,
     startUrl: PAGE1,
     fetchBytes: t.fetchBytes,
+    pauseMs: 0,
     onDocument: async (doc) => seen.push([doc.id, doc.source, new TextDecoder().decode(doc.bytes)]),
   });
   assert.equal(result.mode, 'documents');
@@ -119,6 +121,7 @@ test('a profile can opt into the full-autos PDF instead of each document', async
     startDoc: start,
     startUrl: PAGE1,
     fetchBytes: t.fetchBytes,
+    pauseMs: 0,
     profile: profilesOptingIntoAutos(),
     onDocument: async (doc) => seen.push([doc.id, doc.source, new TextDecoder().decode(doc.bytes)]),
   });
@@ -142,10 +145,31 @@ test('an autos control whose URL matches no autos rule is reported and documents
     startDoc: start,
     startUrl: PAGE1,
     fetchBytes: t.fetchBytes,
+    pauseMs: 0,
     profile: profilesOptingIntoAutos(),
   });
   assert.equal(result.mode, 'documents');
   assert.ok(result.misses.some((miss) => miss.reason === 'autos'));
   assert.equal(result.items[0].state, 'processed');
   assert.ok(t.calls.includes(`${ORIGIN}/pje/doc?id=D1`));
+});
+
+test('document fetches pause 300 ms unless the caller turns the pause off', async () => {
+  const start = listPage({
+    current: 1,
+    total: 1,
+    rows: [row('D1'), row('D2')],
+  });
+  const times = [];
+  const result = await collectCase({
+    startDoc: start,
+    startUrl: PAGE1,
+    fetchBytes: async () => {
+      times.push(Date.now());
+      return { status: 200, contentType: 'application/pdf', bytes: bytesOf('pdf') };
+    },
+  });
+  assert.equal(result.status, 'complete');
+  assert.equal(times.length, 2);
+  assert.ok(times[1] - times[0] >= 250, String(times[1] - times[0]));
 });

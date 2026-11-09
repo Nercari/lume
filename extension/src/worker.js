@@ -1,12 +1,13 @@
 // The side panel is available on every tab. On PJe it shows the inventory; elsewhere it offers
 // the offline PDF page. The toolbar click opens the panel. If that panel cannot be armed, the
-// same click opens the PDF page. The worker relays study slices and keeps the rendered case
-// view in memory for the open study. It does not write the case to disk.
+// same click opens the PDF page. The worker relays study slices and keeps each rendered case
+// view in memory, keyed by the page it came from. It does not write the case to disk.
+import { createViewStore } from './page-trigger.js';
 const PDF_PAGE = 'manual/lume-pdf.html';
 let panelClickOpensPanel = false;
 let pjeTabId = null;
 const relays = new Map();
-let view = { parts: null, allText: '', pageUrl: null };
+const views = createViewStore();
 
 function openPdfMode() {
   chrome.tabs.create({ url: chrome.runtime.getURL(PDF_PAGE) });
@@ -50,7 +51,7 @@ chrome.runtime.onConnect.addListener((port) => {
     slot.study = port;
     port.onMessage.addListener((msg) => {
       if (msg?.type === 'view') {
-        view = { parts: msg.parts ?? [], allText: msg.allText ?? '', pageUrl: msg.pageUrl ?? null };
+        views.put(msg);
         return;
       }
       slot.collect?.postMessage(msg);
@@ -75,15 +76,47 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
     reply({ tabId: pjeTabId });
     return true;
   }
+  if (msg?.type === 'lume:study-here') {
+    const tabId = sender.tab?.id;
+    if (tabId == null) {
+      reply({ ok: false });
+      return true;
+    }
+    const studyId = crypto.randomUUID();
+    chrome.tabs.sendMessage(tabId, { type: 'study', studyId }, () => {
+      if (chrome.runtime.lastError) return;
+      chrome.tabs.create({ url: chrome.runtime.getURL(`study.html?id=${studyId}&attach=0`) });
+    });
+    reply({ ok: true, studyId });
+    return true;
+  }
   if (msg?.type === 'lume:take-view') {
-    const parts = view.parts ?? [];
+    const stored = views.take(msg.pageUrl);
+    const parts = stored?.parts ?? [];
+    const pageUrl = stored?.pageUrl ?? null;
     if (msg.all === true) {
-      reply({ allText: view.allText ?? '', total: parts.length });
+      reply({
+        allText: stored?.allText ?? '',
+        total: parts.length,
+        parts,
+        pageUrl,
+        documents: stored?.documents ?? 0,
+        gaps: stored?.gaps ?? 0,
+      });
       return true;
     }
     const wanted = Number(msg.part) || 1;
     const found = parts.find((item) => item.n === wanted) ?? null;
-    reply({ text: found?.text ?? '', part: found?.n ?? 0, total: parts.length });
+    reply({
+      text: found?.text ?? '',
+      part: found?.n ?? 0,
+      total: parts.length,
+      parts,
+      allText: stored?.allText ?? '',
+      pageUrl,
+      documents: stored?.documents ?? 0,
+      gaps: stored?.gaps ?? 0,
+    });
     return true;
   }
   return false;

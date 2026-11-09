@@ -5,6 +5,7 @@ Instale uma vez. Depois, cada processo é um clique.
 1. Carregue a extensao no Chrome (pasta extension) e cole chatgpt/PROJETO-LUME.md nas Instrucoes do Projeto.
 2. Abra o processo no PJe e clique Estudar processo.
 3. Leia a aba do caso (#lume-autos) no painel do ChatGPT. Salvar partes e Copiar parte k ficam na pagina de estudo.
+Plano B: se o Work não conseguir (sem cota, sem permissão, botão não achado), clique você no botão Lume: Estudar processo na página do processo. A aba e os próximos passos são os mesmos.
 Se o painel nao achar a lista: Calibrar PJe, salve lume-calibracao.json, envie ao Grok.
 Fallback: Gerar pacote do caso, com o PDF baixado no PJe.
 
