@@ -174,6 +174,24 @@ test("published method keeps modules and drops maintenance", async () => {
   assert.equal(/\bDUO\b/.test(joined), false);
 });
 
+test("vision reads a page image and the plugin does not OCR", async () => {
+  const pacote = await readFile(path.join(root, "skills/jef-pacote/SKILL.md"), "utf8");
+  assert.match(pacote, /lido por visão/);
+  assert.match(pacote, /\[ID X, pág\. Y\]/);
+  assert.match(pacote, /imagem sem texto/);
+  assert.match(pacote, /Tesseract/);
+  assert.match(pacote, /sandbox Python/);
+  assert.match(pacote, /nunca adivinhado/);
+  const leia = await readFile(path.join(root, "LEIA-ME.md"), "utf8");
+  const steps = leia.split("\n").filter((line) => /^\d+\.\s/.test(line));
+  assert.ok(steps.length > 0 && steps.length <= 3, steps.join(" | "));
+  for (const file of await filesUnder(root)) {
+    assert.equal(file.endsWith(".py"), false, file);
+    const raw = (await readFile(file)).toString("latin1").toLowerCase();
+    assert.equal(/pytesseract|apt(?:-get)? install tesseract|pip install/.test(raw), false, file);
+  }
+});
+
 test("logo is a generated 512 square png", async () => {
   const bytes = renderLogo();
   const onDisk = await readFile(path.join(root, "assets/logo.png"));
