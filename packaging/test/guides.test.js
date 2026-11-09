@@ -58,6 +58,17 @@ test('staff-facing guides forbid token paste and paid fallback instructions', ()
   }
 });
 
+test('COMECE-AQUI has three numbered steps and an unnumbered Plano B', () => {
+  const text = readFileSync(join(guiasDir, 'COMECE-AQUI.txt'), 'utf8');
+  const numbered = text.split('\n').filter((line) => /^\d+\.\s/.test(line));
+  assert.equal(numbered.length, 3);
+  const plano = text.split('\n').find((line) => line.startsWith('Plano B:'));
+  assert.equal(
+    plano,
+    'Plano B: se o Work não conseguir (sem cota, sem permissão, botão não achado), clique você no botão Lume: Estudar processo na página do processo. A aba e os próximos passos são os mesmos.',
+  );
+});
+
 test('all packaging docs exist and are non-empty', () => {
   const names = readdirSync(docsDir).filter((f) => f.endsWith('.md'));
   assert.ok(names.length >= 7, names.join(', '));
