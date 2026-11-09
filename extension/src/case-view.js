@@ -2,6 +2,8 @@
 // A document page number is printed only when the file says it. It is never estimated.
 
 export const PART_MAX_CHARS = 350000;
+export const CASE_FORMAT = 'lume-caso/1';
+export const CASE_ORIGIN = 'botao';
 
 const HOSTS = new Set(['pje1g.trf1.jus.br', 'pje2g.trf1.jus.br']);
 const SITUATIONS = ['legível', 'OCR', 'ilegível', 'imagem sem texto', 'binário'];
@@ -111,8 +113,26 @@ function chunkPassages(passages, maxChars) {
   return chunks;
 }
 
-function renderPart(n, total, header, index, gaps, passages) {
-  const lines = [`Parte ${n} de ${total}`];
+function yamlScalar(value) {
+  const text = String(value ?? '');
+  if (/^[A-Za-z0-9][A-Za-z0-9._:-]*$/.test(text)) return text;
+  return JSON.stringify(text);
+}
+
+function frontMatter(processo, parte, total) {
+  return [
+    '---',
+    `formato: ${CASE_FORMAT}`,
+    `processo: ${yamlScalar(processo)}`,
+    `parte: ${parte}`,
+    `total: ${total}`,
+    `origem: ${CASE_ORIGIN}`,
+    '---',
+  ];
+}
+
+function renderPart(n, total, header, index, gaps, passages, processo, title) {
+  const lines = [...frontMatter(processo, n, total), '', title];
   if (n === 1) {
     lines.push('', ...header, '', 'Índice', ...index, '', 'Lacunas', ...(gaps.length ? gaps : ['- nenhuma']));
   }
@@ -122,7 +142,8 @@ function renderPart(n, total, header, index, gaps, passages) {
   return lines.join('\n').trim() + '\n';
 }
 
-export function renderCaseParts(caseResult, items = [], maxChars = PART_MAX_CHARS) {
+export function renderCaseParts(caseResult, items = [], maxChars = PART_MAX_CHARS, meta = {}) {
+  const processo = meta?.processo ?? '';
   const header = headerLines(caseResult, items);
   const index = indexLines(caseResult, items);
   const gaps = gapLines(caseResult);
@@ -132,8 +153,8 @@ export function renderCaseParts(caseResult, items = [], maxChars = PART_MAX_CHAR
     n: i + 1,
     total,
     name: partFileName(i + 1, total),
-    text: renderPart(i + 1, total, header, index, gaps, passages),
+    text: renderPart(i + 1, total, header, index, gaps, passages, processo, `Parte ${i + 1} de ${total}`),
   }));
-  const allText = renderPart(1, 1, header, index, gaps, passagesOf(caseResult)).replace(/^Parte 1 de 1\n/, 'Caso completo\n');
+  const allText = renderPart(1, 1, header, index, gaps, passagesOf(caseResult), processo, 'Caso completo');
   return { parts, allText };
 }

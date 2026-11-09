@@ -23,9 +23,16 @@ test('the case view keeps timeline order and does not invent a document page', (
   const view = renderCaseParts(caseResult, [
     { id: 'DOC2', date: '02/02/2020', state: 'processed' },
     { id: 'DOC1', date: null, state: 'processed' },
-  ]);
+  ], undefined, { processo: 'TEST-CASE-A' });
   assert.equal(view.parts.length, 1);
+  assert.equal(view.parts[0].name, 'lume-caso-parte-01-de-01.md');
+  assert.match(view.parts[0].text, /^---\nformato: lume-caso\/1\nprocesso: TEST-CASE-A\nparte: 1\ntotal: 1\norigem: botao\n---\n/);
   assert.match(view.parts[0].text, /Parte 1 de 1/);
+  assert.match(view.parts[0].text, /Índice/);
+  assert.match(view.allText, /^---\nformato: lume-caso\/1\nprocesso: TEST-CASE-A\nparte: 1\ntotal: 1\norigem: botao\n---\n/);
+  assert.match(view.allText, /Caso completo/);
+  const quoted = renderCaseParts(caseResult, [], undefined, { processo: 'a: b' });
+  assert.match(quoted.parts[0].text, /processo: "a: b"/);
   assert.match(view.parts[0].text, /Documentos: 2/);
   assert.match(view.parts[0].text, /ID \| Tipo \| Data \| Págs\. do documento \| Situação/);
   const index = view.allText.split('\n');
@@ -57,7 +64,10 @@ test('a long case is split into ordered parts without cutting a passage', () => 
     gaps: [],
   }, [], 50);
   assert.ok(view.parts.length > 1);
+  assert.match(view.parts[0].text, /formato: lume-caso\/1/);
+  assert.match(view.parts[0].text, /origem: botao/);
   assert.match(view.parts[0].text, /Parte 1 de/);
+  assert.match(view.parts[1].text, /^---\nformato: lume-caso\/1\nprocesso: ""\nparte: 2\n/);
   assert.match(view.parts[1].text, /Parte 2 de/);
   assert.match(view.parts[0].text, /Índice/);
   assert.match(view.parts[0].text, /Documentos: 1/);

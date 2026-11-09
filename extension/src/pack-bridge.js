@@ -5,8 +5,8 @@ import { PART_MAX_CHARS, renderCaseParts } from './case-view.js';
 
 export { PART_MAX_CHARS };
 
-export function packParts(caseResult, items = []) {
-  return renderCaseParts(caseResult, items).parts.map((part) => ({
+export function packParts(caseResult, items = [], meta = {}) {
+  return renderCaseParts(caseResult, items, PART_MAX_CHARS, meta).parts.map((part) => ({
     n: part.n,
     total: part.total,
     name: part.name,

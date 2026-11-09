@@ -126,6 +126,7 @@ port.onMessage.addListener(async (msg) => {
     try {
       const bundle = {
         mode: msg.mode,
+        caseNumber: msg.caseNumber ?? '',
         misses: msg.misses,
         items: msg.items,
         documents: documents.filter((doc) => doc.source !== 'download-autos'),
@@ -155,7 +156,7 @@ port.onMessage.addListener(async (msg) => {
       savedParts = parts;
       listParts(parts);
       $('cancel').disabled = true;
-      const view = renderCaseParts(caseResult, msg.items ?? []);
+      const view = renderCaseParts(caseResult, msg.items ?? [], undefined, { processo: msg.caseNumber ?? '' });
       const ocrPerPage = (timings ?? []).flatMap((row) => row.ocrPages ?? []);
       $('measure').textContent = JSON.stringify({
         documents: (timings ?? []).length,
