@@ -1,4 +1,5 @@
-// Multi-part case pack for ChatGPT when a single file exceeds size limits.
+// Multi-part case pack for ChatGPT when one part would exceed ~100k tokens (~350k chars pt-BR).
+export const DEFAULT_PACK_PART_MAX_CHARS = 350_000;
 import { OCR_MARK } from './ocr-text.js';
 import { formatSpan, pagesByDoc, sheetNumber } from './sheets.js';
 
@@ -274,11 +275,26 @@ function estimateHeaders(caseResult, partCountGuess) {
   return { part1: part1.length, other: partN.length };
 }
 
-export function buildCasePackParts(caseResult, { maxChars = 120000 } = {}) {
+export function buildCasePackParts(caseResult, { maxChars = DEFAULT_PACK_PART_MAX_CHARS } = {}) {
   const blocks = collectPassageBlocks(caseResult);
-  const headers = estimateHeaders(caseResult, 1);
+  const headersOne = estimateHeaders(caseResult, 1);
+  const bodyBudgetOther = Math.max(1000, maxChars - estimateHeaders(caseResult, 2).other - 64);
+  let units = blocks.map((block) => block.text);
+  const singlePassageBudget = Math.max(1000, maxChars - headersOne.part1 - 64);
+  units = blocks.flatMap((block) => {
+    if (block.text.length <= singlePassageBudget) return [block.text];
+    return splitOversizedBlock(block, bodyBudgetOther);
+  });
+
+  const singleMap = buildDocPartMap([units]);
+  const singleTexts = renderPartTexts(caseResult, [units], singleMap, 1);
+  if (singleTexts[0].length <= maxChars) {
+    return [{ name: partFileName(1, 1), text: singleTexts[0] }];
+  }
+
+  const headers = headersOne;
   const bodyBudget = Math.max(1000, maxChars - headers.part1 - 64);
-  const units = blocks.flatMap((block) => splitOversizedBlock(block, bodyBudget));
+  units = blocks.flatMap((block) => splitOversizedBlock(block, bodyBudget));
 
   let partBodies = packUnitsIntoParts(units, maxChars, [headers.part1, headers.other]);
   let totalParts = partBodies.length;

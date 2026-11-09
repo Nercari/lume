@@ -7,7 +7,7 @@ Use quando o usuário anexar **partes do caso** Lume (`lume-caso-parte-*.md`) ou
 
 ## Estudo integral
 
-Antes de análise ou minuta: ler **todas** as partes 1..N na ordem; declarar **"Li as N partes: X peças, Y lacunas"**; pedir parte faltante em vez de redigir sem base.
+Antes de análise ou minuta: ler partes 1..N na ordem; **listar os Ids lidos em cada parte** e os **Ids de lacuna**; declarar **"Li as N partes: X peças, Y lacunas"**; só então redigir. Pedir parte/Id faltante em vez de minuta sem base.
 
 ## Regras
 

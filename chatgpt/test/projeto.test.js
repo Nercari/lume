@@ -30,6 +30,9 @@ test('full-study rule and voto primary template are present', () => {
   assert.match(projeto, /Li as N partes/i);
   assert.match(projeto, /estudo integral/i);
   assert.match(projeto, /parte.*1 a N/i);
+  assert.match(projeto, /Ids das peças/i);
+  assert.match(projeto, /Ids das lacunas/i);
+  assert.match(projeto, /índice mestre/i);
   assert.match(projeto, /minuta de voto/i);
   assert.match(projeto, /EMENTA/);
   assert.match(projeto, /FUNDAMENTAÇÃO/);
