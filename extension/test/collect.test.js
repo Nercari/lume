@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { collectCase } from '../src/collect.js';
+import { PROFILES } from '../src/profile.js';
 import { URL_RULE_IDS } from '../src/url-rules.js';
 import { doc, el } from './dom.js';
 import { ORIGIN, page1, page2, PAGE1, PAGE2 } from './fixtures.js';
@@ -75,8 +76,8 @@ test('a link that matches no URL rule is listed and not fetched', async () => {
   assert.ok(!t.calls.some((url) => url.includes('logo')));
 });
 
-test('download dos autos is preferred when the profile selector matches a named rule', async () => {
-  const start = doc(
+function autosPage() {
+  return doc(
     el('div', { id: 'autosDigitais' },
       el('span', { class: 'numero-processo' }, 'TEST-CASE-A'),
       el('a', { href: '/pje/downloadAutos.seam' }, 'baixar'),
@@ -84,6 +85,14 @@ test('download dos autos is preferred when the profile selector matches a named 
         el('tr', { class: 'documento', 'data-id': 'D1', 'data-versao': '1' }, el('a', { class: 'abrir', href: '/pje/doc?id=D1' }, 'abrir'))),
       el('span', { class: 'paginacao' }, 'Página 1 de 1')),
   );
+}
+
+function profilesOptingIntoAutos() {
+  return PROFILES.map((profile) => (profile.id === 'trf1-placeholder-unverified' ? { ...profile, useDownloadAutos: true } : profile));
+}
+
+test('each document PDF is fetched even when a full-autos link is on the page', async () => {
+  const start = autosPage();
   const t = transport({
     [`${ORIGIN}/pje/downloadAutos.seam`]: () => ({ status: 200, contentType: 'application/pdf', bytes: bytesOf('AUTOS') }),
   });
@@ -92,6 +101,25 @@ test('download dos autos is preferred when the profile selector matches a named 
     startDoc: start,
     startUrl: PAGE1,
     fetchBytes: t.fetchBytes,
+    onDocument: async (doc) => seen.push([doc.id, doc.source, new TextDecoder().decode(doc.bytes)]),
+  });
+  assert.equal(result.mode, 'documents');
+  assert.deepEqual(seen, [['D1', 'document', 'pdf-d1']]);
+  assert.equal(result.items[0].state, 'processed');
+  assert.ok(!t.calls.some((url) => url.includes('downloadAutos')));
+});
+
+test('a profile can opt into the full-autos PDF instead of each document', async () => {
+  const start = autosPage();
+  const t = transport({
+    [`${ORIGIN}/pje/downloadAutos.seam`]: () => ({ status: 200, contentType: 'application/pdf', bytes: bytesOf('AUTOS') }),
+  });
+  const seen = [];
+  const result = await collectCase({
+    startDoc: start,
+    startUrl: PAGE1,
+    fetchBytes: t.fetchBytes,
+    profile: profilesOptingIntoAutos(),
     onDocument: async (doc) => seen.push([doc.id, doc.source, new TextDecoder().decode(doc.bytes)]),
   });
   assert.equal(result.mode, 'autos');
@@ -110,7 +138,12 @@ test('an autos control whose URL matches no autos rule is reported and documents
       el('span', { class: 'paginacao' }, 'Página 1 de 1')),
   );
   const t = transport();
-  const result = await collectCase({ startDoc: start, startUrl: PAGE1, fetchBytes: t.fetchBytes });
+  const result = await collectCase({
+    startDoc: start,
+    startUrl: PAGE1,
+    fetchBytes: t.fetchBytes,
+    profile: profilesOptingIntoAutos(),
+  });
   assert.equal(result.mode, 'documents');
   assert.ok(result.misses.some((miss) => miss.reason === 'autos'));
   assert.equal(result.items[0].state, 'processed');

@@ -10,7 +10,7 @@ Cada processo:
 
 1. Abra o processo no PJe, ja logado.
 2. Clique no icone da Lume.
-3. Clique Estudar processo.
+3. Clique Estudar processo. A Lume busca o PDF ou a imagem de cada documento na memoria e faz o OCR aqui.
 4. O ChatGPT abre com as partes anexadas. Leia o pedido e envie voce mesmo.
 
 Se nao anexar: na pagina de estudo, Anexar no ChatGPT ou Salvar partes.
