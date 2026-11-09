@@ -4,7 +4,8 @@
   "version": "0.0.1",
   "description": "Reads the document inventory of the open PJe TRF1/SJDF case through the browser session.",
   "minimum_chrome_version": "116",
-  "permissions": ["sidePanel"],
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyJB4I0tYGpyoZy4uALDPV1DEsaRUQ4p8x57EJtKrvZC6GMIDyGBQC4FSdYZueFCrZm1W7miXDFjdE56QffHoZ9S67IxNrWvt6NIZcVCIthKhYNmzqckR6vY7qrJHYosJ8dBfcEfYhJdM9oHZjSL0Y+F886bLG1PIjJcOFSM5uSHdslsQcBT6AuvLo8+NnDzpYq1/7UO2Io/OgFVQDxwL9nS+Fle9SVd8WASRgkeqnMQeW8Tk/o/5Y0C9/7gu7GD6/UBU1dOwZPZ6/TOwjv0E0uu9H9OtySljqz0kasa/RrDWYUkJFZnQoyTV9sqC0nCTf1D13jFOmd2k+cM9ecU69QIDAQAB",
+  "permissions": ["sidePanel", "storage"],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   },
@@ -13,7 +14,7 @@
   "action": { "default_title": "Lume" },
   "content_scripts": [
     {
-      "matches": ["https://pje1g.trf1.jus.br/pje/*"],
+      "matches": ["https://pje1g.trf1.jus.br/*", "https://pje2g.trf1.jus.br/*"],
       "js": ["content.js"],
       "run_at": "document_idle"
     }

@@ -1,22 +1,11 @@
-// Lume adapter core for PJe TRF1/SJDF. Pure logic: no chrome.* calls, no imports, no navigation.
+// Lume adapter core for PJe TRF1/SJDF. Pure logic: no chrome.* calls and no navigation.
 // It touches the DOM only through querySelector, querySelectorAll, getAttribute and textContent,
-// so tests can use small mocks. scripts/build.mjs bundles this file into the content script.
+// so tests can use small mocks. scripts/build.mjs inlines the local imports into the content script.
+//
+// Selectors are an ordered list of UNVERIFIED profiles (see profile.js). The first profile that
+// matches every role wins. A miss names the role and stops; the reader does not guess.
 
-// shortcut: these selectors and row attributes are UNVERIFIED placeholders. Nobody has seen a
-// permitted real case yet. Calibrate them against one through the #3 route before live use (#4).
-// An unknown page fails the layout check and stops safely instead of guessing.
-export const PROFILE = {
-  id: 'trf1-pje1g-v0-unverified',
-  layoutMarker: '#autosDigitais',
-  caseNumber: '.numero-processo',
-  docList: '#listaDocumentos',
-  docRow: 'tr.documento',
-  openLink: 'a.abrir',
-  nextPage: 'a.proxima',
-  firstPage: 'a.primeira',
-  pageInfo: '.paginacao',
-  loginMarker: '#loginForm',
-};
+import { activeProfiles, documentIsLogin, readCaseNumber, resolvePage, safeQuery, safeQueryAll } from './profile.js';
 
 export const STATES = ['pending', 'processed', 'restricted', 'missing', 'unsupported', 'failed'];
 const SUPPORTED_TYPES = ['application/pdf', 'text/html'];
@@ -32,15 +21,24 @@ export class Stop extends Error {
 
 const text = (el) => (el?.textContent ?? '').replace(/\s+/g, ' ').trim();
 const abs = (href, base) => (href ? new URL(href, base).href : null);
-const isLogin = (res, p) => res.status === 401 || Boolean(res.doc?.querySelector(p.loginMarker));
+const isLogin = (res, profile) => res.status === 401 || Boolean(res.doc && profile && documentIsLogin(res.doc, [profile]));
 
-// Reads one document-list page. Throws Stop for a login page or an unknown layout.
-export function parseListPage(doc, url, p = PROFILE) {
-  if (doc.querySelector(p.loginMarker)) throw new Stop('session_expired');
-  const list = doc.querySelector(p.docList);
-  const caseNumber = text(doc.querySelector(p.caseNumber));
-  if (!doc.querySelector(p.layoutMarker) || !list || !caseNumber) throw new Stop('incompatible_layout', p.id);
-  const items = Array.from(list.querySelectorAll(p.docRow), (row) => {
+function baseUrl(doc, fallback) {
+  try {
+    const href = doc?.defaultView?.location?.href || doc?.location?.href;
+    if (typeof href === 'string' && href) return href;
+  } catch { /* a frame location that cannot be read stays on the caller URL */ }
+  return fallback;
+}
+
+function parseBound(doc, url, profile) {
+  const base = baseUrl(doc, url);
+  if (!safeQuery(doc, profile.layoutMarker)) throw new Stop('incompatible_layout', { role: 'layoutMarker', profileId: profile.id });
+  const list = safeQuery(doc, profile.docList);
+  const caseNumber = readCaseNumber(doc, profile);
+  if (!list) throw new Stop('incompatible_layout', { role: 'docList', profileId: profile.id });
+  if (!caseNumber) throw new Stop('incompatible_layout', { role: 'caseNumber', profileId: profile.id });
+  const items = safeQueryAll(list, profile.docRow).map((row) => {
     const id = row.getAttribute('data-id');
     // A row we cannot identify would vanish from the inventory, so stop instead.
     if (!id) throw new Stop('incompatible_layout', 'document row without id');
@@ -52,29 +50,45 @@ export function parseListPage(doc, url, p = PROFILE) {
       parentId: row.getAttribute('data-pai'),
       expectedPages: Number.isFinite(pages) ? pages : null,
       restricted: row.getAttribute('data-sigilo') !== null,
-      href: abs(row.querySelector(p.openLink)?.getAttribute('href'), url),
+      href: abs(safeQuery(row, profile.openLink)?.getAttribute('href'), base),
     };
   });
-  const m = text(doc.querySelector(p.pageInfo)).match(/(\d+)\s*(?:de|of|\/)\s*(\d+)/i);
+  const info = safeQuery(doc, profile.pageInfo);
+  const m = text(info).match(/(\d+)\s*(?:de|of|\/)\s*(\d+)/i);
   return {
     caseNumber,
     items,
-    next: abs(doc.querySelector(p.nextPage)?.getAttribute('href'), url),
-    first: abs(doc.querySelector(p.firstPage)?.getAttribute('href'), url),
+    next: abs(safeQuery(doc, profile.nextPage)?.getAttribute('href'), base),
+    first: abs(safeQuery(doc, profile.firstPage)?.getAttribute('href'), base),
     pageInfo: m ? { current: Number(m[1]), total: Number(m[2]) } : null,
+    bound: profile,
   };
+}
+
+// Reads one document-list page. Throws Stop for a login page or an unknown layout.
+// p is an ordered profile list, or a profile already bound with { bound: true }.
+export function parseListPage(doc, url, p = null) {
+  if (p?.bound) {
+    if (documentIsLogin(doc, [p])) throw new Stop('session_expired');
+    return parseBound(doc, url, p);
+  }
+  const found = resolvePage(doc, p ?? activeProfiles());
+  if (found.login) throw new Stop('session_expired');
+  if (!found.ok) throw new Stop('incompatible_layout', { role: found.role, profileId: found.profileId });
+  return parseBound(found.doc, url, found.profile);
 }
 
 export const fingerprint = (page) =>
   `${page.pageInfo?.total ?? '?'}#${page.items.map((i) => `${i.id}@${i.version}`).join('|')}`;
 
 // What the user sees now: the case identity and a fingerprint of the navigation state.
-export function visibleState(doc, url, p = PROFILE) {
+export function visibleState(doc, url, p = null) {
   try {
     const page = parseListPage(doc, url, p);
-    return { status: 'case', caseNumber: page.caseNumber, print: `${url} ${fingerprint(page)}` };
+    return { status: 'case', caseNumber: page.caseNumber, print: `${url} ${fingerprint(page)}`, failedRole: null, unverified: page.bound.unverified !== false };
   } catch (e) {
-    return { status: e instanceof Stop ? e.reason : 'error', caseNumber: null, print: url };
+    const failedRole = e instanceof Stop && e.detail && typeof e.detail === 'object' ? e.detail.role ?? null : null;
+    return { status: e instanceof Stop ? e.reason : 'error', caseNumber: null, print: `${url} ${failedRole ?? ''}`, failedRole, unverified: true };
   }
 }
 
@@ -87,9 +101,9 @@ export function summarize(inv) {
 // Reads the whole document inventory of the case shown in startDoc, one request at a time.
 // fetchPage(url, signal) -> { status, contentType, size, doc } must use the page's own session.
 // isCurrent() must return false as soon as the visible case or navigation state changes.
-export async function readCase({ startDoc, startUrl, fetchPage, isCurrent = () => true, signal, onProgress = () => {}, profile: p = PROFILE }) {
+export async function readCase({ startDoc, startUrl, fetchPage, isCurrent = () => true, signal, onProgress = () => {}, profile = null }) {
   const origin = new URL(startUrl).origin;
-  const inv = { caseNumber: null, profile: p.id, status: 'reading', stopReason: null, stopDetail: null, segments: [], items: [] };
+  const inv = { caseNumber: null, profile: null, status: 'reading', stopReason: null, stopDetail: null, segments: [], items: [] };
   const emit = () => onProgress(structuredClone(inv));
   const guard = () => {
     if (signal?.aborted) throw new Stop(signal.reason === 'user' ? 'stopped_by_user' : 'invalidated');
@@ -107,17 +121,20 @@ export async function readCase({ startDoc, startUrl, fetchPage, isCurrent = () =
     guard();
     return res;
   };
+  let bound = null;
   const loadList = async (url) => {
     const res = await get(url);
-    if (isLogin(res, p)) throw new Stop('session_expired');
+    if (isLogin(res, bound)) throw new Stop('session_expired');
     if (res.status < 200 || res.status > 299 || !res.doc) return null;
-    const page = parseListPage(res.doc, url, p);
+    const page = parseListPage(res.doc, url, bound);
     if (page.caseNumber !== inv.caseNumber) throw new Stop('invalidated', 'list belongs to another case');
     return page;
   };
 
   try {
-    let page = parseListPage(startDoc, startUrl, p);
+    let page = parseListPage(startDoc, startUrl, profile);
+    bound = page.bound;
+    inv.profile = bound.id;
     inv.caseNumber = page.caseNumber;
     let url = startUrl;
     if (page.pageInfo && page.pageInfo.current !== 1) {
@@ -158,7 +175,7 @@ export async function readCase({ startDoc, startUrl, fetchPage, isCurrent = () =
     for (const item of inv.items) {
       if (item.state !== 'pending') continue;
       guard();
-      Object.assign(item, await fetchItem(item, get, p));
+      Object.assign(item, await fetchItem(item, get, bound));
       emit();
     }
 
@@ -195,15 +212,15 @@ async function fetchItem(item, get, p) {
 // Binds reading to the visible case. Any change of case or navigation state starts a new epoch,
 // aborts the run, and drops its inventory, so no case ever reuses another case's context.
 // load identifies one content-script instance (one page load); the epoch counts only inside it.
-export function createTracker({ getDoc, getUrl, fetchPage, publish, profile: p = PROFILE, load = crypto.randomUUID() }) {
+export function createTracker({ getDoc, getUrl, fetchPage, publish, profile = null, load = crypto.randomUUID() }) {
   let epoch = 0;
-  let view = visibleState(getDoc(), getUrl(), p);
+  let view = visibleState(getDoc(), getUrl(), profile);
   let run = null;
   let inventory = null;
-  const status = () => ({ load, epoch, view: { status: view.status, caseNumber: view.caseNumber }, inventory });
+  const status = () => ({ load, epoch, view: { status: view.status, caseNumber: view.caseNumber, failedRole: view.failedRole ?? null, unverified: view.unverified !== false }, inventory });
   const refresh = () => {
-    const next = visibleState(getDoc(), getUrl(), p);
-    if (next.status === view.status && next.caseNumber === view.caseNumber && next.print === view.print) return false;
+    const next = visibleState(getDoc(), getUrl(), profile);
+    if (next.status === view.status && next.caseNumber === view.caseNumber && next.print === view.print && next.failedRole === view.failedRole && next.unverified === view.unverified) return false;
     epoch++;
     view = next;
     inventory = null;
@@ -224,7 +241,7 @@ export function createTracker({ getDoc, getUrl, fetchPage, publish, profile: p =
       startUrl: getUrl(),
       fetchPage,
       signal: ctrl.signal,
-      profile: p,
+      profile,
       isCurrent: () => (refresh(), epoch === mine),
       onProgress: (inv) => {
         if (epoch !== mine) return;
@@ -260,17 +277,22 @@ export function createPanelSync() {
 
 // What the panel shows for a tracker state, or for no state (the tab is not a PJe case page).
 export function panelView(state) {
-  if (!state) return { caseNumber: null, statusKey: 'not_pje', stop: false, counts: summarize(null), items: [], canStart: false, canStop: false };
+  if (!state) return { caseNumber: null, statusKey: 'not_pje', stop: false, counts: summarize(null), items: [], canStart: false, canStop: false, failedRole: null, showHint: false, unverified: false };
   const { view } = state;
   // Show an inventory only if it belongs to the case that is visible now.
   const inv = state.inventory?.caseNumber === view.caseNumber ? state.inventory : null;
+  const statusKey = view.status !== 'case' ? view.status : inv ? (inv.stopReason ?? inv.status) : 'case';
+  const failedRole = view.failedRole ?? (inv?.stopDetail && typeof inv.stopDetail === 'object' ? inv.stopDetail.role ?? null : null);
   return {
     caseNumber: view.caseNumber,
-    statusKey: view.status !== 'case' ? view.status : inv ? (inv.stopReason ?? inv.status) : 'case',
+    statusKey,
     stop: inv?.status === 'stopped' || view.status !== 'case',
     counts: summarize(inv),
     items: inv?.items ?? [],
     canStart: view.status === 'case' && inv?.status !== 'reading',
     canStop: inv?.status === 'reading',
+    failedRole,
+    showHint: statusKey === 'incompatible_layout',
+    unverified: view.unverified !== false && (statusKey === 'case' || statusKey === 'reading' || statusKey === 'complete' || statusKey === 'incomplete' || statusKey === 'incompatible_layout'),
   };
 }

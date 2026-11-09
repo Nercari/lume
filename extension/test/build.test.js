@@ -1,22 +1,34 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const root = new URL('..', import.meta.url).pathname;
+
+function filesUnder(dir, rel = '') {
+  const out = [];
+  for (const name of readdirSync(dir)) {
+    const abs = join(dir, name);
+    const child = rel ? join(rel, name) : name;
+    if (statSync(abs).isDirectory()) out.push(...filesUnder(abs, child));
+    else out.push(child);
+  }
+  return out;
+}
 
 test('build emits a loadable unpacked extension with only the documented permissions', { timeout: 180_000 }, () => {
   execFileSync(process.execPath, [join(root, 'scripts/build.mjs')], { stdio: 'inherit' });
   const m = JSON.parse(readFileSync(join(root, 'dist/manifest.json'), 'utf8'));
   assert.equal(m.manifest_version, 3);
-  assert.deepEqual(m.permissions, ['sidePanel']);
+  assert.deepEqual(m.permissions, ['sidePanel', 'storage']);
   assert.equal(m.host_permissions, undefined);
   assert.equal(m.optional_permissions, undefined);
   assert.equal(m.optional_host_permissions, undefined);
   assert.equal(m.web_accessible_resources, undefined);
   assert.equal(m.externally_connectable, undefined);
-  assert.deepEqual(m.content_scripts.map((c) => c.matches), [['https://pje1g.trf1.jus.br/pje/*']]);
+  assert.ok(m.key?.startsWith('MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA'));
+  assert.deepEqual(m.content_scripts.map((c) => c.matches), [['https://pje1g.trf1.jus.br/*', 'https://pje2g.trf1.jus.br/*']]);
   const csp = m.content_security_policy.extension_pages;
   assert.equal(csp, "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'");
   const tokens = csp.match(/'[^']+'/g);
@@ -24,10 +36,16 @@ test('build emits a loadable unpacked extension with only the documented permiss
   assert.ok(!tokens.includes("'unsafe-inline'"));
   const refs = [m.background.service_worker, m.side_panel.default_path, ...m.content_scripts.flatMap((c) => c.js)];
   for (const f of refs) assert.ok(existsSync(join(root, 'dist', f)), `manifest ref ${f}`);
-  for (const f of ['manifest.json', 'worker.js', 'content.js', 'panel.html', 'panel.js', 'core.js']) assert.ok(existsSync(join(root, 'dist', f)), f);
+  for (const rel of filesUnder(join(root, 'src'))) {
+    if (rel === 'content.js') continue;
+    assert.ok(existsSync(join(root, 'dist', rel)), rel);
+  }
+  assert.ok(existsSync(join(root, 'dist/pages/README.md')));
   const content = readFileSync(join(root, 'dist/content.js'), 'utf8');
   assert.ok(!/^\s*(import|export)\b/m.test(content), 'content script is a classic script');
   assert.match(content, /function createTracker/);
+  assert.match(content, /function snapshotDocument/);
+  assert.match(content, /function validateStoredProfile/);
 
   const pageDir = join(root, 'dist/manual');
   for (const f of ['lume-pdf.html', 'lume-pdf.js', 'pdf.worker.mjs']) assert.ok(existsSync(join(pageDir, f)), f);
@@ -57,6 +75,7 @@ test('panel has the PDF button and the offline hint', () => {
   const js = readFileSync(join(root, 'src/panel.js'), 'utf8');
   assert.match(html, /id="pdf-mode"[^>]*>Abrir modo PDF</);
   assert.match(html, /id="pdf-hint"[^>]*>Baixe o processo completo no PJe \(Download dos autos\) e abra o PDF aqui\.</);
+  assert.match(html, /id="calibrate"[^>]*>Modo calibração</);
   assert.match(js, /\$\('pdf-hint'\)\.hidden = v\.statusKey !== 'not_pje'/);
   assert.match(js, /chrome\.tabs\.create\(\{ url: chrome\.runtime\.getURL\('manual\/lume-pdf\.html'\) \}\)/);
 });
@@ -64,7 +83,7 @@ test('panel has the PDF button and the offline hint', () => {
 test('toolbar click with no panel opens the PDF page and adds no permission', () => {
   const js = readFileSync(join(root, 'src/worker.js'), 'utf8');
   const m = JSON.parse(readFileSync(join(root, 'manifest.json'), 'utf8'));
-  assert.deepEqual(m.permissions, ['sidePanel']);
+  assert.deepEqual(m.permissions, ['sidePanel', 'storage']);
   assert.match(js, /chrome\.action\.onClicked\.addListener/);
   assert.match(js, /if \(!panelClickOpensPanel\) openPdfMode\(\)/);
   assert.match(js, /chrome\.tabs\.create\(\{ url: chrome\.runtime\.getURL\(PDF_PAGE\) \}\)/);
@@ -75,8 +94,8 @@ test('toolbar click with no panel opens the PDF page and adds no permission', ()
 
 test('source never touches credentials, cookies, certificates or navigation', () => {
   const forbidden = /document\.cookie|chrome\.cookies|credentials:\s*['"]include|localStorage|location\.(assign|replace|reload)|location\.href\s*=|window\.open|\.click\(|\.submit\(|chrome\.debugger|webRequest|setInterval/;
-  for (const f of readdirSync(join(root, 'src'))) {
-    const lines = readFileSync(join(root, 'src', f), 'utf8').split('\n');
-    lines.forEach((l, i) => assert.ok(!forbidden.test(l), `${f}:${i + 1} uses a forbidden API`));
+  for (const rel of filesUnder(join(root, 'src'))) {
+    const lines = readFileSync(join(root, 'src', rel), 'utf8').split('\n');
+    lines.forEach((line, i) => assert.ok(!forbidden.test(line), `${rel}:${i + 1} uses a forbidden API`));
   }
 });
