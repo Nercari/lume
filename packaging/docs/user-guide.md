@@ -11,10 +11,8 @@ Lume helps you read a PJe case in Chrome and work in **your own ChatGPT plan**. 
 ## Install the extension
 
 1. IT copies `lume-install` to your machine (for example `%LOCALAPPDATA%\Lume` on Windows).
-2. Open Chrome → `chrome://extensions`.
-3. Turn on **Developer mode** if IT allows it (managed installs may use enterprise policy instead).
-4. Click **Load unpacked** and choose the `extension` folder inside `lume-install`.
-5. Pin the Lume icon if helpful. A click opens the side panel.
+2. Chrome → `chrome://extensions` → **Load unpacked** → the `extension` folder. Turn on **Developer mode** only if IT allows it.
+3. Pin the Lume icon. A click opens the side panel.
 
 ## Set up ChatGPT
 
@@ -26,12 +24,9 @@ Lume helps you read a PJe case in Chrome and work in **your own ChatGPT plan**. 
 
 ## Daily workflow
 
-1. Sign in to PJe in Chrome as usual and open the case.
-2. Click the Lume icon. The side panel opens.
-3. Click **Estudar processo**.
-4. Lume fetches every document in the left timeline, in that order, through the session already open in that tab (in memory, no download dialog and no file on disk). HTML and plain text are read directly. PDF text comes from pdf.js. Pages with no text, and image documents, go through local Portuguese OCR. It then opens the same PJe address with `#lume-autos`. That one tab is the whole case, so the ChatGPT side panel can read it. A long case is split into `Parte k de N`.
-5. On the study page, **Salvar partes** downloads `lume-caso-parte-01-de-NN.md` and **Copiar parte k** copies that part. Lume does not open ChatGPT and does not attach files.
-6. Review every citation `[ID X, pág. Y]` before using text in court systems. A page number appears only when the document states it.
+1. Sign in to PJe in Chrome and open the case.
+2. Click **Estudar processo**.
+3. Read the case on the PJe tab (`#lume-autos`) in the ChatGPT side panel. **Salvar partes** and **Copiar parte k** are on the study page. A page number in `[ID X, pág. Y]` appears only when the document states it.
 
 The manual page is the fallback: **Gerar pacote do caso**, then the PDF you downloaded in PJe (Download dos autos).
 
