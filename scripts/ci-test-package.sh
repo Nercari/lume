@@ -32,12 +32,15 @@ install_pkg() {
   popd >/dev/null
 }
 
+needs_extraction_deps() {
+  case "$pkg" in
+    analysis | chat-editor | source-panel) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 case "$pkg" in
   extraction)
-    install_pkg extraction omit
-    ;;
-  analysis)
-    # analysis tests import extraction, which loads pdfjs-dist at import time.
     install_pkg extraction omit
     ;;
   extension)
@@ -46,6 +49,10 @@ case "$pkg" in
   *)
     if [[ -f "$dir/package-lock.json" ]]; then
       install_pkg "$pkg"
+    fi
+    if needs_extraction_deps; then
+      # Build/tests import ../../extraction, which loads pdfjs-dist at import time.
+      install_pkg extraction omit
     fi
     ;;
 esac
