@@ -1,0 +1,13 @@
+{
+  "name": "lume-extension",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Lume Chrome MV3 extension: side panel, worker and narrow PJe TRF1/SJDF reader",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test --test-reporter=spec test/*.test.js"
+  }
+}
