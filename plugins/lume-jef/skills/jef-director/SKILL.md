@@ -31,7 +31,7 @@ Antes de análise, pesquisa ou redação, leia por completo e recupere trecho tr
 4. `references/c0.md`, `references/c1.md` e `references/c2.md`
 5. `skills/jef-revisao/references/c8.md`
 6. o módulo do produto, pela tabela de `references/c1.md`: `skills/jef-triagem/references/c3.md`, `skills/jef-relatorio/references/c4.md`, `skills/jef-pesquisa/references/c5.md`, `skills/jef-voto/references/c6.md`, `skills/jef-voto/references/jef-v1.md`, `skills/jef-materias/references/c7.md`
-7. `skills/jef-pacote/SKILL.md` antes de ler processo do Lume; `skills/jef-lote/SKILL.md` só para lote já reunido; `skills/jef-estilo/SKILL.md` só para perfil de forma
+7. `skills/jef-pacote/SKILL.md` antes de ler processo do Lume; `skills/jef-work/SKILL.md` só no Work, para o clique no botão da aba já aberta; `skills/jef-lote/SKILL.md` só para lote já reunido; `skills/jef-estilo/SKILL.md` só para perfil de forma
 
 O bloco da seção 17 do contrato é o texto histórico de colagem. Neste plugin, os caminhos vigentes são os pins acima e os arquivos `references/`, não um nome antigo de arquivo nem a Biblioteca.
 

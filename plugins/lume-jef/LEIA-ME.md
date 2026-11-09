@@ -8,4 +8,6 @@ A web não instala um ZIP local. O envio de ZIP em [Upload and submit your plugi
 2. No Chrome, instale o Lume, abra o processo e estude no painel.
 3. No chat, peça o relatório ou a minuta.
 
+Plano B: clique você no botão Lume: Estudar processo na página do processo. A aba e os próximos passos são os mesmos.
+
 Um aviso de dado sensível pode aparecer. Ele não recusa o pedido.

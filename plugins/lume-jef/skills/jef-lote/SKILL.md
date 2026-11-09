@@ -7,7 +7,7 @@ description: >-
 
 # Lote
 
-Use somente quando o usuário já tiver os casos: vários pacotes ou partes anexados, ou a lista que ele cola um a um. Não busque nada.
+Use somente quando o usuário já tiver os casos: vários pacotes ou partes anexados, ou a lista que ele cola um a um. A busca é do jef-work ou do botão.
 
 - Um caso por vez, isolado. Comece com 5 por leva. Se houver mais, a próxima leva só começa depois da tabela da leva atual.
 - CASE_STATE novo em cada caso. Nenhum fato, nome, resultado, exceção ou localizador passa para o seguinte.

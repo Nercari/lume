@@ -21,6 +21,7 @@ const expectedSkills = [
   "jef-lote",
   "jef-estilo",
   "jef-inicio",
+  "jef-work",
 ];
 
 async function filesUnder(dir) {
@@ -65,7 +66,7 @@ test("manifest fields and lengths", async () => {
     "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   );
   assert.equal(manifest.name, "lume-jef");
-  assert.equal(manifest.version, "0.1.0");
+  assert.equal(manifest.version, "0.2.0");
   assert.equal(manifest.license, "MIT");
   assert.equal(manifest.extensions["com.openai"].hooks, undefined);
   assert.equal(manifest.extensions["com.openai"].apps, undefined);
@@ -77,6 +78,11 @@ test("manifest fields and lengths", async () => {
   assert.ok(ui.shortDescription.length > 0 && ui.shortDescription.length <= 30);
   assert.match(ui.longDescription, /não|processo|minuta/i);
   assert.ok(ui.longDescription.length <= 4000);
+  assert.equal(ui.longDescription.includes("o plugin não busca autos"), false);
+  assert.match(ui.longDescription, /No Work, só pede ao ChatGPT que clique no botão Lume/);
+  assert.match(ui.longDescription, /não faz login e não baixa os autos/);
+  assert.equal(/plugin/i.test(ui.displayName), false);
+  assert.equal(/plugin/i.test(manifest.name), false);
   assert.equal(ui.developerName, "Nercari");
   assert.equal(ui.category, "Productivity");
   assert.ok(Array.isArray(ui.defaultPrompt));
@@ -190,6 +196,28 @@ test("vision reads a page image and the plugin does not OCR", async () => {
     const raw = (await readFile(file)).toString("latin1").toLowerCase();
     assert.equal(/pytesseract|apt(?:-get)? install tesseract|pip install/.test(raw), false, file);
   }
+});
+
+test("jef-work clicks the Lume button and names no model", async () => {
+  const work = await readFile(path.join(root, "skills/jef-work/SKILL.md"), "utf8");
+  for (const pin of ["#lume-autos", "#lume-estudar", "Plano B", "Download autos", "5 por leva"]) {
+    assert.equal(work.includes(pin), true, pin);
+  }
+  for (const needle of ["GPT-", "Luna", "Terra", "Sol", "Astra"]) {
+    assert.equal(work.includes(needle), false, needle);
+  }
+  const plano =
+    "Plano B: clique você no botão Lume: Estudar processo na página do processo. A aba e os próximos passos são os mesmos.";
+  assert.equal(work.includes(plano), true);
+  const inicio = await readFile(path.join(root, "skills/jef-inicio/SKILL.md"), "utf8");
+  const leia = await readFile(path.join(root, "LEIA-ME.md"), "utf8");
+  assert.equal(inicio.includes(plano), true);
+  assert.equal(leia.includes(plano), true);
+  const numbered = leia.split("\n").filter((line) => /^\d+\.\s/.test(line));
+  assert.equal(numbered.length, 3);
+  const lote = await readFile(path.join(root, "skills/jef-lote/SKILL.md"), "utf8");
+  assert.equal(lote.includes("Não busque nada"), false);
+  assert.match(lote, /a busca é do jef-work ou do botão/i);
 });
 
 test("logo is a generated 512 square png", async () => {
