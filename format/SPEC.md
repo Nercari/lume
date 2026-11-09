@@ -2,7 +2,7 @@
 
 ## English summary
 
-Shared case package emitted by the Lume button (`origem: botao`) and, later, by the ChatGPT Work skill (`origem: work`). Readers treat both origins the same. One browser view and the part files `lume-caso-parte-kk-de-NN.md` carry the same body. Part 1 holds the master index and the gap list. Passages use `[ID X, pág. Y]` for a document page, `[ID X, pág. PDF Z]` for a PDF page, and both when both are known. The three locators (document id, document page, PDF page) stay distinct and are never estimated. Parts split near 350000 characters. Order is the PJe timeline. An optional `lume-caso.json` sidecar repeats documents, parts, and gaps for a machine check. Normative text below is Portuguese.
+Shared case package emitted by the Lume button (`origem: botao`) and by the ChatGPT Work skill (`origem: work`). The two origins are identical: same `#lume-autos` tab, same DOM, same body, same title. Work opens that tab by clicking the in-page button `#lume-estudar`. The ready title is `Lume: pronto · N docs · L lacunas · parte 1 de T`; a failure title starts `Lume: falhou`. One browser view and the part files `lume-caso-parte-kk-de-NN.md` carry the same body. Part 1 holds the master index and the gap list. Passages use `[ID X, pág. Y]` for a document page, `[ID X, pág. PDF Z]` for a PDF page, and both when both are known. The three locators (document id, document page, PDF page) stay distinct and are never estimated. Parts split near 350000 characters. Order is the PJe timeline. An optional `lume-caso.json` sidecar repeats documents, parts, and gaps for a machine check. Normative text below is Portuguese.
 
 ## 1. Escopo
 
@@ -12,7 +12,15 @@ Não há número de processo, nome de parte nem dado pessoal neste texto. Os exe
 
 ## 2. Vista de uma aba
 
-A página do processo, com a hash `#lume-autos` (parte 1) ou `#lume-autos/k` (parte k), mostra o caso no lugar da lista. O DOM estável é:
+A página do processo, com a hash `#lume-autos` (parte 1) ou `#lume-autos/k` (parte k), mostra o caso no lugar da lista. `origem: work` é idêntica a `origem: botao`: o mesmo DOM, o mesmo corpo, o mesmo título. O modo Work chega nessa aba ao clicar o botão na página `#lume-estudar`. O botão da extensão continua abrindo a mesma aba com `origem: botao`.
+
+O título da aba faz parte do contrato:
+
+- Pronta, na parte 1: `Lume: pronto · N docs · L lacunas · parte 1 de T`. N é o número de documentos do índice, L é o número de lacunas, T é o total de partes.
+- Ao mostrar a parte k, só muda o número da parte: `Lume: pronto · N docs · L lacunas · parte k de T`.
+- Falha, sem caso para ler: o título começa com `Lume: falhou`. O restante é um motivo curto, sem texto de peça.
+
+O DOM estável é:
 
 ```html
 <article id="lume-caso" data-formato="lume-caso/1" data-origem="botao" data-parte="1" data-total="2">
@@ -187,7 +195,7 @@ Opcional. Se o arquivo estiver na mesma pasta, tem de bater com as partes. Campo
 5. Lacunas listadas na parte 1, com motivo do conjunto fechado. Índice sem lacuna só quando a situação é `lido`.
 6. Corte de cerca de 350000 caracteres por arquivo de parte. Uma parte com dois ou mais trechos não passa de 350000. Um único trecho pode passar, inteiro, sem corte no meio.
 7. A ordem é a ordem da linha do tempo do PJe, a ordem do índice. O emissor não reordena por tipo, tamanho ou data decrescente.
-8. `botao` e `work` só mudam o valor de `origem`. O resto do contrato é o mesmo.
+8. `botao` e `work` são a mesma vista. Só o valor de `origem` muda. Work abre `#lume-autos` pelo botão `#lume-estudar`. O título da aba pronta é `Lume: pronto · N docs · L lacunas · parte 1 de T` (e `parte k de T` nas partes seguintes). O título de falha começa com `Lume: falhou`.
 
 ## 7. Conferência
 

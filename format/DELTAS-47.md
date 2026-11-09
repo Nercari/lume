@@ -90,3 +90,11 @@ Aplicar o sidecar opcional da SPEC. `ocr: local` quando esta extensão rodou OCR
 - Situações `restrito`, `ausente`, `falhou`, `ilegível`, `parcial`, `lido`.
 - Hash `#lume-autos` e `#lume-autos/k`.
 - Constante 350000 já definida em `pack-bridge.js`. Falta usá-la nos arquivos, não só na vista.
+
+## 11. Título da aba
+
+A vista não define `document.title`.
+
+Aplicar, com a parte k visível: `Lume: pronto · N docs · L lacunas · parte k de T`. Na abertura, k é 1: `Lume: pronto · N docs · L lacunas · parte 1 de T`. Se o estudo falha, o título começa com `Lume: falhou`.
+
+`#lume-estudar` não é deste botão. É o controle na página pelo qual o modo Work (`origem: work`) abre a mesma aba `#lume-autos`. O contrato da aba, inclusive o título, é o mesmo dos dois.

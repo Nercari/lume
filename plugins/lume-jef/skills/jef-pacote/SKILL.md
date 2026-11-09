@@ -10,8 +10,6 @@ description: >-
 
 Use quando o usuário entregar o processo pelo Lume.
 
-Contrato de leitura da vista e das partes: `references/formato.md`.
-
 1. Leia todas as partes, em ordem, antes de qualquer produto. A vista de uma aba é o texto que o painel lateral mostra para o processo aberto. Se vierem arquivos `lume-caso-parte-k-de-N.md`, k vai de 1 até N, sem pular parte.
 2. Confirme a cobertura listando os IDs lidos em cada parte e os IDs de lacuna. Se a lista não fechar com o índice, não comece o produto: diga a parte ou o ID que falta.
 3. Há três localizadores distintos. Não os troque e não os estime: ID da peça, página do documento e página do PDF.

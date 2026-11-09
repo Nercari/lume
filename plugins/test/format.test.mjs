@@ -5,17 +5,19 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "lume-jef");
-const skillPath = path.join(root, "skills", "jef-pacote", "SKILL.md");
 const refPath = path.join(root, "skills", "jef-pacote", "references", "formato.md");
 
-test("jef-pacote points at the shared case format", async () => {
-  const skill = await readFile(skillPath, "utf8");
+test("formato.md is the shared reader contract", async () => {
   const reference = await readFile(refPath, "utf8");
-  assert.match(skill, /`references\/formato\.md`/);
-  assert.equal(skill.split("\n").filter((line) => line.includes("references/formato.md")).length, 1);
   assert.match(reference, /lume-caso\/1/);
   assert.match(reference, /botao/);
   assert.match(reference, /work/);
+  assert.match(reference, /idênticas/);
+  assert.match(reference, /mesmo tratamento/);
+  assert.match(reference, /#lume-estudar/);
+  assert.match(reference, /#lume-autos/);
+  assert.match(reference, /Lume: pronto · N docs · L lacunas · parte 1 de T/);
+  assert.match(reference, /Lume: falhou/);
   assert.match(reference, /Págs\. do documento/);
   assert.match(reference, /\[ID X, pág\. Y\]/);
   assert.match(reference, /pág\. PDF/);
@@ -25,6 +27,5 @@ test("jef-pacote points at the shared case format", async () => {
   assert.match(reference, /falha_busca/);
   assert.match(reference, /350[\s.]?000/);
   assert.match(reference, /Ids:/);
-  assert.match(reference, /mesmo tratamento/);
   assert.equal(/\b\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}\b/.test(reference), false);
 });
