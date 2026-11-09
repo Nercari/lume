@@ -2,11 +2,13 @@ import { createOcrSession, createTesseractWorker, renderPdfPage } from '../../ma
 import { segmentAutos, setWorkerSrc } from '../../manual/src/segment.js';
 import { joinChunks } from './chunks.js';
 import { caseViewUrl, renderCaseParts } from './case-view.js';
+import { failedTitle, readyTitle, studyingTitle } from './page-trigger.js';
 import { processCollected } from './study-run.js';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const studyId = params.get('id') ?? '';
+const attach = params.get('attach');
 const incoming = new Map();
 let documents = [];
 let finished = false;
@@ -78,8 +80,10 @@ function outcome(kind, text) {
   const result = $('result');
   result.dataset.state = kind;
   result.textContent = text;
+  if (kind === 'failed') document.title = failedTitle(text);
 }
 
+$('result').dataset.attach = attach === '0' || attach == null ? '0' : '0';
 const port = chrome.runtime.connect({ name: `lume-study:${studyId}` });
 let savedParts = [];
 
@@ -101,7 +105,10 @@ port.onMessage.addListener(async (msg) => {
       incoming.set(msg.index, bag);
     }
     bag.parts.push({ seq: msg.seq, total: msg.totalChunks, bytes: msg.bytes });
-    if (msg.docTotal) $('progress').textContent = `Documento ${msg.docIndex} de ${msg.docTotal}`;
+    if (msg.docTotal) {
+      $('progress').textContent = `Documento ${msg.docIndex} de ${msg.docTotal}`;
+      document.title = studyingTitle(msg.docIndex, msg.docTotal);
+    }
   } else if (msg?.type === 'doc-end') {
     const bag = incoming.get(msg.index);
     if (!bag) return;
@@ -166,7 +173,17 @@ port.onMessage.addListener(async (msg) => {
         ocrPerPage,
         wallMs: performance.now() - started,
       });
-      port.postMessage({ type: 'view', pageUrl: msg.pageUrl ?? null, parts: view.parts, allText: view.allText });
+      const documentCount = (caseResult.documents ?? []).length;
+      const gapCount = (caseResult.gaps ?? []).length;
+      document.title = readyTitle({ documents: documentCount, gaps: gapCount, part: 1, total: view.parts.length || 1 });
+      port.postMessage({
+        type: 'view',
+        pageUrl: msg.pageUrl ?? null,
+        parts: view.parts,
+        allText: view.allText,
+        documents: documentCount,
+        gaps: gapCount,
+      });
       const viewTarget = caseViewUrl(msg.pageUrl);
       if (viewTarget) {
         try { await chrome.tabs.create({ url: viewTarget }); } catch { /* the study page still lists the files */ }
@@ -179,7 +196,7 @@ port.onMessage.addListener(async (msg) => {
         outcome('cancelled', 'Estudo cancelado.');
         return;
       }
-      outcome('failed', 'Não foi possível montar o pacote. Use Salvar partes se os arquivos aparecerem, ou tente de novo.');
+      outcome('failed', String(error?.message || 'pacote').slice(0, 60));
     }
   }
 });

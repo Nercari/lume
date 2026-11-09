@@ -50,6 +50,7 @@ test('timeline collection keeps entry order and fetches each document URL', asyn
       return { status: 200, contentType: 'application/pdf', bytes: new TextEncoder().encode(id) };
     },
     onDocument: async () => {},
+    pauseMs: 0,
   });
   assert.deepEqual(result.items.map((item) => item.id), ['DOC2', 'DOC1']);
   assert.deepEqual(calls, [

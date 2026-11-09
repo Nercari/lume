@@ -1,5 +1,6 @@
 import { CALIBRATION_DOWNLOAD_NAME, calibrationReport } from './calibrate.js';
 import { createPanelSync, panelView } from './core.js';
+import { DOCUMENT_PAUSE_MS } from './page-trigger.js';
 import { CALIBRATION_HINT, ERROR_COPY, validateStoredProfile } from './profile.js';
 const $ = (id) => document.getElementById(id);
 const COUNTS = { identified: 'Identificados', processed: 'Processados', pending: 'Pendentes', failed: 'Falhas', restricted: 'Restritos', missing: 'Ausentes', unsupported: 'Não suportados' };
@@ -118,7 +119,7 @@ $('study').addEventListener('click', async () => {
     note('Não foi possível iniciar o estudo nesta aba.');
     return;
   }
-  await chrome.tabs.create({ url: chrome.runtime.getURL(`study.html?id=${studyId}`) });
+  await chrome.tabs.create({ url: chrome.runtime.getURL(`study.html?id=${studyId}&attach=0`) });
 });
 $('start').addEventListener('click', async () => show(await ask('start')));
 $('stop').addEventListener('click', async () => show(await ask('stop')));
@@ -176,4 +177,17 @@ $('cal-profile').addEventListener('change', async () => {
     note('Não foi possível guardar o perfil.');
   }
 });
+async function loadPause() {
+  try {
+    const stored = await chrome.storage.local.get('lumePauseMs');
+    $('pausa').checked = stored?.lumePauseMs == null || Number(stored.lumePauseMs) > 0;
+  } catch {
+    $('pausa').checked = true;
+  }
+}
+
+$('pausa').addEventListener('change', () => {
+  chrome.storage.local.set({ lumePauseMs: $('pausa').checked ? DOCUMENT_PAUSE_MS : 0 }).catch(() => {});
+});
+loadPause();
 bind();
