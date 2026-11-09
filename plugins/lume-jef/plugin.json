@@ -1,0 +1,33 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "lume-jef",
+  "version": "0.1.0",
+  "description": "Skills de relatório e minuta do JEF/TRF1 no chat regular, sobre o processo já reunido pelo Lume. Sem servidor e sem MCP.",
+  "license": "MIT",
+  "keywords": ["lume", "jef", "trf1", "minuta", "voto"],
+  "homepage": "https://github.com/Nercari/lume/tree/main/plugins/lume-jef",
+  "repository": "https://github.com/Nercari/lume",
+  "author": {
+    "name": "Nercari",
+    "url": "https://github.com/Nercari"
+  },
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/jef-inicio/SKILL.md",
+      "interface": {
+        "displayName": "Lume JEF",
+        "shortDescription": "Minutas JEF no chat regular",
+        "longDescription": "Plugin só de skills para o chat regular. Aplica o método publicado de relatório e minuta do JEF/TRF1 (contrato JEF-WORKFLOW-v1, revisão 2026-11-04.4, formato JEF-V1) ao processo que você já reuniu com o Lume: a vista de uma aba no painel, o pacote anexado ou as partes lume-caso-parte-k-de-N.md. Não há servidor, não há MCP e o plugin não busca autos. Lacuna ilegível não é adivinhada. Fato de um processo não passa para outro.",
+        "developerName": "Nercari",
+        "category": "Productivity",
+        "defaultPrompt": [
+          "Ler todas as partes do processo anexado e entregar o relatório preliminar.",
+          "Redigir a minuta de voto com o resultado que eu indicar, sem inventar lacuna.",
+          "Revisar a minuta anexada e listar a pendência material."
+        ],
+        "logo": "./assets/logo.png",
+        "composerIcon": "./assets/logo.png"
+      }
+    }
+  }
+}
