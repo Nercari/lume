@@ -17,12 +17,12 @@ export const listPage = ({ caseNumber = 'TEST-CASE-A', rows, current = 1, total 
     next ? el('a', { class: 'proxima', href: next }, 'próxima') : '',
     first ? el('a', { class: 'primeira', href: first }, 'primeira') : ''));
 
-// Page 1: a document with an attachment, a restricted row. Page 2: unsupported, missing, failed, no link.
+// Page 1: a document with an attachment, a sigilo-marked row (still read when linked). Page 2: unsupported, missing, failed, no link.
 export const page1 = (over = {}) => listPage({
   rows: [
     row('D1', { 'data-paginas': '3' }),
     row('D1A', { 'data-tipo': 'anexo', 'data-pai': 'D1', 'data-paginas': '1' }),
-    row('D2', { 'data-sigilo': '' }, null),
+    row('D2', { 'data-sigilo': '' }),
   ],
   next: '/pje/autos?p=2',
   ...over,
@@ -44,6 +44,7 @@ export function transport(overrides = {}) {
     [PAGE2]: () => ({ status: 200, contentType: 'text/html', doc: page2() }),
     [`${ORIGIN}/pje/doc?id=D1`]: () => ({ status: 200, contentType: 'application/pdf', size: 1000 }),
     [`${ORIGIN}/pje/doc?id=D1A`]: () => ({ status: 200, contentType: 'application/pdf; charset=binary', size: 200 }),
+    [`${ORIGIN}/pje/doc?id=D2`]: () => ({ status: 200, contentType: 'application/pdf', size: 400 }),
     [`${ORIGIN}/pje/doc?id=D3`]: () => ({ status: 200, contentType: 'text/html', doc: doc(el('p', {}, 'conteúdo técnico')) }),
     [`${ORIGIN}/pje/doc?id=D4`]: () => ({ status: 200, contentType: 'video/mp4', size: 5 }),
     [`${ORIGIN}/pje/doc?id=D5`]: () => ({ status: 404 }),

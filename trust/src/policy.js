@@ -1,9 +1,8 @@
 // Boundaries the model, the page, and case text do not own. Values come from the
-// extension manifest and the companion command table, then stay frozen.
+// extension manifest, then stay frozen.
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { COMMANDS } from '../../companion/src/commands.js';
 
 const manifest = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../../extension/manifest.json'), 'utf8'));
 
@@ -23,8 +22,6 @@ export const CONTROLLER_ONLY = Object.freeze([
   'gap.decide',
   'citation.review',
   'store.deleteCase',
-  'companion.login',
-  'companion.logout',
   'permissions.grant',
   'http.post',
 ]);
@@ -37,7 +34,6 @@ export function createPolicy() {
     permissions: Object.freeze([...manifest.permissions]),
     contentScriptMatches: Object.freeze(manifest.content_scripts.flatMap((s) => s.matches)),
     caseIdentitySource: 'extension-visible-case',
-    nativeMessagingCommands: Object.freeze(Object.keys(COMMANDS).sort()),
   });
 }
 
@@ -49,7 +45,6 @@ export function snapshot(policy) {
     permissions: [...policy.permissions],
     contentScriptMatches: [...policy.contentScriptMatches],
     caseIdentitySource: policy.caseIdentitySource,
-    nativeMessagingCommands: [...policy.nativeMessagingCommands],
   };
 }
 

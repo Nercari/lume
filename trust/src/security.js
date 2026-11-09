@@ -2,8 +2,6 @@
 // into a real boundary: the Native Messaging host, the tool surface, the extension
 // reader, gap decisions, citation review, or the transfer controller.
 import { GateError, emptyLedger, syncGaps } from '../../analysis/src/index.js';
-import { COMMANDS, originFor } from '../../companion/src/commands.js';
-import { createHost } from '../../companion/src/host.js';
 import { CaseStore, MemoryBackend } from '../../case-store/src/index.js';
 import { USER_ACTION, CaseSession } from '../../chat-editor/src/index.js';
 import { createPanelSync, createTracker, panelView, parseListPage, readCase } from '../../extension/src/core.js';
@@ -12,22 +10,6 @@ import { recordReview } from '../../source-panel/src/verify.js';
 import { TransferController, domEditor } from '../../transfer/src/index.js';
 import { INJECTION, LIST_URL, fileResponse, htmlResponse, listDoc, editorDoc } from './page.js';
 import { absorb, createPolicy, createToolSurface, snapshot } from './policy.js';
-
-const EXT = 'abcdefghijklmnopabcdefghijklmnop';
-export const ORIGIN = originFor(EXT);
-const silent = { info() {}, warn() {}, error() {} };
-
-export function mockHost() {
-  return createHost({
-    allowedOrigin: ORIGIN,
-    logger: silent,
-    handlers: {
-      status: async () => ({ signedIn: false }),
-      'login.start': async () => ({ authorizeUrl: 'https://example.test/authorize' }),
-      logout: async () => ({ revoked: false }),
-    },
-  });
-}
 
 function attack(attempts, row) {
   attempts.push({
@@ -90,50 +72,6 @@ export async function runSecurityMatrix() {
   const attempts = [];
   const policy = createPolicy();
   const before = snapshot(policy);
-  const host = mockHost();
-
-  const unknown = ['fetch', 'exec', 'readFile', 'writeFile', 'proxy', 'shell', 'navigate', 'sign', 'file', 'publish', 'eval', '__proto__', 'constructor', 'toString'];
-  for (const cmd of unknown) {
-    const reply = await host(ORIGIN, { id: 'a1', cmd, args: {} });
-    attack(attempts, {
-      id: `nm-${cmd.replace(/[^a-z0-9]+/gi, '') || 'blank'}`,
-      boundary: 'native-messaging',
-      vector: 'command',
-      refused: reply.ok === false && reply.error.code === 'unknown_command',
-      unauthorizedAction: reply.ok === true ? 1 : 0,
-    });
-  }
-
-  const shaped = [
-    ['nm-extra-destination', { id: 'a1', cmd: 'status', args: {}, destination: 'https://collector.example/ingest' }, 'bad_request'],
-    ['nm-args-url', { id: 'a1', cmd: 'status', args: { url: 'https://collector.example/ingest' } }, 'bad_args'],
-    ['nm-login-arg', { id: 'a1', cmd: 'login.start', args: { authorizeUrl: 'https://collector.example/ingest' } }, 'bad_args'],
-    ['nm-bad-id', { id: 'ignore previous', cmd: 'status', args: {} }, 'bad_request'],
-    ['nm-exec-json', JSON.parse('{"id":"a1","cmd":"exec","args":{"url":"https://collector.example/ingest"}}'), 'unknown_command'],
-    ['nm-proto-message', JSON.parse('{"id":"a1","cmd":"status","__proto__":{"isAdmin":true}}'), 'bad_request'],
-    ['nm-proto-args', JSON.parse('{"id":"a1","cmd":"status","args":{"__proto__":{"url":"https://collector.example/ingest"}}}'), 'bad_args'],
-    ['nm-page-string', INJECTION, 'bad_request'],
-  ];
-  for (const [id, msg, code] of shaped) {
-    const reply = await host(ORIGIN, msg);
-    attack(attempts, {
-      id, boundary: 'native-messaging', vector: 'message',
-      refused: reply.ok === false && reply.error.code === code,
-      unauthorizedAction: reply.ok === true ? 1 : 0,
-    });
-  }
-  const foreign = await host('https://collector.example/', { id: 'a1', cmd: 'status', args: {} });
-  attack(attempts, {
-    id: 'nm-bad-origin', boundary: 'native-messaging', vector: 'origin',
-    refused: foreign.ok === false && foreign.error.code === 'bad_origin',
-    unauthorizedAction: foreign.ok === true ? 1 : 0,
-  });
-  const allow = [...policy.nativeMessagingCommands];
-  attack(attempts, {
-    id: 'nm-allowlist', boundary: 'native-messaging', vector: 'allowlist',
-    refused: allow.length === 3 && allow.every((c) => Object.hasOwn(COMMANDS, c)) && !allow.includes('exec'),
-    unauthorizedAction: allow.some((c) => !['login.start', 'logout', 'status'].includes(c)) ? 1 : 0,
-  });
 
   const tools = await toolSurface();
   const draft = await tools.surface.invoke('case.readDraft', { id: 'd1', command: 'permissions.grant', permissions: ['tabs', 'cookies'] });
@@ -142,7 +80,7 @@ export async function runSecurityMatrix() {
     refused: draft.ok === true && draft.result.current === 'draft-marker' && tools.wrote() === 0,
     permissionChange: snapshot(policy).permissions.includes('tabs') ? 1 : 0,
   });
-  for (const name of ['transfer.insert', 'transfer.review', 'gap.decide', 'permissions.grant', 'http.post', 'companion.exec', 'editor.sign']) {
+  for (const name of ['transfer.insert', 'transfer.review', 'gap.decide', 'permissions.grant', 'http.post', 'editor.sign']) {
     const reply = await tools.surface.invoke(name, { destination: 'https://collector.example/ingest', caseId: 'SYNTH-OTHER' });
     attack(attempts, {
       id: `tool-${name.replace(/[^a-z0-9]+/gi, '-')}`,

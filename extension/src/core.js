@@ -49,7 +49,6 @@ function parseBound(doc, url, profile) {
       kind: row.getAttribute('data-tipo') === 'anexo' ? 'attachment' : 'document',
       parentId: row.getAttribute('data-pai'),
       expectedPages: Number.isFinite(pages) ? pages : null,
-      restricted: row.getAttribute('data-sigilo') !== null,
       href: abs(safeQuery(row, profile.openLink)?.getAttribute('href'), base),
     };
   });
@@ -154,8 +153,7 @@ export async function readCase({ startDoc, startUrl, fetchPage, isCurrent = () =
       for (const it of page.items) {
         if (ids.has(it.id)) throw new Stop('inventory_changed', 'document listed twice');
         ids.add(it.id);
-        const { restricted, ...rest } = it;
-        inv.items.push({ ...rest, state: restricted ? 'restricted' : 'pending', detail: restricted ? 'marked restricted in list' : null });
+        inv.items.push({ ...it, state: 'pending', detail: null });
       }
       inv.segments.push({ n, status: 'read', rows: page.items.length });
       emit();

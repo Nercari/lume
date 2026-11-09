@@ -5,7 +5,7 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 canonical=(
   intake
-  companion
+  chatgpt
   extension
   case-store
   extraction

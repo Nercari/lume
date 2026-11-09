@@ -4,12 +4,12 @@
     "Before the session",
     "Observer role",
     "Install and setup",
-    "Sign-in",
+    "ChatGPT project setup",
     "Case workflow",
     "Source inspection",
     "Draft revision",
     "Authorized transfer",
-    "Logout and revocation",
+    "Remove case data",
     "Uninstall",
     "Timing and friction",
     "Failure capture",
@@ -18,26 +18,22 @@
   "userGuideSections": [
     "Before you start",
     "Install the extension",
-    "Install the companion",
-    "Connect extension and companion",
-    "First sign-in",
-    "Open a case",
+    "Set up ChatGPT",
+    "Daily workflow",
     "Update Lume",
-    "Sign out and revoke access",
     "Remove case data",
     "Uninstall Lume",
     "Troubleshooting"
   ],
   "layoutArtifacts": [
     "extension/dist",
-    "companion native messaging host",
-    "host manifest",
+    "chatgpt/PROJETO-LUME.md",
     "version pin file"
   ],
   "attributionItems": [
     "Primary license",
     "Third-party runtime dependencies",
-    "OpenAI Sign in with ChatGPT",
+    "ChatGPT manual workflow",
     "Chrome extension platform",
     "Sample and evaluation separation"
   ]

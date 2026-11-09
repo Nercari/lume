@@ -51,7 +51,7 @@ if (!layout.includes('extension/dist')) throw new Error('package-layout.md missi
 
 const repoRefs = [
   ['../extension/README.md', join(root, '../extension/README.md')],
-  ['../companion/docs/auth-route.md', join(root, '../companion/docs/auth-route.md')],
+  ['../chatgpt/LEIA-ME.md', join(root, '../chatgpt/LEIA-ME.md')],
 ];
 
 for (const [, target] of repoRefs) {

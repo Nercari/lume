@@ -4,7 +4,7 @@ This file is the merge evidence for this repo. Update it in the same PR when beh
 
 ## Commands
 
-- Test one package: `npm test --prefix <package>` (packages: intake, companion, extension, case-store, extraction, analysis, chat-editor, source-panel, transfer, packaging). Packages that import `extraction` need `npm ci --omit=optional --prefix extraction` first.
+- Test one package: `npm test --prefix <package>` (packages: intake, chatgpt, extension, case-store, extraction, analysis, chat-editor, source-panel, transfer, packaging, trust, validation). Packages that import `extraction` need `npm ci --omit=optional --prefix extraction` first.
 - Hosted CI runs the same package tests in the per-package workflows under `.github/workflows/`.
 
 ## Essential check
@@ -14,7 +14,7 @@ GREEN for a merge: `hq_onboard_repo.py merge N --repo Nercari/lume` runs these c
 ```
 npm run build --prefix intake
 npm run lint:public --prefix intake
-npm run build --prefix companion
+npm test --prefix chatgpt
 npm run build --prefix case-store
 npm run build --prefix extension
 ```

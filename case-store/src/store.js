@@ -37,7 +37,7 @@ export class StepFailedError extends Error {
 }
 
 // Maps an error to a pause reason, or null for a transient error that may be retried.
-// Codes match companion/src/pause.js (PR for #5).
+// Codes align with subscription usage errors mapped in validation/ (#5 manual ChatGPT).
 export function pauseReasonFor(err) {
   const code = err?.code;
   const status = err?.status;

@@ -72,7 +72,7 @@ with no extracted text counts as fully wrong. An excerpt without `checkedBy` is 
 Today it runs on synthetic fixtures. The real excerpts need the permitted route and manifest from
 #3. They stay private. Only aggregate numbers go to GitHub.
 
-## 6. OCR engine: browser first, measure before moving to the companion
+## 6. OCR engine: browser first, measure before a heavier host
 
 The OCR interface is `{ id, recognize({ bytes, mime }) -> { lines: [{ text, confidence, bbox }] } }`.
 `createTesseractAdapter(worker)` wraps a tesseract.js worker (WebAssembly, local, in the
@@ -86,10 +86,10 @@ Measurement plan (needs #3 route and manifest; not run yet):
 2. Browser run: tesseract.js `por` in the extension worker on the standard workstation. Record
    per page: wall time, peak memory, CER, WER and the low-confidence share. Render the page at
    200 and 300 DPI.
-3. Companion run: the same pages through a native engine in the companion (for example the
-   Tesseract CLI), the same metrics, and the native-message transfer time.
-4. Move OCR to the companion only if the browser run fails one limit: median more than 10 s per
-   page, peak memory more than 1 GB, or CER more than 2 points worse than the companion. Record
+3. Optional host run: the same pages through a local CLI engine (for example Tesseract on the
+   workstation), the same metrics, and transfer time if applicable.
+4. Move OCR off the browser only if the browser run fails one limit: median more than 10 s per
+   page, peak memory more than 1 GB, or CER more than 2 points worse than the host run. Record
    the result on #2 with aggregate numbers only.
 5. Set `DEFAULT_THRESHOLD` (now 0.8, uncalibrated) from the same data: the lowest confidence
    where line CER stays under the target the #3 rubric sets.

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Assemble lume-install/ from built extension + companion. No network.
+// Assemble lume-install/ from built extension + ChatGPT project assets. No network.
 import {
   copyFileSync,
   cpSync,
@@ -85,11 +85,9 @@ function writeReleasePin(outDir) {
     /* not a git checkout */
   }
   const extManifest = JSON.parse(readFileSync(join(outDir, 'extension/manifest.json'), 'utf8'));
-  const companionPkg = JSON.parse(readFileSync(join(outDir, 'companion/package.json'), 'utf8'));
   const body = [
     `commit=${commit}`,
     `extension_version=${extManifest.version}`,
-    `companion_version=${companionPkg.version}`,
     `extension_id=${process.env.LUME_EXTENSION_ID ?? 'odjfiioakpihgkikmjadmohgckkhkjhi'}`,
     `built=${new Date().toISOString().slice(0, 10)}`,
     '',
@@ -106,17 +104,14 @@ function main() {
 
   copyTree(ensureExtensionDist(), join(out, 'extension'), manifestLines, 'extension');
 
-  const companionDest = join(out, 'companion');
-  mkdirSync(companionDest, { recursive: true });
-  cpSync(join(REPO, 'companion/package.json'), join(companionDest, 'package.json'));
-  const companionPkg = readFileSync(join(companionDest, 'package.json'));
-  manifestLines.push(`companion/package.json\t${createHash('sha256').update(companionPkg).digest('hex')}\t${companionPkg.length}`);
-  copyTree(join(REPO, 'companion/src'), join(companionDest, 'src'), manifestLines, 'companion/src');
-
   const manualDist = join(REPO, 'manual/dist');
   if (existsSync(manualDist)) {
     copyTree(manualDist, join(out, 'manual'), manifestLines, 'manual');
   }
+
+  const chatgptRoot = join(REPO, 'chatgpt');
+  if (!existsSync(chatgptRoot)) throw new Error('missing chatgpt/');
+  copyTree(chatgptRoot, join(out, 'chatgpt'), manifestLines, 'chatgpt');
 
   for (const platform of ['windows', 'macos', 'linux', 'guias', 'it', 'LICENSES']) {
     const src = join(PACKAGING, platform);

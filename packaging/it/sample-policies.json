@@ -1,15 +1,12 @@
 {
   "ExtensionInstallForcelist": [
-    "odjfiioakpihgkikmjadmohgckkhkjhi;https://SEU_SERVIDOR_INTERNO/lume/update.xml"
+    "odjfiioakpihgkikmjadmohgckkhkjhi;https://example.invalid/lume-updates.xml"
   ],
   "ExtensionSettings": {
     "odjfiioakpihgkikmjadmohgckkhkjhi": {
-      "installation_mode": "force_installed",
-      "update_url": "https://SEU_SERVIDOR_INTERNO/lume/update.xml",
-      "toolbar_pin": "force_pinned"
+      "installation_mode": "forced",
+      "update_url": "https://example.invalid/lume-updates.xml"
     }
   },
-  "ExtensionInstallAllowlist": ["odjfiioakpihgkikmjadmohgckkhkjhi"],
-  "NativeMessagingUserLevelHosts": true,
-  "NativeMessagingAllowlist": ["com.lume.chatgpt"]
+  "ExtensionInstallAllowlist": ["odjfiioakpihgkikmjadmohgckkhkjhi"]
 }

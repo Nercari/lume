@@ -1,11 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { emptyLedger, syncGaps } from '../../analysis/src/index.js';
-import { COMMANDS } from '../../companion/src/commands.js';
 import { USER_ACTION, CaseSession } from '../../chat-editor/src/index.js';
 import { recordReview } from '../../source-panel/src/verify.js';
 import { LIMITS, packageVersion, writeReport } from '../src/index.js';
-import { mockHost, ORIGIN, runSecurityMatrix } from '../src/security.js';
+import { runSecurityMatrix } from '../src/security.js';
 import { runFailureMatrix } from '../src/failure.js';
 import { runStorageChecks } from '../src/storage.js';
 
@@ -28,21 +27,6 @@ test('security matrix records at least 20 attempts and zero unauthorized changes
   assert.equal(r.permissionChanges, 0);
   assert.equal(r.caseTargetChanges, 0);
   assert.equal(r.held, true);
-});
-
-test('native messaging allowlist rejects unknown commands', async () => {
-  const host = mockHost();
-  assert.deepEqual(Object.keys(COMMANDS).sort(), ['login.start', 'logout', 'status']);
-  assert.equal((await host(ORIGIN, { id: 'a1', cmd: 'status', args: {} })).ok, true);
-  for (const cmd of ['fetch', 'exec', 'readFile', 'proxy', 'sign', 'publish']) {
-    const reply = await host(ORIGIN, { id: 'a1', cmd, args: {} });
-    assert.equal(reply.ok, false, cmd);
-    assert.equal(reply.error.code, 'unknown_command', cmd);
-  }
-  const matrix = await security();
-  const commands = matrix.attempts.filter((a) => a.boundary === 'native-messaging' && a.vector === 'command');
-  assert.ok(commands.length >= 8);
-  assert.ok(commands.every((a) => a.refused && a.unauthorizedAction === 0));
 });
 
 test('forged actor and USER_ACTION are refused', async () => {
@@ -78,7 +62,7 @@ test('failure matrix records at least 20 interruptions and zero mix, duplicate, 
 
 test('storage, token, deletion, expiration, and case isolation pass', async () => {
   const r = await storage();
-  assert.ok(r.checks.length >= 8, `checks ${r.checks.length}`);
+  assert.ok(r.checks.length >= 7, `checks ${r.checks.length}`);
   assert.equal(r.failed, 0);
   assert.ok(r.checks.every((c) => c.pass));
 });
@@ -88,7 +72,7 @@ test('report records the build version, tested paths, and blocked live checks', 
   assert.equal(report.component, 'lume-trust');
   assert.equal(report.version, packageVersion());
   assert.equal(report.version, '0.0.0');
-  assert.ok(report.paths.includes('companion/src/commands.js'));
+  assert.ok(report.paths.includes('chatgpt/PROJETO-LUME.md'));
   assert.ok(report.paths.includes('transfer/src/controller.js'));
   assert.ok(report.paths.includes('case-store/src/store.js'));
   assert.ok(report.security.attempts >= 20);
@@ -99,6 +83,6 @@ test('report records the build version, tested paths, and blocked live checks', 
   assert.equal(report.failure.lostManualEdits, 0);
   assert.equal(report.storage.failed, 0);
   assert.ok(report.limits.some((l) => l.id === 'live-workstation' && l.status === 'BLOCKED'));
-  assert.ok(report.limits.some((l) => l.id === 'real-account' && l.status === 'BLOCKED'));
+  assert.ok(report.limits.some((l) => l.id === 'chatgpt-live' && l.status === 'BLOCKED'));
   assert.deepEqual(report.limits.map((l) => l.id), LIMITS.map((l) => l.id));
 });

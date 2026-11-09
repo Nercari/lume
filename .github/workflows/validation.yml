@@ -11,7 +11,7 @@ on:
       - 'extraction/src/ocr.js'
       - 'extraction/src/reconcile.js'
       - 'case-store/src/**'
-      - 'companion/src/pause.js'
+      - 'validation/src/usage.js'
       - 'chat-editor/src/method.js'
       - 'source-panel/src/research.js'
       - 'transfer/src/editor.js'

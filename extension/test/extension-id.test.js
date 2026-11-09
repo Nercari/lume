@@ -10,7 +10,7 @@ function extensionIdFromKey(key) {
   return [...hex].map((c) => String.fromCharCode(c.charCodeAt(0) + (c >= 'a' ? 10 : 49))).join('');
 }
 
-test('the manifest key pins the extension id used for native messaging', () => {
+test('the manifest key pins the extension id for managed installs', () => {
   const manifest = JSON.parse(readFileSync(new URL('../manifest.json', import.meta.url), 'utf8'));
   assert.equal(manifest.key, KEY);
   assert.equal(extensionIdFromKey(manifest.key), 'odjfiioakpihgkikmjadmohgckkhkjhi');

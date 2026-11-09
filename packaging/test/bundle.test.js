@@ -57,6 +57,10 @@ test('bundle.mjs assembles lume-install tree with manifest and without pdf', () 
   assert.ok(files.some((f) => f === 'windows/instalar.ps1'));
   assert.ok(files.some((f) => f === 'MANIFEST.txt'));
   assert.ok(files.some((f) => f === 'RELEASE-PIN.txt'));
+  assert.ok(files.some((f) => f === 'chatgpt/PROJETO-LUME.md'));
+  assert.ok(files.some((f) => f === 'chatgpt/LEIA-ME.md'));
+  assert.ok(files.some((f) => f.startsWith('chatgpt/plugin/')));
+  assert.ok(!files.some((f) => f.startsWith('comp' + 'anion/')));
   assert.ok(!files.some((f) => f.toLowerCase().endsWith('.pdf')));
 
   const manifestBody = readFileSync(join(out, 'MANIFEST.txt'), 'utf8');

@@ -57,7 +57,7 @@ or a browser restart.
   non-extractable WebCrypto AES-GCM key and a random 12-byte IV. The key is a `CryptoKey` in
   IndexedDB; script cannot export its bytes. This protects against copies of the IndexedDB files.
   It does not protect against code that runs inside the extension. The codec is a hook: a
-  stronger key source (for example, a key held by the companion from #5) can replace it.
+  stronger key source (for example, OS keychain integration) can replace it.
 - **Temporary data.** Downloads and intermediate data go only into `temp` records of the case.
   Lume writes no temporary files outside the store. Temp records have their own TTL.
 - **Logs and diagnostics.** `diagnostics()` gives counts per kind, step status, attempt counts,
@@ -66,7 +66,7 @@ or a browser restart.
   shown, and it is cut to 200 characters. Redaction removes bearer tokens, JWTs, `sk-` keys,
   `token=`/`cookie=`/`session=`/`password=`-style pairs, and long opaque strings.
 - **Credentials.** The store never receives PJe cookies, certificates, PJe credentials or model
-  tokens. Model tokens stay in the companion (#5). PJe access uses the open browser session.
+  tokens. Manual ChatGPT mode (#5) keeps no model tokens in Lume. PJe access uses the open browser session.
 
 ## 5. Expiration and deletion
 
@@ -101,7 +101,7 @@ or a browser restart.
   - HTTP 401, `auth_expired`, `subscription_sharing_invalid_user` → pause `auth_expired`.
   - HTTP 429, `quota_exhausted`, `subscription_sharing_usage_limit_exceeded` → pause
     `quota_exhausted`.
-  - These codes match `companion/src/pause.js` in the #5 PR.
+  - These codes align with subscription usage errors mapped in `validation/src/usage.js`.
 - A paused case refuses every step without a call. The pause is durable. `resume()` is a user
   action; it clears the pause and gives paused steps a new budget. There is no automatic retry
   loop.
