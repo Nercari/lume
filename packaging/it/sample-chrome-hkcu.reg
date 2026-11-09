@@ -1,0 +1,7 @@
+Windows Registry Editor Version 5.00
+
+; Sample HKCU Native Messaging registration (adjust paths).
+; Policy NativeMessagingUserLevelHosts may still be required on managed PCs.
+
+[HKEY_CURRENT_USER\Software\Google\Chrome\NativeMessagingHosts\com.lume.chatgpt]
+@="C:\\Users\\USUARIO\\AppData\\Local\\Lume\\native-messaging\\com.lume.chatgpt.json"

@@ -8,6 +8,7 @@
   "engines": { "node": ">=22" },
   "scripts": {
     "build": "node scripts/sanity.mjs",
+    "bundle": "node scripts/bundle.mjs",
     "test": "node --test --test-reporter=spec test/*.test.js"
   }
 }

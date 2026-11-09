@@ -5,10 +5,13 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const docsDir = join(dirname(fileURLToPath(import.meta.url)), '../docs');
+const guiasDir = join(dirname(fileURLToPath(import.meta.url)), '../guias');
 
 const GUIDE_FILES = ['user-guide.md', 'permissions-and-limits.md', 'package-layout.md', 'observer-checklist.md'];
+const STAFF_GUIDE_PATHS = [...GUIDE_FILES.map((f) => join(docsDir, f)), join(guiasDir, 'LEIA-ME-PRIMEIRO.md')];
 
 const PASTE_TOKEN = /paste\s+(your\s+)?(token|api\s*key|refresh)/i;
+const PASTE_TOKEN_PT = /\b(cole|colar|insira|digite)\b[^.\n]{0,40}\b(token|tokens|chave|senha)\b/i;
 const FORBIDDEN = [
   /\bOPENAI_API_KEY\b/,
   /\bsk-[A-Za-z0-9]{8,}/,
@@ -18,23 +21,31 @@ const FORBIDDEN = [
 
 const PAID_CREDITS = /paid\s+api\s+credits?/i;
 const ENABLE_PAID = /enable\s+paid/i;
+const PAID_PT = /cr[eé]dito\s+pago|habilit(e|ar)\s+.{0,20}pago/i;
 
 const BYOK = /bring\s+your\s+own\s+api\s+key/i;
+const BYOK_PT = /\b(chave de api|api\s*key)\b/i;
 
 function lineInstructsForbidden(line, re) {
   if (!re.test(line)) return false;
-  return !/(never|do not|does not|must not|without|no alternate|not offer|not silently|does \*\*not\*\*)/i.test(line);
+  return !/(never|do not|does not|must not|without|no alternate|not offer|not silently|does \*\*not\*\*|n[aã]o\s+(cole|use|habilite|ative|existe)|nunca\s+cole)/i.test(
+    line,
+  );
 }
 
 const REQUIRED_SAFE = [/does \*\*not\*\* offer a paid API key/i, /never paste tokens/i];
 
 test('staff-facing guides forbid token paste and paid fallback instructions', () => {
-  for (const file of GUIDE_FILES) {
-    const text = readFileSync(join(docsDir, file), 'utf8');
+  for (const path of STAFF_GUIDE_PATHS) {
+    const file = path.endsWith('LEIA-ME-PRIMEIRO.md') ? 'LEIA-ME-PRIMEIRO.md' : path.split('/').pop();
+    const text = readFileSync(path, 'utf8');
     for (const line of text.split('\n')) {
       assert.ok(!lineInstructsForbidden(line, PASTE_TOKEN), `${file} instructs token paste: ${line.trim()}`);
+      assert.ok(!lineInstructsForbidden(line, PASTE_TOKEN_PT), `${file} instructs token paste (pt): ${line.trim()}`);
       assert.ok(!lineInstructsForbidden(line, BYOK), `${file} instructs BYOK: ${line.trim()}`);
+      assert.ok(!lineInstructsForbidden(line, BYOK_PT), `${file} instructs BYOK (pt): ${line.trim()}`);
       assert.ok(!lineInstructsForbidden(line, PAID_CREDITS), `${file} instructs paid credits: ${line.trim()}`);
+      assert.ok(!lineInstructsForbidden(line, PAID_PT), `${file} instructs paid path (pt): ${line.trim()}`);
       assert.ok(!lineInstructsForbidden(line, ENABLE_PAID), `${file} enables paid path: ${line.trim()}`);
     }
     for (const re of FORBIDDEN) {
