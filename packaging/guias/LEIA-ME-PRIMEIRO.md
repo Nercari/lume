@@ -5,7 +5,7 @@ Pacote de instalacao offline para servidores da Justica Federal (PJe TRF1/SJDF +
 ## O que vem neste pacote
 
 - **extension/** — extensao Chrome (carregar sem compactacao).
-- **manual/** — pagina para montar o pacote do caso a partir do PDF dos autos.
+- **extension/manual/** — pagina do pacote do caso (aberta pelo painel **Gerar pacote do caso**).
 - **chatgpt/** — `PROJETO-LUME.md` (instrucoes do Projeto ChatGPT) e `LEIA-ME.md`.
 - **guias/** — guias em portugues e ingles para TI e usuarios.
 

@@ -44,7 +44,7 @@ Lume helps you read a PJe case in Chrome, build a local **case package**, and wo
 ## Uninstall Lume
 
 1. Remove the extension in `chrome://extensions`.
-2. Run the uninstall script for your OS under `lume-install/windows`, `macos`, or `linux`, or delete the install folder IT created.
+2. Run `windows\desinstalar.bat` or delete the install folder IT created (`%LOCALAPPDATA%\Lume` on Windows).
 3. Remove any ChatGPT Project you no longer need (your ChatGPT account settings).
 
 ## Troubleshooting

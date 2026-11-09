@@ -13,7 +13,7 @@ BLOCKED** until the maintainer supplies three permitted users and cases through 
 | Observer | __________________ |
 | Date | __________________ |
 | Workstation ID | opaque label only (no hostname with PII) |
-| Build pin | from `RELEASE-PIN.txt` |
+| Build pin | from `MANIFEST.txt` header (`# commit=`, `# extension_version=`) |
 
 ## Before the session
 

@@ -28,7 +28,7 @@
   "layoutArtifacts": [
     "extension/dist",
     "chatgpt/PROJETO-LUME.md",
-    "version pin file"
+    "MANIFEST.txt"
   ],
   "attributionItems": [
     "Primary license",

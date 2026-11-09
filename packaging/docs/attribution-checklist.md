@@ -5,7 +5,7 @@ maintainer; packages today use `UNLICENSED` in development.
 
 ## Primary license
 
-- [ ] SPDX identifier recorded in root or `packaging/RELEASE-PIN.txt`
+- [ ] SPDX identifier recorded in root or `MANIFEST.txt` header in the install bundle
 - [ ] Full license text shipped in `lume-install/LICENSE` (or equivalent)
 - [ ] Source offer complies with chosen license if binaries are distributed
 

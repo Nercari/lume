@@ -1,13 +1,13 @@
 # Permissions and limits (staff summary)
 
-Aligned with `extension/`, `chatgpt/`, and `case-store/` behavior as of the pinned commit in `RELEASE-PIN.txt`.
+Aligned with `extension/`, `chatgpt/`, and `case-store/` behavior as of the pinned commit in `MANIFEST.txt` (header).
 
 ## What touches case data
 
 | Component | Access | Purpose |
 |-----------|--------|---------|
 | Extension content script | Same-origin fetches in the open PJe tab | Inventory (#4) |
-| Manual page (`manual/`) | PDF the user selects locally | Build `.md` package |
+| Manual page (`extension/manual/`) | PDF the user selects locally | Build `.md` package |
 | ChatGPT (user account) | Text the user pastes | Analysis and drafts (#5 manual) |
 | Case store (when wired) | Encrypted local files | Resume work (#7) |
 
