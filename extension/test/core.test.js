@@ -17,7 +17,7 @@ test('inventory: every row across both list pages appears exactly once with an e
   const s = byId(inv);
   assert.deepEqual(
     Object.fromEntries(ALL_IDS.map((id) => [id, s[id].state])),
-    { D1: 'processed', D1A: 'processed', D2: 'restricted', D3: 'processed', D4: 'unsupported', D5: 'missing', D6: 'failed', D7: 'missing' },
+    { D1: 'processed', D1A: 'processed', D2: 'processed', D3: 'processed', D4: 'unsupported', D5: 'missing', D6: 'failed', D7: 'missing' },
   );
   assert.equal(s.D1A.kind, 'attachment');
   assert.equal(s.D1A.parentId, 'D1');
@@ -31,10 +31,10 @@ test('inventory: every row across both list pages appears exactly once with an e
   assert.equal(c.pending, 0);
 });
 
-test('inventory: a restricted row is never fetched', async () => {
+test('inventory: a sigilo-marked row is fetched like any other', async () => {
   const t = transport();
   await read(t);
-  assert.ok(!t.calls.some((u) => u.includes('id=D2')));
+  assert.ok(t.calls.some((u) => u.includes('id=D2')));
 });
 
 test('inventory: http 403 on a document becomes restricted, not failed or dropped', async () => {
@@ -165,7 +165,7 @@ test('safe stop: an expired-session page in pagination stops with no further req
   assert.equal(inv.status, 'stopped');
   assert.equal(inv.stopReason, 'session_expired');
   assert.deepEqual(t.calls, [PAGE2]);
-  assert.equal(summarize(inv).pending, 2, 'unfetched items stay pending, not dropped');
+  assert.equal(summarize(inv).pending, 3, 'unfetched items stay pending, not dropped');
 });
 
 test('safe stop: a 401 or a login page instead of a document stops the read', async () => {

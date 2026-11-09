@@ -3,13 +3,12 @@ Lume install bundle — third-party notices (Part of #13)
 extension/
   No npm runtime dependencies at package time.
 
-companion/
-  Node.js >= 22 (system or optional bundled runtime on Windows).
-  Uses only Node.js standard library modules.
+chatgpt/
+  Markdown and Agent Plugin metadata only; no bundled runtime.
 
 Chrome / Edge:
   Google Chrome extension platform terms apply to the unpacked extension.
 
-OpenAI (optional Sign in with ChatGPT via companion):
-  When login is used, OpenAI authentication and usage terms apply.
+OpenAI (user ChatGPT account):
+  When users paste case packages into ChatGPT, OpenAI usage terms apply.
   The court deployment does not imply OpenAI endorsement.

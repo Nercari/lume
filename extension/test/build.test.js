@@ -70,14 +70,15 @@ test('build emits a loadable unpacked extension with only the documented permiss
   assert.match(readFileSync(join(pageDir, 'lume-pdf.js'), 'utf8'), /pdf\.worker\.mjs/);
 });
 
-test('panel has the PDF button and the offline hint', () => {
+test('panel has the package button and calibration link', () => {
   const html = readFileSync(join(root, 'src/panel.html'), 'utf8');
   const js = readFileSync(join(root, 'src/panel.js'), 'utf8');
-  assert.match(html, /id="pdf-mode"[^>]*>Abrir modo PDF</);
-  assert.match(html, /id="pdf-hint"[^>]*>Baixe o processo completo no PJe \(Download dos autos\) e abra o PDF aqui\.</);
+  assert.match(html, /id="package-mode"[^>]*>Gerar pacote do caso</);
+  assert.match(html, /id="pdf-hint"[^>]*>Baixe o processo completo no PJe \(Download dos autos\) e abra o PDF aqui\./);
   assert.match(html, /id="calibrate"[^>]*>Modo calibração</);
   assert.match(js, /\$\('pdf-hint'\)\.hidden = v\.statusKey !== 'not_pje'/);
   assert.match(js, /chrome\.tabs\.create\(\{ url: chrome\.runtime\.getURL\('manual\/lume-pdf\.html'\) \}\)/);
+  assert.match(js, /\$\('package-mode'\)/);
 });
 
 test('toolbar click with no panel opens the PDF page and adds no permission', () => {

@@ -10,7 +10,7 @@ Policy, destinations, permissions, and case identity are fixed outside evidence 
 | --- | --- | --- |
 | Permissions | `extension/manifest.json` (`sidePanel` only) | Add a permission or a content-script match |
 | Destinations | Empty model destination list. The controller destination is the PJe editor text | POST or redirect a draft |
-| Native Messaging | `companion` `COMMANDS`: `status`, `login.start`, `logout` | Any other command, extra keys, or another origin |
+| Extension surface | Fixed manifest permissions and content-script matches | Extra permissions or cross-origin fetches from evidence |
 | Case identity | The case element the extension parses, and the case id the transfer controller was given | A sentence in a row, or a second list page for another case |
 | Writes | `TransferController.review` / `transfer`, `CaseSession.decideGap`, `recordReview` | Run without the `USER_ACTION` symbol. A string, a lookalike symbol, or an `actor` field is refused |
 | Model tools | Read names in `trust/src/policy.js` | Insert, grant, sign, or send |
@@ -19,7 +19,7 @@ Policy, destinations, permissions, and case identity are fixed outside evidence 
 
 ## Matrices
 
-`runSecurityMatrix` records one row per prompt-injection attempt (document text, page DOM, research text, model JSON, Native Messaging frames). A row is refused when the real API rejects it and the four counters stay at zero: destinations, actions, permission changes, case-target changes.
+`runSecurityMatrix` records one row per prompt-injection attempt (document text, page DOM, research text, model JSON). A row is refused when the real API rejects it and the four counters stay at zero: destinations, actions, permission changes, case-target changes.
 
 `runFailureMatrix` records interruptions across the case-store step runner, the extension reader, chat-editor regeneration, and the transfer controller. The mock editor, in-memory backend, and injected model stand in for the worker, the browser, the network, auth, and quota. Each row measures mixed cases, duplicate insertions, and lost manual edits. A partial editor write is uncertain: the pre-write text stays on the ticket and a later click does not write again.
 

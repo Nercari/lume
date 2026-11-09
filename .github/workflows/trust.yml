@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - 'trust/**'
-      - 'companion/src/**'
+      - 'chatgpt/**'
       - 'case-store/src/**'
       - 'chat-editor/src/**'
       - 'chat-editor/test/fixtures.js'

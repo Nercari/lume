@@ -6,7 +6,7 @@ export const DEFAULT_MAX_ATTEMPTS = 3;
 // Opaque local ids only. A digit-leading process number cannot be a batch case id.
 export const CASE_ID = /^[a-z][a-z0-9-]{0,63}$/;
 
-// Shared pauses match case-store pauseReasonFor (#7) and companion plan failures (#5).
+// Shared pauses match case-store pauseReasonFor (#7) and subscription quota codes (#5 manual ChatGPT).
 export const SHARED_REASONS = Object.freeze([
   'auth_expired',
   'quota_exhausted',

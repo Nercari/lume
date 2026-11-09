@@ -6,9 +6,9 @@ One paragraph per deployable or library package. Design depth is in each package
 
 Defines the **permitted real-case route** without putting case content on GitHub: a data-flow and permission matrix, official-source citations with explicit blockers, JSON Schema for private evaluation manifests, a linter that rejects identifying public text, and a six-axis rubric whose aggregate is the weakest dimension. Read [`intake/docs/data-flow-matrix.md`](../intake/docs/data-flow-matrix.md), [`intake/docs/official-sources.md`](../intake/docs/official-sources.md), and [`intake/docs/rubric.md`](../intake/docs/rubric.md).
 
-## companion (#5)
+## chatgpt (#5)
 
-Implements the **smallest native-messaging host** for Sign in with ChatGPT: PKCE OAuth on loopback, framed Chrome Native Messaging, vault-backed refresh-token custody with redaction, fixed command surface, and pause states for auth, plan, and quota failures—with no paid-API fallback. Route and blockers are documented in [`companion/docs/auth-route.md`](../companion/docs/auth-route.md).
+Ships **ChatGPT Project instructions** (`PROJETO-LUME.md`), a short setup guide (`LEIA-ME.md`), and an optional **Agent Plugin** (`plugin/` with `skills/lume/`). The user pastes the local **pacote do caso** from the extension; citations use `[Id X, fl. Y]`. No Lume API, no paid fallback, no native host. See [`chatgpt/LEIA-ME.md`](../chatgpt/LEIA-ME.md).
 
 ## extension (#4)
 
@@ -20,7 +20,7 @@ The **MV3 browser surface**: a TRF1 first-instance PJe content script and side p
 
 ## extraction (#2)
 
-Turns **#4 inventory rows** into passages with document/page/offset provenance, explicit gap records for restricted or unread content, reconciliation with zero silent omissions, and OCR quality metrics (CER/WER) before any companion OCR is justified. See [`extraction/docs/design.md`](../extraction/docs/design.md).
+Turns **#4 inventory rows** into passages with document/page/offset provenance, explicit gap records for unread or HTTP-denied content, reconciliation with zero silent omissions, and OCR quality metrics (CER/WER) before a heavier OCR engine is justified. See [`extraction/docs/design.md`](../extraction/docs/design.md).
 
 ## analysis (#6)
 

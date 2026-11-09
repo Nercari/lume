@@ -28,7 +28,7 @@ The content script fetches with `credentials: 'same-origin'` from the page's own
 
 - The adapter binds every read to the visible case number and navigation state. A case switch or a navigation starts a new epoch, aborts in-flight work and drops the old inventory.
 - It walks the document list from page 1 to the last page, attachments included. For each row it records the ID, version, kind, parent ID and the expected page count when the list shows it.
-- Each item ends in one explicit state: `processed`, `restricted`, `missing`, `unsupported` or `failed`. Items the read did not reach stay `pending`. Nothing is dropped.
+- Each item ends in one explicit state: `processed`, `restricted`, `missing`, `unsupported` or `failed`. Items the read did not reach stay `pending`. Nothing is dropped. `restricted` means the server answered HTTP 403, not a list flag.
 - `processed` means only that the document is reachable and has a supported type (PDF or HTML). Text extraction is #2.
 - A read stops safely on `session_expired`, `incompatible_layout`, `invalidated`, `inventory_changed` or `stopped_by_user`. At the end it reads page 1 again. A different list gives `inventory_changed`.
 
@@ -36,10 +36,10 @@ The content script fetches with `credentials: 'same-origin'` from the page's own
 
 - The selector profiles in `src/profile.js` are **UNVERIFIED**. Nobody has seen a permitted real case yet. The first profile that matches every role is used. If a role matches nothing, the panel names that role and stops. It does not guess.
 - The snapshot and the reader also look at same-origin iframes the top frame can open. A cross-origin frame is counted and not read. The content script itself stays in the top frame.
-- Row id, version and restriction attributes are still the placeholder names (`data-id`, `data-versao`, `data-sigilo`). A live list that uses other attributes stops instead of dropping the row.
+- Row id, version and list attributes are still the placeholder names (`data-id`, `data-versao`, `data-sigilo`). A `data-sigilo` marker does not skip the row; only a real HTTP 403 yields `restricted`. A live list that uses other attribute names stops instead of dropping the row.
 - For a document, the adapter checks the status and content type. It cancels the body of a non-HTML response (for example a PDF) unread. It reads an HTML response in full, to detect a login page. The size of an HTML response has no limit.
-- The panel ignores a state from an older epoch of the same page load. A new page load has a new load ID, so its states always show. A tab navigation clears the inventory. The panel then asks the new page. Outside PJe it shows `not_pje`, the button "Abrir modo PDF", and the line "Baixe o processo completo no PJe (Download dos autos) e abra o PDF aqui." The inventory controls on a PJe tab are unchanged.
-- "Abrir modo PDF" opens `manual/lume-pdf.html` in a new tab (`chrome.tabs.create` of `chrome.runtime.getURL`). The toolbar icon opens the side panel on any tab. If the side panel cannot be armed, that click opens the same PDF page.
+- The panel ignores a state from an older epoch of the same page load. A new page load has a new load ID, so its states always show. A tab navigation clears the inventory. The panel then asks the new page. Outside PJe it shows `not_pje`, **Gerar pacote do caso**, and the line "Baixe o processo completo no PJe (Download dos autos) e abra o PDF aqui." The inventory controls on a PJe tab are unchanged.
+- **Gerar pacote do caso** opens `manual/lume-pdf.html` in a new tab (`chrome.tabs.create` of `chrome.runtime.getURL`). **Modo calibração** is a secondary link. The toolbar icon opens the side panel on any tab. If the side panel cannot be armed, that click opens the same manual page.
 - The PDF page is the manual package build: one HTML file, `lume-pdf.js`, and `pdf.worker.mjs`. Scripts are external modules from the extension origin. The worker is a module worker. Nothing is loaded from the network.
 - DOM changes are debounced (250 ms) before the visible case is checked again. Each read checks the visible case itself before it uses a response.
 
