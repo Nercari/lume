@@ -1,0 +1,200 @@
+// Named, tolerant patterns for a merged PJe autos PDF.
+// Wording varies by tribunal build; each rule accepts one signal, not a fixed sentence.
+// Matching is accent-insensitive. Rules never keep a signer name.
+
+export function fold(value) {
+  return String(value ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+}
+
+function lastMatch(re, text) {
+  const flags = re.flags.includes('g') ? re.flags : `${re.flags}g`;
+  const global = new RegExp(re.source, flags);
+  let found = null;
+  let match;
+  while ((match = global.exec(text))) {
+    found = match;
+    if (match.index === global.lastIndex) global.lastIndex += 1;
+  }
+  return found;
+}
+
+// Bottom band of the page, where PJe prints the signature footer.
+export const FOOTER_ZONE_RATIO = 0.22;
+
+// "Num. 123 - Pág. 2", "Nº 123 – Pagina 2", and the same words without accents.
+export const footerNumPag = {
+  id: 'footer_num_pag',
+  specific: true,
+  re: /(?:num(?:ero)?\.?|n[oº°]\.?)\s*(\d{1,12})\s*[-–—]\s*pag(?:ina)?\.?\s*(\d{1,6})/iu,
+};
+
+// "Número do documento: 123" and close variants.
+export const footerNumeroDocumento = {
+  id: 'footer_numero_documento',
+  specific: false,
+  re: /numero\s+do\s+documento\s*[:\-]?\s*(\d{1,12})/iu,
+};
+
+// ".../ConsultaDocumento/listView.seam?x=123" and the same path with an earlier query parameter.
+export const footerConsultaUrl = {
+  id: 'footer_consulta_url',
+  specific: true,
+  re: /consultadocumento\/listview\.seam\?(?:[^ \n]*&)?x=(\d{1,12})/iu,
+};
+
+// Presence of an electronic-signature line. The name and the clock time are not kept.
+export const footerAssinado = {
+  id: 'footer_assinado',
+  specific: false,
+  re: /assinad[oa]\s+eletronicamente(?:\s+por\b)?/iu,
+};
+
+export const FOOTER_RULES = Object.freeze([
+  footerNumPag,
+  footerNumeroDocumento,
+  footerConsultaUrl,
+  footerAssinado,
+]);
+
+const ID_RULES = new Set(['footer_num_pag', 'footer_numero_documento', 'footer_consulta_url']);
+
+export function applyFooterRules(text) {
+  const folded = fold(text);
+  const hits = [];
+  for (const rule of FOOTER_RULES) {
+    const match = lastMatch(rule.re, folded);
+    if (!match) continue;
+    const hit = { id: rule.id };
+    if (rule.id === 'footer_num_pag') {
+      hit.docId = match[1];
+      hit.pageInDoc = Number(match[2]);
+    } else if (ID_RULES.has(rule.id)) {
+      hit.docId = match[1];
+    }
+    hits.push(hit);
+  }
+  return hits;
+}
+
+// Prefer the rule that carries both id and page. Disagreeing ids stay visible to the caller.
+export function footerFromHits(hits) {
+  const identified = hits.filter((hit) => hit.docId);
+  if (!identified.length) return null;
+  const preferred = identified.find((hit) => hit.id === 'footer_num_pag')
+    ?? identified.find((hit) => hit.id === 'footer_numero_documento')
+    ?? identified.find((hit) => hit.id === 'footer_consulta_url');
+  const ids = new Set(identified.map((hit) => hit.docId));
+  return {
+    docId: preferred.docId,
+    pageInDoc: preferred.pageInDoc ?? null,
+    rules: hits.map((hit) => hit.id),
+    conflict: ids.size > 1,
+  };
+}
+
+export function matchFooterText(text) {
+  return footerFromHits(applyFooterRules(text));
+}
+
+// Header row of the autos index: Id, Data, Documento/Tipo, in any separator style.
+export function isIndexHeader(line) {
+  const folded = fold(line).replace(/[|/.:;-]+/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!folded || folded.length > 60) return false;
+  const words = folded.split(' ');
+  if (words.length > 8) return false;
+  const has = (word) => words.includes(word);
+  const hasId = has('id');
+  const hasDoc = has('documento') || words.some((word) => word.startsWith('documento'));
+  const hasTipo = has('tipo');
+  const hasData = has('data');
+  const groups = [hasId, hasData, hasDoc || hasTipo].filter(Boolean).length;
+  return hasId && (hasDoc || hasTipo) && groups >= 2;
+}
+
+export const indexHeader = Object.freeze({ id: 'index_header', test: isIndexHeader });
+
+function splitTitle(rest) {
+  const parts = rest.split(/\s*\/\s*/).map((part) => part.trim()).filter(Boolean);
+  if (!parts.length || parts[0].length < 2) return null;
+  return {
+    title: parts[0],
+    type: parts.length > 1 ? parts.slice(1).join(' / ') : parts[0],
+  };
+}
+
+// "1001 01/02/2020 Peticao Inicial" or "1001 01/02/2020 Peticao / Inicial".
+export function parseIndexRowDated(line) {
+  const match = /^(\d{1,12})\s+(\d{2}\/\d{2}\/\d{4})\s+(.+)$/u.exec(String(line).trim());
+  if (!match) return null;
+  const split = splitTitle(match[3]);
+  if (!split) return null;
+  return { rule: 'index_row_dated', docId: match[1], date: match[2], ...split };
+}
+
+export const indexRowDated = Object.freeze({ id: 'index_row_dated', parse: parseIndexRowDated });
+
+// Same row when the date column is absent. Only used after a header, by the caller.
+export function parseIndexRowIdTitle(line) {
+  const match = /^(\d{1,12})\s+(\p{L}.+)$/u.exec(String(line).trim());
+  if (!match) return null;
+  const split = splitTitle(match[2]);
+  if (!split) return null;
+  return { rule: 'index_row_id_title', docId: match[1], date: null, ...split };
+}
+
+export const indexRowIdTitle = Object.freeze({ id: 'index_row_id_title', parse: parseIndexRowIdTitle });
+
+export function parseIndexRow(line) {
+  return parseIndexRowDated(line) ?? parseIndexRowIdTitle(line);
+}
+
+// "1001 - Peticao Inicial"
+export function parseOutlineIdPrefix(title) {
+  const match = /^(\d{1,12})\s*[-–—|:]\s*(.+)$/u.exec(String(title).trim());
+  if (!match || match[2].trim().length < 2) return null;
+  return { rule: 'outline_id_prefix', docId: match[1], title: match[2].trim() };
+}
+
+export const outlineIdPrefix = Object.freeze({ id: 'outline_id_prefix', parse: parseOutlineIdPrefix });
+
+// "Peticao Inicial - 1001"
+export function parseOutlineIdSuffix(title) {
+  const match = /^(.+?)\s*[-–—]\s*(\d{1,12})$/u.exec(String(title).trim());
+  if (!match || match[1].trim().length < 2) return null;
+  return { rule: 'outline_id_suffix', docId: match[2], title: match[1].trim() };
+}
+
+export const outlineIdSuffix = Object.freeze({ id: 'outline_id_suffix', parse: parseOutlineIdSuffix });
+
+export function parseOutlineTitle(title) {
+  const raw = String(title ?? '').trim();
+  if (!raw) return null;
+  return parseOutlineIdPrefix(raw)
+    ?? parseOutlineIdSuffix(raw)
+    ?? { rule: 'outline_title', docId: null, title: raw };
+}
+
+export const outlineTitle = Object.freeze({
+  id: 'outline_title',
+  parse: (title) => {
+    const parsed = parseOutlineTitle(title);
+    return parsed?.rule === 'outline_title' ? parsed : null;
+  },
+});
+
+const FULL_PAGE_RULES = new Set(['footer_num_pag', 'footer_consulta_url']);
+
+// Footer band first. Distinctive id patterns may also appear in the reading order
+// when the extractor did not place them in the band.
+export function matchPageFooter(lines, pageHeight) {
+  const texts = lines.map((line) => line.text).filter(Boolean);
+  if (!texts.length) return null;
+  const hasY = lines.some((line) => typeof line.y === 'number') && pageHeight > 0;
+  const zone = hasY
+    ? lines.filter((line) => typeof line.y === 'number' && line.y <= pageHeight * FOOTER_ZONE_RATIO).map((line) => line.text)
+    : texts.slice(-8);
+  const zoned = footerFromHits(applyFooterRules(zone.join('\n')));
+  if (zoned) return zoned;
+  const fallback = applyFooterRules(texts.join('\n')).filter((hit) => FULL_PAGE_RULES.has(hit.id));
+  return footerFromHits(fallback);
+}
