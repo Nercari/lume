@@ -1,23 +1,25 @@
-# Lume no ChatGPT
+# Lume no ChatGPT — VOTOS
 
-O Lume prepara um **pacote do caso** (Markdown) no seu computador. Você usa o **seu** plano ChatGPT — sem API paga do Lume.
+O Lume gera **partes do caso** (`lume-caso-parte-01-de-N.md`, …) no seu computador. Você usa o **seu** plano ChatGPT — sem API paga do Lume.
 
-## Opção 1 — Projeto no ChatGPT (recomendado)
+## Projeto (recomendado)
 
-1. Abra **ChatGPT**.
-2. Vá em **Projetos** → **Novo projeto** → nome **Lume**.
-3. Em **Instruções**, cole **uma vez** o conteúdo de `PROJETO-LUME.md` (nesta pasta ou em `lume-install/chatgpt/`).
-4. Salve.
-5. No dia a dia: gere o pacote com a extensão (**Gerar pacote do caso**), cole o `.md` no chat do projeto Lume e peça resumo, linha do tempo ou minuta.
+1. ChatGPT → **Projetos** → **Novo projeto** → nome **Lume**.
+2. Em **Instruções**, cole **uma vez** o texto de `PROJETO-LUME.md`.
+3. (Opcional) Anexe votos anonimizados como `estilo-voto-01.pdf` etc. — veja `ESTILO-LEIA-ME.md`.
+4. No dia a dia: gere as partes na extensão, **anexe todas as partes** no chat do projeto e peça **estudo integral**, resumo ou **minuta de voto**.
 
-## Opção 2 — Plugin (se o plano oferecer)
+## Plugin (se o plano oferecer)
 
-1. Instale o plugin a partir da pasta `plugin/` (manifesto Agent Plugin, pasta `skills/lume/`).
-2. As mesmas regras de citação e modelos de peça estão em `skills/lume/SKILL.md` e em `skills/lume/templates/`.
-3. O fluxo continua: pacote local → colar no ChatGPT.
+Instale a partir de `plugin/`. Regras em `skills/lume/SKILL.md` e modelos em `skills/lume/templates/` (inclui `voto.md`).
+
+## Fluxo integral
+
+1. Anexe **todas** as partes, da 01 à N.
+2. Peça **estudo integral** antes de minutas longas.
+3. O assistente deve declarar quantas partes leu e quantas peças/lacunas viu.
 
 ## O que não é necessário
 
-- Não instale host nativo de mensagens nem cole tokens.
-- Não cole tokens, chaves de API nem senhas.
-- O pacote não envia o processo a servidores do Lume.
+- Tokens, chaves de API ou senhas do Lume.
+- O pacote não é enviado a servidores do Lume — só o que você cola ou anexa no ChatGPT.
