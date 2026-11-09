@@ -5,8 +5,10 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const docsDir = join(dirname(fileURLToPath(import.meta.url)), '../docs');
+const guiasDir = join(dirname(fileURLToPath(import.meta.url)), '../guias');
 
 const GUIDE_FILES = ['user-guide.md', 'permissions-and-limits.md', 'package-layout.md', 'observer-checklist.md'];
+const STAFF_GUIDE_PATHS = [...GUIDE_FILES.map((f) => join(docsDir, f)), join(guiasDir, 'LEIA-ME-PRIMEIRO.md')];
 
 const PASTE_TOKEN = /paste\s+(your\s+)?(token|api\s*key|refresh)/i;
 const FORBIDDEN = [
@@ -29,8 +31,9 @@ function lineInstructsForbidden(line, re) {
 const REQUIRED_SAFE = [/does \*\*not\*\* offer a paid API key/i, /never paste tokens/i];
 
 test('staff-facing guides forbid token paste and paid fallback instructions', () => {
-  for (const file of GUIDE_FILES) {
-    const text = readFileSync(join(docsDir, file), 'utf8');
+  for (const path of STAFF_GUIDE_PATHS) {
+    const file = path.endsWith('LEIA-ME-PRIMEIRO.md') ? 'LEIA-ME-PRIMEIRO.md' : path.split('/').pop();
+    const text = readFileSync(path, 'utf8');
     for (const line of text.split('\n')) {
       assert.ok(!lineInstructsForbidden(line, PASTE_TOKEN), `${file} instructs token paste: ${line.trim()}`);
       assert.ok(!lineInstructsForbidden(line, BYOK), `${file} instructs BYOK: ${line.trim()}`);

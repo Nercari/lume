@@ -1,0 +1,12 @@
+node_modules/
+dist/
+lume-install/
+*.zip
+
+# Private case material — never commit
+private/
+lume-private/
+lume-cases/
+*.case.pdf
+lume-calibracao-*.json
+**/private-eval*/
