@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { research, assessRelevance, minimizeQuery, leaks, caseTermsOf, QueryLeakError } from '../src/index.js';
+import { research, assessRelevance, minimizeQuery, leaks, caseTermsOf, currencyOf, QueryLeakError } from '../src/index.js';
 
 // Stub research client: records every outgoing query; no network.
 function stubClient(results) {
@@ -60,4 +60,45 @@ test('research records source, checked text, currency and relevance; verified on
   assert.equal(assessRelevance(stale, { relevant: true, by: 'r' }).verification, 'currency_stale');
   const [unknown] = await research(stubClient([{ ...RESULTS[0], status: undefined }]), { question: 'lei 8.112/1990', caseTerms: [] }, { now: NOW });
   assert.equal(unknown.currency.status, 'unknown');
+});
+
+test('unparseable or future asOf is not current, and the record stays unverified', async () => {
+  assert.equal(currencyOf({ status: 'in_force', asOf: 'not-a-date' }, NOW, 30), 'invalid');
+  assert.equal(currencyOf({ status: 'in_force', asOf: '2099-01-01' }, NOW, 30), 'future');
+  assert.notEqual(currencyOf({ status: 'in_force', asOf: 'not-a-date' }, NOW, 30), 'current');
+  assert.notEqual(currencyOf({ status: 'in_force', asOf: '2099-01-01' }, NOW, 30), 'current');
+  const base = { title: 'Synthetic Statute', url: 'https://law.example.test/s', official: true, text: 'Article 5. Synthetic rule text.', status: 'in_force' };
+  const [bad] = await research(stubClient([{ ...base, asOf: 'not-a-date' }]), { question: 'lei 8.112/1990', caseTerms: [] }, { now: NOW });
+  const [future] = await research(stubClient([{ ...base, asOf: '2099-01-01' }]), { question: 'lei 8.112/1990', caseTerms: [] }, { now: NOW });
+  assert.equal(bad.currency.status, 'invalid');
+  assert.equal(future.currency.status, 'future');
+  assert.equal(assessRelevance(bad, { relevant: true, by: 'r' }).verification, 'currency_invalid');
+  assert.equal(assessRelevance(future, { relevant: true, by: 'r' }).verification, 'currency_future');
+  assert.notEqual(assessRelevance(bad, { relevant: true, by: 'r' }).verification, 'verified');
+  assert.notEqual(assessRelevance(future, { relevant: true, by: 'r' }).verification, 'verified');
+});
+
+test('research refuses when a case id or CPF-like token remains after minimization', async () => {
+  // Callers must pass known names. These identifier shapes are glued to letters, so the boundary
+  // stripper leaves them. They are synthetic. Free-text addresses are not part of this check.
+  const question = 'prazo da lei 8.112/1990 proc0001234-56.2026.4.01.3400 e docx123.456.789-09';
+  const minimized = minimizeQuery(question, []);
+  assert.match(minimized.query, /8\.112\/1990/);
+  assert.match(minimized.query, /0001234-56\.2026\.4\.01\.3400/);
+  assert.match(minimized.query, /123\.456\.789-09/);
+  assert.ok(leaks(minimized.query, []).includes('case_number'));
+  assert.ok(leaks(minimized.query, []).includes('cpf'));
+  const client = stubClient(RESULTS);
+  await assert.rejects(
+    research(client, { question, caseTerms: [] }, { now: NOW }),
+    (err) => {
+      assert.ok(err instanceof QueryLeakError);
+      assert.match(err.message, /case_number/);
+      assert.match(err.message, /cpf/);
+      assert.ok(!err.message.includes('0001234'));
+      assert.ok(!err.message.includes('123.456.789-09'));
+      return true;
+    },
+  );
+  assert.equal(client.queries.length, 0, 'nothing was sent');
 });
