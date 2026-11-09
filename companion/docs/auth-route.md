@@ -187,3 +187,21 @@ the host manifest and installer; inference and streaming.
 | B5 | Host install under the managed workstation's Chrome policies and supported OS | BLOCKED | A representative managed workstation and its policy export |
 | B6 | Loopback port 1455 (or another) is free and not blocked by endpoint security on the workstation | BLOCKED | The managed workstation |
 | B7 | OS vault access from the companion process under workstation policy | BLOCKED | The managed workstation |
+
+## 10. O que falta para o Sign in with ChatGPT funcionar
+
+O modo suportado hoje é o modo manual (`manual/`): a pessoa baixa o PDF dos autos no PJe, monta o pacote neste computador e cola o texto no ChatGPT que ela mesma abre. Esse caminho não faz login, não troca token e não chama a API.
+
+O Sign in with ChatGPT ainda não funciona. Falta:
+
+1. **Registro dinâmico (`dynamic_agent_client`).** As páginas de código aberto descrevem esse ponto de entrada, mas a página de client ID diz que o Sign in with ChatGPT é oferecido a um grupo selecionado de parceiros. Um aplicativo aberto que não está nessa lista pode ser recusado. Isso só se confirma com uma tentativa ao vivo na conta ChatGPT do Pedro, ou com o formulário da OpenAI de pedido de client ID (OAI-CLIENTID). Nenhum dos dois foi feito.
+
+2. **HTTP de troca do código, de refresh e de revogação.** O companion valida o retorno no loopback (state, PKCE, nonce, prazo, uso único). Ele não envia o código ao endpoint de token, não renova o refresh token e não revoga a sessão. A seção 8 lista o que já existe e o que ficou de fora.
+
+3. **Adaptadores do cofre do sistema.** A custódia espera um adaptador injetado. Não há implementação para o Credential Manager do Windows, o Keychain do macOS nem o libsecret. Sem isso o refresh token não tem onde ficar no posto de trabalho.
+
+4. **Política da estação gerenciada.** O texto das políticas `NativeMessagingAllowlist`, `NativeMessagingBlocklist` e `NativeMessagingUserLevelHosts`, e a política de instalação da extensão, não foi conferido. Sem o export da política da estação, não dá para dizer se o host nativo pode ser instalado.
+
+5. **Porta de loopback.** O redirect documentado é `http://127.0.0.1:<porta>/auth/callback` (só a porta varia; o exemplo da documentação é 1455; o caminho continua `/auth/callback`). Não foi verificado se essa porta está livre nem se o antivírus ou a política da estação a bloqueia.
+
+Até esses itens terem evidência, o modo manual é o caminho suportado. O issue #5 continua aberto.
