@@ -1,6 +1,7 @@
 // Legal research (#10). The research client is injected (the approved data route from #3); this
-// module makes no network call. Only a minimized legal formulation leaves the case: identifiers
-// and caller-named sensitive terms are removed, and a query that still contains one is not sent.
+// module makes no network call. Callers must pass known party names and any other known sensitive
+// terms: nothing here discovers names, and free-text addresses are not stripped. Identifier shapes
+// are removed. A case id, CPF, or CNPJ that is still present after that is not sent.
 
 export class QueryLeakError extends Error {}
 
@@ -16,11 +17,21 @@ const PATTERNS = [
   ['long_number', /\b\d{6,}\b/g],
 ];
 
+// The same case-id, CNPJ, and CPF shapes without word boundaries. Minimization can miss one that
+// is glued to a letter. leaks() refuses the query when one of these remains. Addresses are absent
+// on purpose: this module does not claim to strip free text.
+const RESIDUAL = [
+  ['case_number', /\d{7}-?\d{2}\.?\d{4}\.?\d\.?\d{2}\.?\d{4}/],
+  ['cnpj', /\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/],
+  ['cpf', /\d{3}\.?\d{3}\.?\d{3}-?\d{2}/],
+];
+
 const fold = (s) => String(s).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-// Case terms: document IDs from the #6 ledger plus what the caller names (case number, party
-// names, places). The ledger has no party names, so the caller must pass them.
+// Case terms: document IDs from the #6 ledger plus the names the caller passes. The ledger has no
+// party names. The caller must pass every known party name and any other known sensitive term
+// (a place, an address). This module does not infer them and does not strip free-text addresses.
 export function caseTermsOf(L, extra = []) {
   const ids = Object.values(L.passages ?? {}).map((p) => p.docId);
   return [...new Set([...ids, ...extra].map(String).filter((t) => t.trim().length > 1))];
@@ -33,6 +44,7 @@ export function leaks(query, caseTerms) {
   const q = fold(query);
   const found = caseTerms.filter((t) => termRe(t).test(q));
   for (const [kind, re] of PATTERNS) if (new RegExp(re.source, 'g').test(query)) found.push(kind);
+  for (const [kind, re] of RESIDUAL) if (new RegExp(re.source).test(query)) found.push(kind);
   return found;
 }
 
@@ -55,12 +67,16 @@ export function minimizeQuery(text, caseTerms) {
   return { query: q, removed: [...new Set(removed)] };
 }
 
-// Currency of a legal source: 'current' only when the source states it is in force and it was
-// checked within maxAgeDays. Anything else is labeled, not assumed.
+// Currency of a legal source. 'current' only when the source says it is in force, asOf parses,
+// that time is at or before now, and the check is within maxAgeDays. An unparseable asOf is
+// 'invalid'. A time after now is 'future'. Neither is current, so the record stays unverified.
 export function currencyOf(r, now, maxAgeDays) {
   if (!r.status || r.status === 'unknown' || !r.asOf) return 'unknown';
   if (r.status !== 'in_force') return r.status; // revoked, amended, suspended ...
-  return now - Date.parse(r.asOf) > maxAgeDays * 86_400_000 ? 'stale' : 'current';
+  const t = Date.parse(r.asOf);
+  if (Number.isNaN(t)) return 'invalid';
+  if (t > now) return 'future';
+  return now - t > maxAgeDays * 86_400_000 ? 'stale' : 'current';
 }
 
 // Runs one research request. client.search(query) -> [{ title, url, official, text, status, asOf }].

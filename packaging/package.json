@@ -1,0 +1,13 @@
+{
+  "name": "lume-packaging",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Lume distribution layout, nontechnical guides, observer checklist, and packaging verification",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "node scripts/sanity.mjs",
+    "test": "node --test --test-reporter=spec test/*.test.js"
+  }
+}
