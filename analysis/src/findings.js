@@ -1,12 +1,13 @@
 // Assertion classes and support checks (#6). Model output is untrusted input: every assertion is
-// checked here before it becomes a finding, and a decisive assertion without admissible support is
-// kept visible as unsupported, never presented as a documented fact.
+// checked here before it becomes a finding. A decisive assertion without admissible support —
+// including a legal conclusion — stays visible as unsupported and opens a gap. It is never left
+// as supported.
 import { canSupportDecisive } from '../../extraction/src/extract.js';
 import { parseRef } from '../../extraction/src/store.js';
 
 export const CLASSES = Object.freeze(['fact', 'allegation', 'contradiction', 'unknown', 'legal_conclusion']);
-// Classes whose decisive use needs a cited passage. An allegation needs the passage that alleges it.
-const NEEDS_SUPPORT = ['fact', 'allegation', 'contradiction'];
+// Every decisive class needs admissible cited passages. A contradiction needs one on each side.
+const minAdmissible = (cls) => (cls === 'contradiction' ? 2 : 1);
 
 export const portionOf = (id) => {
   const r = parseRef(id);
@@ -38,10 +39,11 @@ export function admit(L, stepId, callPortions, inputPassages, assertions) {
       else rejected.push({ id, reason: ok.reason });
     }
     const decisive = Boolean(a.decisive);
+    const need = minAdmissible(cls);
     let supported = true;
-    if (decisive && NEEDS_SUPPORT.includes(cls) && support.length < (cls === 'contradiction' ? 2 : 1)) {
+    if (decisive && support.length < need) {
       supported = false;
-      issues.push(cls === 'contradiction' ? 'contradiction needs two admissible sources' : 'no admissible source for a decisive assertion');
+      issues.push(need === 2 ? 'contradiction needs two admissible sources' : 'no admissible source for a decisive assertion');
     }
     const id = `${stepId}#${i}`;
     L.findings[id] = {
