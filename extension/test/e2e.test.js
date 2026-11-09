@@ -107,7 +107,12 @@ test('one click reads fifty timeline documents and opens the case on the PJe tab
     const viewPage = await waitFor(opened, (page) => page.url().includes('#lume-autos') || page.url().startsWith('chrome-error://'));
     await viewPage.goto(`${CASE_URL}#lume-autos`, { waitUntil: 'domcontentloaded' });
     await viewPage.locator('#lume-caso').waitFor({ timeout: 20_000 });
+    const root = viewPage.locator('#lume-caso-root');
+    assert.equal(await root.getAttribute('data-formato'), 'lume-caso/1');
+    assert.equal(await root.getAttribute('data-origem'), 'botao');
     const full = await viewPage.locator('#lume-caso').textContent();
+    assert.match(full ?? '', /^---\nformato: lume-caso\/1\nprocesso: TEST-CASE-A\nparte: 1\ntotal: 1\norigem: botao\n---/);
+    assert.match(full ?? '', /Índice/);
     assert.match(full ?? '', /Documentos: 50/);
     assert.match(full ?? '', /ID \| Tipo \| Data \| Págs\. do documento \| Situação/);
     assert.match(full ?? '', /H01 \| .* \| 01\/01\/2020 \| 1 \| legível/);

@@ -105,6 +105,10 @@ function viewPartFromHash() {
 
 function paintCaseView(payload) {
   const text = payload?.text || 'A visão do caso ainda não chegou. Deixe a página de estudo aberta.';
+  const root = document.createElement('article');
+  root.id = 'lume-caso-root';
+  root.dataset.formato = 'lume-caso/1';
+  root.dataset.origem = 'botao';
   const pre = document.createElement('pre');
   pre.id = 'lume-caso';
   pre.textContent = text;
@@ -142,7 +146,8 @@ function paintCaseView(payload) {
     });
   });
   bar.append(copyPart, document.createTextNode(' '), copy);
-  document.body.replaceChildren(bar, pre);
+  root.append(bar, pre);
+  document.body.replaceChildren(root);
 }
 
 function requestCaseView(attempt) {

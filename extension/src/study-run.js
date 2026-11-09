@@ -19,7 +19,7 @@ export async function processCollected(bundle, deps) {
       },
     });
     const caseResult = mergeAutos(segmented, bundle.items);
-    const parts = packParts(caseResult, bundle.items ?? []);
+    const parts = packParts(caseResult, bundle.items ?? [], { processo: bundle.caseNumber ?? '' });
     return { caseResult, parts, timings: [] };
   }
   const documents = [];
@@ -52,6 +52,6 @@ export async function processCollected(bundle, deps) {
       kind: miss.reason === 'unsupported' ? 'binary' : null,
     });
   }
-  const parts = packParts(caseResult, bundle.items ?? []);
+  const parts = packParts(caseResult, bundle.items ?? [], { processo: bundle.caseNumber ?? '' });
   return { caseResult, parts, timings };
 }
