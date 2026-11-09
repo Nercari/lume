@@ -1,0 +1,36 @@
+LUME — COMECE AQUI
+==================
+
+UMA VEZ SÓ: INSTALAR (2 minutos)
+1. Descompacte este zip numa pasta fixa, por exemplo Documentos\Lume
+   (botão direito > Extrair tudo). Não apague essa pasta depois.
+2. No Chrome, abra  chrome://extensions  e ligue "Modo do desenvolvedor"
+   (canto superior direito).
+3. Clique "Carregar sem compactação" e escolha a pasta  extension  deste zip.
+4. Fixe o Lume no ícone de quebra-cabeça do Chrome.
+
+UMA VEZ SÓ: CRIAR O PROJETO "LUME" NO CHATGPT (1 minuto)
+1. No ChatGPT: Projetos > Novo projeto > nome "Lume".
+2. Abra as Instruções do projeto e cole TODO o texto do arquivo
+   chatgpt\PROJETO-LUME.md (deste zip). Salve.
+   (Se o seu plano mostrar "Plugins", dá para instalar a pasta
+   chatgpt\plugin em vez de colar. Não é obrigatório.)
+
+A CADA PROCESSO
+1. Abra o processo no PJe e pegue os autos:
+   - PDF dos autos (Download dos autos) — lê também as páginas
+     escaneadas, com OCR feito no seu computador; ou
+   - o texto do PJe+R ("extrair autos em texto") — mais rápido, mas
+     sem as imagens.
+2. Clique no Lume > "Gerar pacote do caso" > escolha o PDF ou cole o
+   texto. Espere terminar (o OCR mostra "página X de Y").
+3. Clique "Baixar pacote do caso (.md)".
+4. No ChatGPT, abra o projeto Lume, comece uma conversa, anexe o
+   arquivo lume-pacote-do-caso.md e peça, por exemplo:
+   "resumo do processo", "linha do tempo", "pontos controvertidos" ou
+   "minuta de sentença: <o que você quer>".
+5. As respostas citam [Id X, fl. Y]. Para conferir, cole a resposta
+   em "Conferir citações" na mesma página do Lume.
+
+Tudo é processado no seu computador; o Lume não envia nada a lugar
+nenhum. Só vai ao ChatGPT o arquivo que você anexar.
