@@ -1,0 +1,29 @@
+name: companion
+
+on:
+  pull_request:
+    paths:
+      - 'companion/**'
+      - '.github/workflows/companion.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'companion/**'
+      - '.github/workflows/companion.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: companion
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm run build
+      - run: npm test
