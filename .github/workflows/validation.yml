@@ -1,0 +1,41 @@
+name: validation
+
+on:
+  pull_request:
+    paths:
+      - 'validation/**'
+      - 'intake/src/**'
+      - 'intake/schema/**'
+      - 'extension/src/core.js'
+      - 'extraction/src/measure.js'
+      - 'extraction/src/ocr.js'
+      - 'extraction/src/reconcile.js'
+      - 'case-store/src/**'
+      - 'companion/src/pause.js'
+      - 'chat-editor/src/method.js'
+      - 'source-panel/src/research.js'
+      - 'transfer/src/editor.js'
+      - '.github/workflows/validation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'validation/**'
+      - '.github/workflows/validation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: validation
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-package-lock --ignore-scripts
+      - run: npm run build
+      - run: npm test
