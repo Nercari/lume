@@ -1,13 +1,15 @@
-// Citation check for a pasted ChatGPT answer. Existence only: the id and the sheet
-// have to be in the case. This does not judge whether the sentence is true.
-// Accepts [Id X], [Id X, fl. Y] and the older [Id X, p. Y]. A decisive sentence
+// Citation check for a pasted ChatGPT answer. Existence only: the id and the
+// page inside the document have to be in the case. This does not judge whether
+// the sentence is true. Accepts [ID X, pág. Y], [ID X], and the older
+// [Id X, fl. Y] and [Id X, p. Y]. "id" is case-insensitive. A page number is
+// only pageInDoc from the export, never a guessed position. A decisive sentence
 // with none of those nearby is flagged. There is no network call here.
-import { sheetMap } from './sheets.js';
+import { pagesByDoc } from './sheets.js';
 import { fold } from './rules.js';
 
 export const CITATION_RULE = Object.freeze({
   id: 'citation_id_page',
-  re: /\[\s*Id\s+([^,\]]+?)(?:\s*,\s*(?:fl|p)\.?\s*(\d{1,6}))?\s*\]/giu,
+  re: /\[\s*id\s+([^,\]]+?)(?:\s*,\s*(?:p[áa]g|fl|p)\.?\s*(\d{1,6}))?\s*\]/giu,
 });
 
 const decisive = (id, re) => Object.freeze({ id, re });
@@ -31,8 +33,8 @@ function citationPattern() {
 }
 
 function sentencesOf(text) {
-  // "fl. 2" and "p. 2" are citations, not the end of a sentence.
-  return String(text).split(/\n+/).flatMap((line) => line.split(/(?<!(?:[Pp]\.|[Ff][Ll]\.))(?<=[.!?])\s+/)).map((part) => part.trim()).filter(Boolean);
+  // "pág. 2", "fl. 2" and "p. 2" are citations, not the end of a sentence.
+  return String(text).split(/\n+/).flatMap((line) => line.split(/(?<!(?:[Pp]\.|[Ff][Ll]\.|[Pp][áa]g\.|[Pp]ag\.))(?<=[.!?])\s+/)).map((part) => part.trim()).filter(Boolean);
 }
 
 function gapIdsOf(caseResult) {
@@ -44,20 +46,36 @@ function gapIdsOf(caseResult) {
   return ids;
 }
 
+function locatorsOf(caseResult) {
+  const map = new Map();
+  for (const [docId, pages] of pagesByDoc(caseResult)) {
+    const sheets = new Map();
+    let anyText = false;
+    for (const page of pages) {
+      if (page.hasText) anyText = true;
+      if (page?.pageInDoc == null || !Number.isFinite(Number(page.pageInDoc))) continue;
+      const sheet = Number(page.pageInDoc);
+      sheets.set(sheet, Boolean(page.hasText) || sheets.get(sheet) === true);
+    }
+    map.set(docId, { sheets, anyText });
+  }
+  return map;
+}
+
 function citationStatus(docId, pageInDoc, known, gapIds) {
-  const pages = known.get(docId);
+  const doc = known.get(docId);
   if (pageInDoc == null) {
-    if (pages) return [...pages.values()].some(Boolean) ? 'exists' : 'unreadable';
+    if (doc) return doc.anyText ? 'exists' : 'unreadable';
     return gapIds.has(docId) ? 'unreadable' : 'missing_document';
   }
-  if (!pages) return gapIds.has(docId) ? 'missing_page' : 'missing_document';
-  if (!pages.has(pageInDoc)) return 'missing_page';
-  return pages.get(pageInDoc) ? 'exists' : 'unreadable';
+  if (!doc) return gapIds.has(docId) ? 'missing_page' : 'missing_document';
+  if (!doc.sheets.has(pageInDoc)) return 'missing_page';
+  return doc.sheets.get(pageInDoc) ? 'exists' : 'unreadable';
 }
 
 export function checkAnswer(answerText, caseResult) {
   const text = String(answerText ?? '');
-  const known = sheetMap(caseResult);
+  const known = locatorsOf(caseResult);
   const gapIds = gapIdsOf(caseResult);
   const citations = [];
   const re = citationPattern();

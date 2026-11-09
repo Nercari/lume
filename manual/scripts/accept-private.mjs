@@ -33,7 +33,11 @@ export function assessResult(headers, result) {
     gaps[key] = (gaps[key] ?? 0) + 1;
   }
   let failures = headers === documents ? 0 : 1;
-  const lines = passages.map((passage) => `[Id ${passage.docId}, fl. ${passage.pageInDoc}]`);
+  const lines = passages.map((passage) => (
+    passage.pageInDoc == null
+      ? `[ID ${passage.docId}]`
+      : `[ID ${passage.docId}, pág. ${passage.pageInDoc}]`
+  ));
   const checked = lines.length ? checkAnswer(lines.join('\n'), result) : { citations: [] };
   let resolved = 0;
   if (checked.citations.length !== lines.length) failures += 1;

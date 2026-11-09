@@ -294,16 +294,14 @@ function groupLeaves(leaves) {
 }
 
 function assignSheetNumbers(doc) {
-  let next = 1;
   for (const leaf of doc.leaves) {
-    if (leaf.footer?.pageInDoc != null) {
-      leaf.pageInDoc = leaf.footer.pageInDoc;
-      next = leaf.footer.pageInDoc + 1;
-    } else {
-      leaf.pageInDoc = next;
-      next += 1;
-    }
+    leaf.pageInDoc = leaf.footer?.pageInDoc != null ? leaf.footer.pageInDoc : null;
   }
+}
+
+function textPassageId(docId, version, pageInDoc, ordinal) {
+  if (pageInDoc != null) return passageIdFor(docId, version, pageInDoc, null);
+  return `${docId}@${version}:t${ordinal}`;
 }
 
 function assignMissingIds(docs) {
@@ -361,7 +359,7 @@ function materialize(docs, version) {
       numbers.push(ordinal);
       const placeholder = isPlaceholderBody(leaf.body);
       const text = placeholder ? '' : leaf.body;
-      const passageId = passageIdFor(doc.docId, version, leaf.pageInDoc, ordinal);
+      const passageId = textPassageId(doc.docId, version, leaf.pageInDoc, ordinal);
       const page = {
         n: ordinal,
         hasText: !placeholder,
@@ -379,7 +377,7 @@ function materialize(docs, version) {
         docId: doc.docId,
         version,
         pageInDoc: leaf.pageInDoc,
-        pdfPage: ordinal,
+        pdfPage: null,
         text,
         method: page.method,
         hasText: page.hasText,
@@ -664,7 +662,7 @@ function sheetsOf(piece, fileRules) {
     else loose.push(line);
   }
   if (current) marked.push(current);
-  if (!sawMarker) return [{ pageInDoc: 1, text: loose.join('\n').trim() }];
+  if (!sawMarker) return [{ pageInDoc: null, text: loose.join('\n').trim() }];
   if (marked.length && loose.some((line) => line.trim())) {
     marked[0].lines = [...loose, ...marked[0].lines];
   }
@@ -693,7 +691,7 @@ function materializePje(pieces, version, processNumber, fileRules) {
       }
       const hasText = body.kind === 'text';
       const text = hasText ? body.text : '';
-      const passageId = passageIdFor(piece.docId, version, sheet.pageInDoc, ordinal);
+      const passageId = textPassageId(piece.docId, version, sheet.pageInDoc, ordinal);
       const page = {
         n: ordinal,
         hasText,
@@ -711,7 +709,7 @@ function materializePje(pieces, version, processNumber, fileRules) {
         docId: piece.docId,
         version,
         pageInDoc: sheet.pageInDoc,
-        pdfPage: ordinal,
+        pdfPage: null,
         text,
         method: page.method,
         hasText,

@@ -36,16 +36,26 @@ function wantedText(fixture) {
   return fixture.expected.flatMap((piece) => piece.pages.map((page) => page.text)).filter(Boolean).join('\n');
 }
 
+function cite(passage) {
+  if (passage.pageInDoc == null) return `[ID ${passage.docId}]`;
+  return `[ID ${passage.docId}, pág. ${passage.pageInDoc}]`;
+}
+
 function assertCitations(result) {
-  const lines = result.passages.map((passage) => `[Id ${passage.docId}, fl. ${passage.pageInDoc}]`);
+  const lines = result.passages.map(cite);
   const checked = checkAnswer(lines.join('\n'), result);
   assert.equal(checked.citations.length, result.passages.length);
   for (let index = 0; index < result.passages.length; index += 1) {
     const passage = result.passages[index];
     const status = passage.hasText ? 'exists' : 'unreadable';
     assert.equal(checked.citations[index].status, status, passage.docId);
+    assert.equal(passage.pdfPage, null);
     assert.equal(passage.text.includes('\u0000'), false);
     if (!passage.hasText) assert.equal(passage.text, '');
+    if (passage.pageInDoc == null) {
+      const guessed = checkAnswer(`[ID ${passage.docId}, pág. 1]`, result);
+      assert.equal(guessed.citations[0].status, 'missing_page');
+    }
   }
 }
 
@@ -143,6 +153,24 @@ test('documentoHeader wins: every header is a document, processo is not a piece'
   ]) {
     assert.ok(result.rules.includes(rule.id), rule.id);
   }
+});
+
+test('Documento headers stay in source order even when ids decrease', () => {
+  const fixture = makePjeExport({
+    pieces: [
+      { id: '100000030', fields: ['Despacho', 'Parte Fictícia'], raw: ['Texto da peca trinta, longo o bastante.'] },
+      { id: '100000010', fields: ['Sentença', 'Juízo Fictício'], raw: ['Texto da peca dez, longo o bastante.'] },
+      { id: '100000020', fields: ['Laudo', 'Perito Fictício'], paginated: true, raw: ['folha um', 'folha dois'] },
+    ],
+  });
+  const result = segmentText(fixture.text);
+  assert.deepEqual(result.documents.map((doc) => doc.docId), ['100000030', '100000010', '100000020']);
+  assert.deepEqual(result.passages.map((passage) => [passage.docId, passage.pageInDoc, passage.pdfPage]), [
+    ['100000030', null, null],
+    ['100000010', null, null],
+    ['100000020', 1, null],
+    ['100000020', 2, null],
+  ]);
 });
 
 test('Página N de M sets fl. N and keeps the same-line text', () => {

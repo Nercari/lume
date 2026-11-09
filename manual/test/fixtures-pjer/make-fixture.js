@@ -46,19 +46,16 @@ export function symbolBlob(token = '') {
 }
 
 function expectedPages(piece) {
-  if (piece.gap === 'binary' || piece.gap === 'image') {
-    return [{ pageInDoc: 1, text: '' }];
-  }
   const raw = piece.raw ?? [];
   if (piece.paginated) {
     return raw.map((page, index) => ({
       pageInDoc: index + 1,
-      text: String(page ?? '').replaceAll('\u0000', '').trim(),
+      text: piece.gap ? '' : String(page ?? '').replaceAll('\u0000', '').trim(),
     }));
   }
   return [{
-    pageInDoc: 1,
-    text: raw.join('\n').replaceAll('\u0000', '').trim(),
+    pageInDoc: null,
+    text: piece.gap ? '' : raw.join('\n').replaceAll('\u0000', '').trim(),
   }];
 }
 
