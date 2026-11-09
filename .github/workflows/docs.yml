@@ -1,0 +1,64 @@
+name: docs
+
+on:
+  pull_request:
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - '.github/workflows/docs.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  link-sanity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify paths referenced from docs
+        run: |
+          set -euo pipefail
+          test -f README.md
+          test -f docs/packages.md
+          for p in \
+            intake companion extension case-store extraction analysis chat-editor source-panel \
+            intake/docs/data-flow-matrix.md intake/docs/official-sources.md intake/docs/rubric.md \
+            companion/docs/auth-route.md extension/README.md \
+            case-store/docs/design.md extraction/docs/design.md \
+            analysis/docs/design.md chat-editor/docs/design.md source-panel/docs/design.md
+          do
+            test -e "$p" || { echo "missing: $p"; exit 1; }
+          done
+          echo "link-sanity ok"
+
+  package-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - intake
+          - companion
+          - extension
+          - case-store
+          - extraction
+          - analysis
+          - chat-editor
+          - source-panel
+    defaults:
+      run:
+        working-directory: ${{ matrix.package }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: npm install
+      - name: Build
+        run: npm run build --if-present
+      - name: Test
+        run: npm test
+      - name: intake public linter
+        if: matrix.package == 'intake'
+        run: npm run lint:public
