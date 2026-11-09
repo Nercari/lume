@@ -1,22 +1,19 @@
 # Modelo — Voto (Turma Recursal / 2º grau)
 
-**Cabeçalho**  
-(Recurso nº … — Turma/Órgão — Relator(a) — Recorrente / Recorrido — placeholders se não constar)
+**Ementa (uma linha, CAIXA-ALTA)**  
+ÁREA. BENEFÍCIO. REQUISITO. ACHADO. SENTENÇA MANTIDA. RECURSO DESPROVIDO.  
+(variante: SENTENÇA REFORMADA. RECURSO PROVIDO.)
 
-**Ementa** (se pedida ou no estilo carregado)  
-TEMA EM CAIXA-ALTA. OUTRO TEMA.  
-1. …  
-2. …
+**Voto — parágrafos numerados (sem subtítulos)**
 
-**Relatório**  
-(ou: *Dispensado o relatório (art. 38 da Lei 9.099/1995)*)  
-Fatos com `[Id X, fl. Y]`.
+1. Trata-se de recurso inominado … sentença que julgou (im)procedente … `[Id X, fl. Y]`
+2. Sustenta, em síntese, que … (perfil: idade, escolaridade, profissão — se constar)
+3. Rejeito a preliminar de … / Não há cerceamento de defesa. …
+4.–n. Provas: perícia (data, CID, conclusões, aspas + citação); estudo social (renda R$, etc.); prova rural (lista de documentos + parágrafo que **pondera** a prova).
+n+1. Requisito a requisito, em ordem (cada um em parágrafo).
+n+2. O laudo oficial encontra-se bem fundamentado …
+(n opcional) Ausente o requisito …, fica prejudicado o exame dos demais pressupostos.
+último. Recurso conhecido e (des)provido.
+Honorários: 10%, exigibilidade suspensa (gratuidade, art. 98 §3º CPC) se desprovido; nenhum se provido (art. 55 Lei 9.099/1995).
 
-**Voto / Fundamentação**  
-Admissibilidade. Mérito por tópicos. Enfrentamento do recurso, com citações.
-
-**Dispositivo**  
-Ante o exposto, NEGO/DOU (PARCIAL) PROVIMENTO ao recurso…  
-(Honorários/custas — art. 55 Lei 9.099/1995 quando JEF, ou placeholder.)
-
-**Acórdão / súmula** (opcional)
+**ACÓRDÃO (opcional)** — Decide a … Turma Recursal …, à unanimidade …

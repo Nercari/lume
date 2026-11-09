@@ -1,11 +1,15 @@
-# Exemplos de estilo de voto (Projeto Lume)
+# Estilo de voto no Projeto Lume
 
-Para o ChatGPT imitar o **seu** formato de votos no TRF1:
+## 1. Guia anonimizado (obrigatório no Projeto)
 
-1. Abra o **Projeto Lume** no ChatGPT → **Arquivos do projeto**.
-2. Envie votos ou acórdãos **já anonimizados** (sem nomes, números de processo ou dados pessoais).
-3. Salve cada arquivo como `estilo-voto-01.pdf`, `estilo-voto-02.md`, `estilo-voto-03.docx`, etc.
-4. Prefira **PDF ou Markdown** quando possível; DOCX também funciona.
-5. Atualize a lista quando quiser mudar tom ou estrutura — o modelo usa só **forma**, nunca fatos desses arquivos.
+1. Abra o Projeto **Lume** no ChatGPT → **Arquivos do projeto**.
+2. Envie o arquivo **`ESTILO-VOTO.md`** desta pasta (`chatgpt/ESTILO-VOTO.md` ou cópia no pacote de instalação).
+3. Esse guia fixa ementa, ordem dos parágrafos, preliminares, prova, honorários etc. **sem** dados de caso.
 
-Não é obrigatório ter exemplos: sem eles, vale o modelo padrão em `PROJETO-LUME.md`.
+## 2. Exemplos reais do Pedro (opcional, privados)
+
+1. Anexe votos **anonimizados** (sem nomes, números de processo ou dados pessoais).
+2. Nomeie: `estilo-voto-01.pdf`, `estilo-voto-02.docx`, etc.
+3. O modelo usa só **estrutura e tom** — nunca fatos desses arquivos.
+
+Sem exemplos em PDF, o guia `ESTILO-VOTO.md` basta. Sem guia nem exemplos, use o resumo em `PROJETO-LUME.md`.

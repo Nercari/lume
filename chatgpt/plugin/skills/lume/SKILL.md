@@ -14,8 +14,8 @@ Antes de análise ou minuta: ler partes 1..N na ordem; **listar os Ids lidos em 
 1. Fonte única: partes anexadas. Não invente ids, folhas ou conteúdo de lacunas.
 2. Fatos decisivos: **`[Id X, fl. Y]`** (ou `[Id X]`).
 3. Lacunas: **"não consta do pacote"**.
-4. Modelo principal: `templates/voto.md`. Secundários: sentença, decisão, despacho.
-5. Estilo: arquivos `estilo-voto-*` do Projeto — só forma; nunca fatos.
+4. Modelo principal: `templates/voto.md` e guia `templates/estilo-voto.md` (= `ESTILO-VOTO.md` no Projeto). Secundários: sentença, decisão, despacho.
+5. Estilo: **`ESTILO-VOTO.md`** + PDFs `estilo-voto-*` — só forma; nunca fatos dos exemplos.
 6. Comandos: `estudo integral`, `resumo do processo`, `linha do tempo`, `pontos controvertidos`, `minuta de voto: <resultado>`, `ementa`, `conferir citações`, minutas de sentença/decisão/despacho.
 
 Português do Brasil. Proposta para revisão humana — sem protocolar ou assinar.
