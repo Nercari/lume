@@ -15,7 +15,7 @@ export const DOC_TYPES = Object.freeze({
 
 const INSTRUCTIONS = Object.freeze([
   'Use only the facts in the case evidence block. The style block shows tone and structure only: never take a fact, name, number or date from it.',
-  'State a decisive fact only when a current finding supports it, and list that finding id in `uses` of the section.',
+  'State a decisive fact or legal conclusion only when a current finding with `inspectable: true` supports it, and list that finding id in `uses`.',
   'Follow the section order of the document type. Do not leave a section empty.',
   'Address every contradiction listed in `mustAddress`, and list its id in `addressed`.',
   'Without a requested outcome, propose the conclusion the evidence supports, with its reasoning and the findings it rests on.',
@@ -50,10 +50,11 @@ export const CHECKS = Object.freeze([
     run: (d, { ctx }) => {
       const byId = new Map(ctx.findings.map((f) => [f.id, f]));
       const out = [];
-      for (const s of d.sections) for (const id of s.uses) {
+      const parts = [...d.sections, ...(d.conclusion ? [{ id: 'conclusion', uses: d.conclusion.uses }] : [])];
+      for (const s of parts) for (const id of s.uses) {
         const f = byId.get(id);
-        if (!f) out.push(`section ${s.id} uses ${id}, which is not a current finding of this case`);
-        else if (f.decisive && !f.supported) out.push(`section ${s.id} uses unsupported decisive finding ${id}`);
+        if (!f) out.push(`${s.id} uses ${id}, which is not a current finding of this case`);
+        else if (!f.inspectable) out.push(`${s.id} uses decisive ${f.class} ${id} without an inspectable cited passage`);
       }
       return out;
     },

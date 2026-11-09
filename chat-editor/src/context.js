@@ -2,10 +2,16 @@
 // findings, open gaps and the permitted #2 passages. Style material never enters it.
 import { openGaps } from '../../analysis/src/index.js';
 
+// A decisive finding reaches a draft only with support a reader can inspect: #6 marks it supported,
+// and it cites at least one current #2 passage (two for a contradiction). #6 does not require a
+// citation for a decisive legal_conclusion or unknown; this module does.
+export const inspectable = (f, L) => !f.decisive
+  || (f.supported && f.support.length >= (f.class === 'contradiction' ? 2 : 1) && f.support.every((id) => L.passages[id]));
+
 export function buildContext(L) {
   const findings = Object.values(L.findings).filter((f) => !f.stale).map((f) => ({
     id: f.id, class: f.class, text: f.text, decisive: f.decisive, supported: f.supported,
-    subject: f.subject, value: f.value, support: [...f.support],
+    inspectable: inspectable(f, L), subject: f.subject, value: f.value, support: [...f.support],
   }));
   const gaps = openGaps(L).map((g) => ({ id: g.id, reason: g.reason, impact: g.impact, docId: g.docId, page: g.page }));
   const passages = Object.values(L.passages).map((p) => ({ id: p.id, text: p.text }));
@@ -42,7 +48,7 @@ export function sourcePanel(ctx, draft, moved = []) {
   const add = (ref, ids) => {
     for (const id of ids) {
       const f = byId.get(id);
-      entries.push({ ref, finding: id, class: f?.class ?? null, text: f?.text ?? null, passages: f?.support ?? [], verification: f ? 'unverified' : 'not_in_case' });
+      entries.push({ ref, finding: id, class: f?.class ?? null, text: f?.text ?? null, passages: f?.support ?? [], verification: !f ? 'not_in_case' : f.inspectable ? 'unverified' : 'unsupported' });
     }
   };
   for (const s of draft.sections) add(s.id, s.uses);

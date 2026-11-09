@@ -1,10 +1,14 @@
 // Case chat and side editor for one case (#8). Chat and drafting read the same case context.
 // The model is an injected function and gets no write tool: every state change here comes from a
 // user action handler calling a method of this class.
-import { registerDraft, draftState, assertConclusive, ProvisionalDraftError } from '../../analysis/src/index.js';
+import { registerDraft, draftState, assertConclusive, reclassifyGap, GateError, ProvisionalDraftError } from '../../analysis/src/index.js';
 import { DEFAULT_METHOD, CITATION, inferDocType } from './method.js';
 import { buildContext, incompatibilities, mustAddress, sourcePanel } from './context.js';
 import { merge3 } from './merge.js';
+
+// Held only by the UI user-action handler. Model output and page content are data (JSON, DOM
+// text) and cannot carry a Symbol, so they cannot reach decideGap as a human.
+export const USER_ACTION = Symbol('chat-editor.user-action');
 
 export const emptyProfile = () => ({ instructions: [], examples: [] });
 
@@ -150,6 +154,17 @@ export class CaseSession {
     meta.corrections.push(instruction);
     await this.#save(draftId, meta);
     return { scope, corrections: meta.corrections };
+  }
+
+  // The only path from this module to the #6 gap reclassification. The actor is set here from the
+  // call origin; an `actor` in the decision is refused, never trusted.
+  decideGap(gapId, decision, origin) {
+    if (origin !== USER_ACTION) throw new GateError('a gap decision needs a user action');
+    if ('actor' in (decision ?? {})) throw new GateError('the actor is set by the session, not by the decision');
+    const { by, impact, reason, sources } = decision;
+    const rec = reclassifyGap(this.ledger, gapId, { actor: 'human', by, impact, reason, sources });
+    this._ctx = null; // #6 does not change L.rev on reclassification
+    return rec;
   }
 
   // Always available, also for a provisional draft: editing and analysis continue.

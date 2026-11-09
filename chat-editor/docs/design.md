@@ -34,10 +34,16 @@ The draft text has no citations. The code moves citation markers out of the mode
 
 Each generation registers the used findings with #6 `registerDraft`. `view` combines the #6 `draftState` with failed checks and open conflicts. `presentConclusive` is the only path that presents a draft as ready, and #9 transfer must call it. It throws `ProvisionalDraftError` while the #6 gate is closed, a check fails, or a conflict is open. Editing continues in all states.
 
+## Trust boundaries (follow-up from the #6 review)
+
+Gap decisions: `decideGap(gapId, decision, origin)` is the only path from this module to #6 `reclassifyGap`. It accepts only the `USER_ACTION` symbol as origin. Only the UI user-action handler holds this symbol. Model output and page content are data (JSON, DOM text), so they cannot carry a Symbol. The session sets `actor: 'human'`. A decision that contains an `actor` field is refused. The code does not read model output for gap decisions.
+
+Decisive support: #6 requires a citation for a decisive fact, allegation or contradiction, but not for a decisive legal conclusion or unknown. This module requires it for all classes. A decisive finding is `inspectable` only if #6 marks it supported and it cites at least one current #2 passage (two for a contradiction). The check `facts_from_case_only` flags a section or conclusion that uses a decisive finding that is not inspectable, so the draft stays provisional. The source panel marks the entry `unsupported`.
+
 ## Use of #3, #6 and #7
 
 - #3: rubric dimensions for the checks. Human rubric scoring on a real case is not done here.
-- #6: ledger, findings, gaps, `registerDraft`, `draftState`, `assertConclusive`.
+- #6: ledger, findings, gaps, `reclassifyGap` (through `decideGap` only), `registerDraft`, `draftState`, `assertConclusive`.
 - #7: `runStep` (idempotent model calls), conversation messages, checkpoints for draft metadata, and draft revisions with conflicts.
 
 The model is an injected function. Tests use a deterministic fake. This module makes no network call.
