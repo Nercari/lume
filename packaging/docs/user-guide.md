@@ -1,108 +1,58 @@
-# Lume: install and daily use
+# Lume installation guide (staff)
 
-Part of #13. Plain-language steps for court staff. You never paste tokens, API keys, or
-billing details. Sign-in happens only through the official browser flow started by Lume.
+Lume helps you read a PJe case in Chrome, build a local **case package**, and work in **your own ChatGPT plan**. Lume does **not** offer a paid API key. Never paste tokens.
 
 ## Before you start
 
-You need:
-
-- Google Chrome version 116 or newer.
-- Access to **PJe TRF1/SJDF first instance** (`pje1g.trf1.jus.br`) in the same browser, already
-  signed in the usual way your court uses.
-- A **ChatGPT account** that your organization allows for “Sign in with ChatGPT” in other apps.
-  If IT has not approved this, stop and ask them first.
-- The install folder from your IT team (`lume-install/`), not a random download.
-
-Ten minutes is a **goal** for first setup, not a promise. Your first run may take longer.
+- You need permission to work on the case in PJe with your normal login.
+- You need access to ChatGPT with a plan that allows Projects (or plugin install, if your organization offers it).
+- Ask IT for the **`lume-install`** folder from the maintainer, not a random download.
 
 ## Install the extension
 
-1. Open Chrome and go to `chrome://extensions`.
-2. Turn on **Developer mode** only if IT tells you to use an unpacked install. Managed installs
-   skip this step.
-3. Click **Load unpacked** and choose the `extension` folder inside `lume-install`.
-4. Pin **Lume** to the toolbar if Chrome offers it.
+1. IT copies `lume-install` to your machine (for example `%LOCALAPPDATA%\Lume` on Windows).
+2. Open Chrome → `chrome://extensions`.
+3. Turn on **Developer mode** if IT allows it (managed installs may use enterprise policy instead).
+4. Click **Load unpacked** and choose the `extension` folder inside `lume-install`.
+5. Pin the Lume side panel if helpful.
 
-Lume asks only for **side panel** permission. It does not read all tabs, cookies, or passwords.
+## Set up ChatGPT (once)
 
-## Install the companion
+1. Open `lume-install/chatgpt/LEIA-ME.md` and follow **Opção 1**:
+   - ChatGPT → **Projects** → **New project** named **Lume**.
+   - Paste the contents of `PROJETO-LUME.md` into **Instructions** and save.
+2. Optional: install the plugin from `chatgpt/plugin/` if your plan supports Agent Plugins.
 
-The companion is a small program on your computer. It completes Sign in with ChatGPT. Your IT
-team places the files and the native messaging manifest (see the technical layout guide).
+## Daily workflow
 
-You do **not** configure OAuth client IDs, redirect URLs, or secrets. The companion creates
-what it needs on first sign-in.
-
-## Connect extension and companion
-
-IT registers the companion with Chrome using the manifest in `lume-install/native-messaging/`.
-After that, the Lume side panel shows whether the companion is reachable.
-
-If the panel says the companion is missing, contact IT. Do not copy files into system folders
-yourself unless IT documented that step for you.
-
-## First sign-in
-
-1. Open a **PJe** tab for a case you are allowed to work on.
-2. Open the **Lume** side panel.
-3. Click **Sign in** (or the equivalent button your build shows).
-4. Chrome opens the **official OpenAI sign-in page**. Use your normal ChatGPT work login.
-5. When the page finishes, return to PJe. The panel should show that you are signed in.
-
-If sign-in fails with “plan not eligible” or “usage limit,” pause and try again later. Lume
-does **not** offer a paid API key or credit card fallback.
-
-## Open a case
-
-With PJe open on the supported site, Lume reads the document list through your existing session.
-It does not store your PJe password. Case notes stay on this computer in encrypted browser
-storage until you delete them or they expire (see permissions guide).
+1. Sign in to PJe in Chrome as usual.
+2. Open the Lume side panel on the case.
+3. Click **Gerar pacote do caso** to open the manual page, load the PDF you downloaded from PJe, and save the `.md` package.
+4. Paste the package into your **Lume** ChatGPT project and ask for summaries, timelines, or drafts.
+5. Review every citation `[Id X, fl. Y]` before using text in court systems.
 
 ## Update Lume
 
-1. IT provides a new `lume-install` folder or triggers a managed update.
-2. For unpacked installs: remove the old extension, load the new `extension` folder, and
-   confirm the version in `RELEASE-PIN.txt` matches what IT announced.
-3. IT updates the companion files if the release notes say so.
-4. Sign in again only if the panel asks you to.
-
-## Sign out and revoke access
-
-1. In the Lume panel, choose **Sign out**.
-2. Lume asks the companion to **revoke** the refresh token with the provider when the network
-   allows, then deletes local tokens.
-3. If revocation cannot be confirmed, local tokens are still removed, but IT may ask you to
-   revoke the app in your ChatGPT account settings.
-
-You do not paste tokens into the panel or a settings file.
+1. IT provides a new `lume-install` folder or managed update.
+2. Reload the unpacked extension or let policy refresh the CRX.
 
 ## Remove case data
 
-In the panel, use **Remove case** (or delete cases from the case list) for each matter you
-finished. That erases encrypted local copies. Other open cases are not affected.
+- Delete local Lume case stores only through the product controls when available ([#7](../case-store/docs/design.md)).
+- Remove downloaded `.md` packages and PDFs according to your court’s file policy.
 
 ## Uninstall Lume
 
-1. Sign out (previous section).
-2. Remove all cases you no longer need.
-3. In `chrome://extensions`, click **Remove** on Lume.
-4. IT removes the companion binary and native messaging manifest when you return the machine
-   or on request.
-
-After uninstall, no Lume authorization should remain active. Local case blobs tied to the
-extension profile are gone with the extension unless Chrome retained a profile backup outside
-Lume’s control—IT handles profile wipes per policy.
+1. Remove the extension in `chrome://extensions`.
+2. Run `windows\desinstalar.bat` or delete the install folder IT created (`%LOCALAPPDATA%\Lume` on Windows).
+3. Remove any ChatGPT Project you no longer need (your ChatGPT account settings).
 
 ## Troubleshooting
 
 | Symptom | What to try |
-|---------|-------------|
-| Panel empty on non-PJe pages | Normal. Open a supported PJe tab. |
-| “Session expired” on PJe | Sign in to PJe again in that tab, then resume in Lume. |
-| “Companion not found” | Ask IT to verify native messaging registration. |
-| “Plan limit” / “Not eligible” | Wait or use an account IT approved; do not add API keys. |
-| Layout error on PJe | Stop and report to IT; the page layout may have changed. |
+|--------|----------------|
+| Panel says layout not recognized | Use **Modo calibração** and send the JSON to IT/maintainer. |
+| Package page will not open | Rebuild or reinstall `extension/dist` with the manual bundle. |
+| ChatGPT ignores citations | Confirm Project instructions still contain `PROJETO-LUME.md`. |
 
-For deeper technical detail, see `permissions-and-limits.md` and `companion/docs/auth-route.md`
-in the repository (maintainers only).
+For permissions and limits, see `permissions-and-limits.md`.

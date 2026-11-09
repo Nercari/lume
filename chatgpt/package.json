@@ -1,0 +1,10 @@
+{
+  "name": "lume-chatgpt",
+  "version": "0.0.1",
+  "private": true,
+  "description": "ChatGPT project instructions and optional Agent Plugin for Lume manual mode",
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
+}

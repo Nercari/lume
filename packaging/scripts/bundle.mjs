@@ -1,8 +1,7 @@
 #!/usr/bin/env node
-// Assemble lume-install/ from built extension + companion. No network.
+// Assemble lume-install/ for Windows: extension + ChatGPT assets + copy-only installer. No network.
 import {
   copyFileSync,
-  cpSync,
   existsSync,
   mkdirSync,
   readdirSync,
@@ -22,17 +21,16 @@ const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const PACKAGING = join(SCRIPT_DIR, '..');
 const REPO = join(PACKAGING, '..');
 
+const BUNDLE_TOP_LEVEL = Object.freeze(['extension', 'chatgpt', 'guias', 'windows', 'it', 'LICENSES']);
+
 function parseArgs(argv) {
-  const opts = { out: null, nodeWin: null, zip: null };
+  const opts = { out: null, zip: null };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--out' && argv[i + 1]) opts.out = resolve(argv[++i]);
-    else if (a === '--node-win' && argv[i + 1]) opts.nodeWin = resolve(argv[++i]);
     else if (a === '--zip' && argv[i + 1]) opts.zip = resolve(argv[++i]);
     else if (a === '--help' || a === '-h') {
-      console.log(
-        'Usage: node packaging/scripts/bundle.mjs --out <dir> [--node-win <extracted-node-win-x64-dir>] [--zip <file.zip>]',
-      );
+      console.log('Usage: node packaging/scripts/bundle.mjs --out <dir> [--zip <file.zip>]');
       process.exit(0);
     } else throw new Error(`unknown argument: ${a}`);
   }
@@ -77,7 +75,7 @@ function copyTree(srcRoot, destRoot, manifestLines, manifestPrefix = '') {
   walk(srcRoot, destRoot, '');
 }
 
-function writeReleasePin(outDir) {
+function buildPinHeader(outDir) {
   let commit = 'unknown';
   try {
     commit = execFileSync('git', ['-C', REPO, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
@@ -85,20 +83,20 @@ function writeReleasePin(outDir) {
     /* not a git checkout */
   }
   const extManifest = JSON.parse(readFileSync(join(outDir, 'extension/manifest.json'), 'utf8'));
-  const companionPkg = JSON.parse(readFileSync(join(outDir, 'companion/package.json'), 'utf8'));
-  const body = [
-    `commit=${commit}`,
-    `extension_version=${extManifest.version}`,
-    `companion_version=${companionPkg.version}`,
-    `extension_id=${process.env.LUME_EXTENSION_ID ?? 'odjfiioakpihgkikmjadmohgckkhkjhi'}`,
-    `built=${new Date().toISOString().slice(0, 10)}`,
-    '',
-  ].join('\n');
-  writeFileSync(join(outDir, 'RELEASE-PIN.txt'), body);
+  const extensionId = process.env.LUME_EXTENSION_ID ?? 'odjfiioakpihgkikmjadmohgckkhkjhi';
+  const built = new Date().toISOString().slice(0, 10);
+  return [
+    `# Lume install bundle manifest`,
+    `# commit=${commit}`,
+    `# extension_version=${extManifest.version}`,
+    `# extension_id=${extensionId}`,
+    `# built=${built}`,
+    '# path\\tsha256\\tsize_bytes',
+  ];
 }
 
 function main() {
-  const { out, nodeWin, zip } = parseArgs(process.argv);
+  const { out, zip } = parseArgs(process.argv);
   if (existsSync(out)) rmSync(out, { recursive: true, force: true });
   mkdirSync(out, { recursive: true });
 
@@ -106,19 +104,11 @@ function main() {
 
   copyTree(ensureExtensionDist(), join(out, 'extension'), manifestLines, 'extension');
 
-  const companionDest = join(out, 'companion');
-  mkdirSync(companionDest, { recursive: true });
-  cpSync(join(REPO, 'companion/package.json'), join(companionDest, 'package.json'));
-  const companionPkg = readFileSync(join(companionDest, 'package.json'));
-  manifestLines.push(`companion/package.json\t${createHash('sha256').update(companionPkg).digest('hex')}\t${companionPkg.length}`);
-  copyTree(join(REPO, 'companion/src'), join(companionDest, 'src'), manifestLines, 'companion/src');
+  const chatgptRoot = join(REPO, 'chatgpt');
+  if (!existsSync(chatgptRoot)) throw new Error('missing chatgpt/');
+  copyTree(chatgptRoot, join(out, 'chatgpt'), manifestLines, 'chatgpt');
 
-  const manualDist = join(REPO, 'manual/dist');
-  if (existsSync(manualDist)) {
-    copyTree(manualDist, join(out, 'manual'), manifestLines, 'manual');
-  }
-
-  for (const platform of ['windows', 'macos', 'linux', 'guias', 'it', 'LICENSES']) {
+  for (const platform of ['windows', 'guias', 'it', 'LICENSES']) {
     const src = join(PACKAGING, platform);
     if (!existsSync(src)) throw new Error(`missing packaging/${platform}`);
     copyTree(src, join(out, platform), manifestLines, platform);
@@ -136,20 +126,13 @@ function main() {
     );
   }
 
-  if (nodeWin) {
-    if (!existsSync(join(nodeWin, 'node.exe'))) throw new Error('--node-win must contain node.exe');
-    copyTree(nodeWin, join(out, 'runtime/node'), manifestLines, 'runtime/node');
-  }
-
-  writeReleasePin(out);
-
-  const pinStat = statSync(join(out, 'RELEASE-PIN.txt'));
-  const pinHash = createHash('sha256').update(readFileSync(join(out, 'RELEASE-PIN.txt'))).digest('hex');
-  manifestLines.push(`RELEASE-PIN.txt\t${pinHash}\t${pinStat.size}`);
-
   manifestLines.sort((a, b) => a.localeCompare(b, 'en'));
-  const header = `# Lume install bundle manifest\n# path\\tsha256\\tsize_bytes\n`;
+  const header = `${buildPinHeader(out).join('\n')}\n`;
   writeFileSync(join(out, 'MANIFEST.txt'), header + manifestLines.join('\n') + '\n');
+
+  const top = readdirSync(out).filter((name) => statSync(join(out, name)).isDirectory()).sort();
+  const extra = top.filter((d) => !BUNDLE_TOP_LEVEL.includes(d));
+  if (extra.length) throw new Error(`unexpected bundle directories: ${extra.join(', ')}`);
 
   console.log(`bundle: wrote ${manifestLines.length} files to ${out}`);
 

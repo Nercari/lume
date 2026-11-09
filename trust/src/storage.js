@@ -1,14 +1,9 @@
-// Storage, token, deletion, expiration, and case-isolation checks on the mocked build.
+// Storage, deletion, expiration, and case-isolation checks on the mocked build.
 import assert from 'node:assert/strict';
-import { SCOPES } from '../../companion/src/auth.js';
-import { TokenCustody } from '../../companion/src/custody.js';
-import { createLogger } from '../../companion/src/redact.js';
 import { CaseStore, MemoryBackend, createAesGcmCodec } from '../../case-store/src/index.js';
 
 const CASE_A = 'fixture-alpha';
 const CASE_B = 'fixture-beta';
-const ACCESS = 'access-token-synthetic-acct-a';
-const REFRESH = 'refresh-token-synthetic-acct-a';
 const BEARER = 'Bearer synthetic.FAKE.bearer-0123456789abcdef';
 
 function clock(start = 1_000_000) {
@@ -27,15 +22,6 @@ function encrypted() {
     browserSession: () => false,
   });
   return { backend, clock: c, store };
-}
-
-function memoryVault() {
-  const map = new Map();
-  return {
-    get: async (k) => map.get(k) ?? null,
-    set: async (k, v) => { map.set(k, v); },
-    delete: async (k) => { map.delete(k); },
-  };
 }
 
 export async function runStorageChecks() {
@@ -128,30 +114,6 @@ export async function runStorageChecks() {
     assert.equal(await a.get('checkpoint', 'reader'), undefined);
     assert.equal((await a.getDraft('d1')).current, 'alpha-edit');
     pass('case-isolation');
-  }
-
-  {
-    const vault = memoryVault();
-    const now = () => 5_000_000;
-    const a = new TokenCustody({ vault, accountKey: 'acct-a', clientId: 'synthetic-client-a', now });
-    const b = new TokenCustody({ vault, accountKey: 'acct-b', clientId: 'synthetic-client-b', now });
-    await a.store({ access_token: ACCESS, refresh_token: REFRESH, expires_in: 3600, scope: SCOPES });
-    await b.store({ access_token: 'access-token-synthetic-acct-b', refresh_token: 'refresh-token-synthetic-acct-b', expires_in: 3600, scope: SCOPES });
-    const described = await a.describe();
-    assert.equal(described.signedIn, true);
-    assert.equal(JSON.stringify(described).includes(ACCESS), false);
-    assert.equal(JSON.stringify(described).includes(REFRESH), false);
-    const token = await a.accessToken(async () => { throw new Error('refresh not expected'); });
-    assert.equal(JSON.stringify(token), '"[REDACTED]"');
-    assert.equal(String(token), '[REDACTED]');
-    const lines = [];
-    createLogger((line) => lines.push(line)).info('custody', token, 'refresh_token=FAKErefreshTOKENvalue0123456789');
-    assert.equal(lines.join('\n').includes(ACCESS), false);
-    assert.equal(lines.join('\n').includes('FAKErefresh'), false);
-    await a.logout(async () => {});
-    assert.equal((await a.describe()).signedIn, false);
-    assert.equal((await b.describe()).signedIn, true);
-    pass('token-custody-redaction-and-logout');
   }
 
   {

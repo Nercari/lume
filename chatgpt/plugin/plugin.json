@@ -1,0 +1,14 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "lume",
+  "version": "0.0.1",
+  "description": "Minutas e análise de processos a partir do pacote do caso Lume (modo manual).",
+  "license": "MIT",
+  "keywords": ["lume", "minutas", "pje", "justica-federal"],
+  "homepage": "https://github.com/Nercari/lume/tree/main/chatgpt",
+  "repository": "https://github.com/Nercari/lume",
+  "author": {
+    "name": "Nercari",
+    "url": "https://github.com/Nercari"
+  }
+}

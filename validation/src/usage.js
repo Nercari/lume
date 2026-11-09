@@ -1,8 +1,6 @@
 // Subscription usage and latency stub. Work is a local function. This module has no HTTP client
 // and no paid-API route. A quota failure is a subscription limit, not a software price.
-// Issue #12 has no package on this branch; pause and resume go through #7 and #5.
 import { LONG_RECORD_PAGES } from '../../intake/src/manifest.mjs';
-import { pauseFor } from '../../companion/src/pause.js';
 import { CaseStore, PausedError, pauseReasonFor } from '../../case-store/src/store.js';
 import { MemoryBackend } from '../../case-store/src/backend.js';
 import { AUTOSAVE } from '../../transfer/src/editor.js';
@@ -12,6 +10,16 @@ export const PAID_API = false;
 export function openRoute(route) {
   if (route !== 'subscription') throw new Error('refusing paid API fallback');
   return { route: 'subscription', paidApi: PAID_API, network: false };
+}
+
+function subscriptionPauseFor(err) {
+  const reason = pauseReasonFor(err);
+  if (!reason) return null;
+  return Object.freeze({
+    state: 'paused',
+    reason,
+    resumable: reason !== 'auth_expired' || err?.code !== 'subscription_sharing_user_not_eligible',
+  });
 }
 
 export async function measureTurn({ caseId, turn, work, now }) {
@@ -52,9 +60,9 @@ export async function measureQuotaPauseResume({ caseId, now } = {}) {
   });
   const c = await store.openCase(caseId);
   const fail = Object.assign(new Error('plan limit'), { code: 'subscription_sharing_usage_limit_exceeded', status: 429 });
-  const companion = pauseFor(fail);
+  const planPause = subscriptionPauseFor(fail);
   const storeReason = pauseReasonFor(fail);
-  if (!companion || companion.reason !== 'quota_exhausted' || storeReason !== 'quota_exhausted') {
+  if (!planPause || planPause.reason !== 'quota_exhausted' || storeReason !== 'quota_exhausted') {
     throw new Error('quota failure did not map to a subscription pause');
   }
 
@@ -81,8 +89,7 @@ export async function measureQuotaPauseResume({ caseId, now } = {}) {
   return {
     caseId,
     attempts,
-    pause: { reason: paused.reason, resumable: companion.resumable, subscriptionLimit: true },
-    companionReason: companion.reason,
+    pause: { reason: paused.reason, resumable: planPause.resumable, subscriptionLimit: true },
     storeReason,
     resumed: after === null,
     result,

@@ -11,11 +11,7 @@ export const TESTED_PATHS = Object.freeze([
   'trust/src/failure.js',
   'trust/src/storage.js',
   'trust/src/page.js',
-  'companion/src/commands.js',
-  'companion/src/host.js',
-  'companion/src/custody.js',
-  'companion/src/redact.js',
-  'companion/src/auth.js',
+  'chatgpt/PROJETO-LUME.md',
   'case-store/src/store.js',
   'case-store/src/codec.js',
   'case-store/src/backend.js',
@@ -33,10 +29,9 @@ export const TESTED_PATHS = Object.freeze([
 // Live workstation and real-account checks are outside this harness.
 export const LIMITS = Object.freeze([
   { id: 'live-workstation', status: 'BLOCKED', reason: 'No permitted PJe workstation session. Extension selectors and editor autosave were not measured on a live page.' },
-  { id: 'real-account', status: 'BLOCKED', reason: 'No Sign in with ChatGPT account or client id. Token checks use an in-memory vault and synthetic token strings.' },
+  { id: 'chatgpt-live', status: 'BLOCKED', reason: 'No live ChatGPT project validation in CI. Instructions are checked offline in chatgpt/ tests.' },
   { id: 'judicial-records', status: 'BLOCKED', reason: 'No judicial record was opened or mutated. Fixtures are synthetic.' },
-  { id: 'native-messaging-process', status: 'BLOCKED', reason: 'Chrome was not started. The Native Messaging allowlist was exercised through the host function with a mock handler map.' },
-  { id: 'os-credential-vault', status: 'BLOCKED', reason: 'The operating-system credential store was not used. Custody uses an in-memory vault adapter.' },
+  { id: 'os-credential-vault', status: 'BLOCKED', reason: 'No Lume OAuth host on this branch; manual ChatGPT mode uses no Lume-stored tokens.' },
 ]);
 
 export function packageVersion() {

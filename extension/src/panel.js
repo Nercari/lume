@@ -80,10 +80,11 @@ chrome.tabs.onUpdated.addListener(async (id, info) => {
 });
 $('start').addEventListener('click', async () => show(await ask('start')));
 $('stop').addEventListener('click', async () => show(await ask('stop')));
-$('pdf-mode').addEventListener('click', () => {
+$('package-mode').addEventListener('click', () => {
   chrome.tabs.create({ url: chrome.runtime.getURL('manual/lume-pdf.html') });
 });
-$('calibrate').addEventListener('click', async () => {
+$('calibrate').addEventListener('click', async (ev) => {
+  ev.preventDefault();
   $('calibration').hidden = false;
   const snap = await ask('calibrate');
   if (!snap || snap.error || !Array.isArray(snap.frames)) {

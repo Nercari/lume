@@ -13,7 +13,7 @@ BLOCKED** until the maintainer supplies three permitted users and cases through 
 | Observer | __________________ |
 | Date | __________________ |
 | Workstation ID | opaque label only (no hostname with PII) |
-| Build pin | from `RELEASE-PIN.txt` |
+| Build pin | from `MANIFEST.txt` header (`# commit=`, `# extension_version=`) |
 
 ## Before the session
 
@@ -33,20 +33,19 @@ user's words. Stop the session if real case data would enter an unapproved chann
 | Step | User completed alone? | Help needed (describe generically) | Notes |
 |------|----------------------|-------------------------------------|-------|
 | Load extension | | | |
-| Companion recognized | | | |
+| ChatGPT project instructions pasted | | | |
 | Pin / find side panel | | | |
 | Open PJe tab | | | |
 
 Elapsed install time: ______ minutes (desired target 10, not guaranteed)
 
-## Sign-in
+## ChatGPT project setup
 
 | Step | User completed alone? | Friction |
 |------|----------------------|----------|
-| Started sign-in from panel | | |
-| Finished official OAuth page | | |
-| Panel shows signed in | | |
-| User never pasted a token | observer initialed: ____ |
+| Opened ChatGPT Projects | | |
+| Pasted `PROJETO-LUME.md` into Instructions | | |
+| User never pasted a token or API key | observer initialed: ____ |
 
 ## Case workflow
 
@@ -80,12 +79,12 @@ Elapsed install time: ______ minutes (desired target 10, not guaranteed)
 | Stale-case guard understood if shown | | |
 | Insertion matches user intent | | |
 
-## Logout and revocation
+## Remove case data
 
-| Step | Expected (#5) | Observed |
+| Step | Expected (#7) | Observed |
 |------|---------------|----------|
-| User chose sign out | companion clears vault | |
-| Remote revoke confirmed or reported unconfirmed | `{ revoked: true|false }` | |
+| User deleted local case store or files | scoped delete works | |
+| Local `.md` packages removed per policy | no stray exports | |
 
 ## Uninstall
 
@@ -93,8 +92,8 @@ Elapsed install time: ______ minutes (desired target 10, not guaranteed)
 |------|----------------------------------|----------|
 | Cases deleted or expired | no readable case records | |
 | Extension removed | panel gone | |
-| Companion removed | native host unregistered | |
-| No active OAuth refresh token locally | vault empty | |
+| Install folder removed | `%LOCALAPPDATA%\\Lume` or equivalent gone | |
+| ChatGPT project removed (optional) | user account only | |
 
 ## Timing and friction
 
@@ -114,4 +113,4 @@ Store completed forms in the **private evaluation** path (#3), not in git. Publi
 summaries that pass `lint-public`.
 
 **Done-when for live study:** all three users complete install → case → source → draft →
-transfer → logout → uninstall without developer intervention, with this form filed per user.
+transfer → remove case data → uninstall without developer intervention, with this form filed per user.

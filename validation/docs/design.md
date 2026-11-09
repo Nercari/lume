@@ -62,7 +62,7 @@ loads PDF.js, and so do `#6` `analysis`, `#10` `verify.js`, `#9` `controller.js`
 | Issue | Interface used |
 |---|---|
 | #3 | `validateManifest`, `score`, `lintText` / `lintJson` |
-| #5 | `pauseFor` |
+| #5 | `subscriptionPauseFor` in `usage.js` |
 | #4 | `STATES` |
 | #2 | `reconcile`, `measure`, `recognize` |
 | #7 | `CaseStore`, `pauseReasonFor` |

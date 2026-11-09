@@ -1,64 +1,33 @@
-# Permissions, plans, quotas, data, and limits
+# Permissions and limits (staff summary)
 
-Part of #13. Copy suitable for staff handouts and release notes. Wording tracks `extension/`,
-`companion/`, and `case-store/` behavior as of the pinned commit in `RELEASE-PIN.txt`.
+Aligned with `extension/`, `chatgpt/`, and `case-store/` behavior as of the pinned commit in `MANIFEST.txt` (header).
 
-## What Lume may access
+## What touches case data
 
-| Surface | Access | Why |
-|---------|--------|-----|
-| PJe TRF1/SJDF first instance | Read document list in the open tab, same as you | Core inventory (#4) |
-| Side panel | Show status and controls next to PJe | UI |
-| Sign in with ChatGPT (via companion) | OAuth tokens for allowed model calls | Analysis and chat (#5, #8) |
-| Local encrypted storage | Case inventory, drafts, chat for cases you open | Resume work (#7) |
+| Component | Access | Purpose |
+|-----------|--------|---------|
+| Extension content script | Same-origin fetches in the open PJe tab | Inventory (#4) |
+| Manual page (`extension/manual/`) | PDF the user selects locally | Build `.md` package |
+| ChatGPT (user account) | Text the user pastes | Analysis and drafts (#5 manual) |
+| Case store (when wired) | Encrypted local files | Resume work (#7) |
 
-Lume does **not** request broad tab access, cookie export, certificate access, or permission to
-drive the PJe editor without your explicit transfer action (#9).
+## ChatGPT
 
-## ChatGPT plan eligibility
+- Lume does **not** offer a paid API key. It does not silently switch the user to metered API billing.
+- The user works in **their own ChatGPT plan** (Project instructions from `PROJETO-LUME.md`).
+- Lume never receives ChatGPT tokens; nothing is stored in the extension for model access.
 
-- Lume uses **Sign in with ChatGPT** with your work or personal ChatGPT login, only if your
-  organization permits it.
-- The companion checks that granted scopes include **ChatGPT plan usage**. Accounts without that
-  capability pause with a clear message. There is no alternate “bring your own API key” path.
-- OpenAI preview limitations may apply; see their official “preview limitations” page linked from
-  `companion/docs/auth-route.md`.
+## Chrome extension
 
-## Quotas and usage limits
+- Permissions: `sidePanel`, `storage` only (see `extension/README.md`).
+- No Chrome native host, no broad host permissions.
 
-When shared plan usage is exhausted, Lume **pauses** the case and keeps your local work. It does
-not silently switch to paid API credits. Resume when your plan allows more usage or after the
-period resets, per OpenAI’s documentation.
+## PJe
 
-## Data handling
+- Reading uses the authenticated browser session only.
+- HTTP 403 on a document is shown as `restricted` (server refusal). List metadata alone does not block a fetch.
 
-| Data | Where it lives | How long |
-|------|----------------|----------|
-| PJe session | Chrome, same as today | Until you sign out of PJe |
-| Model tokens | Companion OS vault + short-lived memory | Until logout/revoke (#5) |
-| Case content | Encrypted in this browser profile | Until you delete the case, uninstall, or TTL expiry (#7) |
-| Diagnostics | Counts and redacted errors only | No draft or chat text in logs |
+## Known limits
 
-Case data does **not** sync to Lume’s GitHub, CI, or other users’ machines by default.
-
-## Supported PJe scope
-
-- **In scope:** `https://pje1g.trf1.jus.br/pje/*` (TRF1/SJDF, first instance).
-- **Out of scope today:** Second instance (`pje2g`), other tribunals, and pages whose layout
-  does not match the calibrated selectors (the extension stops safely).
-
-## Known limitations
-
-- Selectors and layout checks are verified against permitted real cases only when #3 and #4
-  complete live calibration. Until then, an unexpected PJe change may stop reads.
-- Sign-in registration for open-source projects may require maintainer approval from OpenAI
-  (**BLOCKED** until a live attempt succeeds).
-- OCR quality metrics (#2) gate whether scanned PDFs are trusted; poor scans may yield gaps.
-- Decisive legal conclusions without sources stay provisional (#6, #10).
-- Only drafts marked conclusive through the editor may be offered for authorized transfer (#8, #9).
-
-## Privacy and evaluation separation
-
-- Public GitHub content must pass the intake linter: no party names, case numbers, or tokens.
-- Real case work stays on the permitted workstation route (#3). Observer study notes use opaque
-  IDs only when published.
+- Selector profiles are **UNVERIFIED** until calibrated on a real list layout.
+- OCR quality and long PDFs may leave gaps in the package; the model must respect Lacunas in the `.md`.
