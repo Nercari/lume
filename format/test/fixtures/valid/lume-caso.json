@@ -1,0 +1,62 @@
+{
+  "formato": "lume-caso/1",
+  "processo": "PROC-SYN-1",
+  "orgao": "ORGAO-SYN",
+  "geradoEm": "2026-01-15T12:00:00Z",
+  "origem": "botao",
+  "ocr": "local",
+  "documents": [
+    {
+      "id": "D1",
+      "tipo": "petição inicial",
+      "data": "2020-02-02",
+      "paginasDocumento": [1],
+      "paginasPdf": [1],
+      "situacao": "lido"
+    },
+    {
+      "id": "D2",
+      "tipo": "laudo",
+      "data": "2020-03-03",
+      "paginasDocumento": [1, 2],
+      "paginasPdf": [4],
+      "situacao": "parcial"
+    },
+    {
+      "id": "D3",
+      "tipo": "outros",
+      "data": null,
+      "paginasDocumento": [],
+      "paginasPdf": [],
+      "situacao": "ausente"
+    }
+  ],
+  "parts": [
+    {
+      "parte": 1,
+      "total": 2,
+      "arquivo": "lume-caso-parte-01-de-02.md",
+      "ids": ["D1"]
+    },
+    {
+      "parte": 2,
+      "total": 2,
+      "arquivo": "lume-caso-parte-02-de-02.md",
+      "ids": ["D2", "D3"]
+    }
+  ],
+  "gaps": [
+    {
+      "id": "D2",
+      "reason": "ilegivel",
+      "paginaDocumento": 2,
+      "paginaPdf": null
+    },
+    {
+      "id": "D3",
+      "reason": "falha_busca",
+      "paginaDocumento": null,
+      "paginaPdf": null
+    }
+  ]
+}

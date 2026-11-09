@@ -1,0 +1,11 @@
+{
+  "name": "lume-format",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lume shared case format v1 (lume-caso/1) validator",
+  "type": "module",
+  "scripts": {
+    "build": "node --check src/validate.mjs",
+    "test": "node --test test/*.test.mjs"
+  }
+}
