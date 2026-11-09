@@ -1,6 +1,6 @@
 # Lume — leia primeiro
 
-Pacote do Lume para PJe (TRF1/SJDF) + ChatGPT. O passo a passo curto está em `COMECE-AQUI.txt`, na raiz do zip.
+Pacote do Lume para PJe (TRF1/SJDF) + ChatGPT. O passo a passo curto está em `guias\COMECE-AQUI.txt` (a mesma cópia fica na raiz do zip).
 
 ## O que vem neste pacote
 
