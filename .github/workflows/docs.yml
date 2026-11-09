@@ -31,34 +31,31 @@ jobs:
           done
           echo "link-sanity ok"
 
-  package-tests:
+  repo-smoke:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        package:
-          - intake
-          - companion
-          - extension
-          - case-store
-          - extraction
-          - analysis
-          - chat-editor
-          - source-panel
-    defaults:
-      run:
-        working-directory: ${{ matrix.package }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-      - name: Install
-        run: npm install
-      - name: Build
-        run: npm run build --if-present
-      - name: Test
-        run: npm test
+          node-version: '24'
+      # Packages #6/#8/#10 import extraction; pdfjs-dist must be installed once.
+      - name: Install extraction dependencies
+        run: npm ci --omit=optional
+        working-directory: extraction
+      - name: Package tests (leaf packages)
+        run: |
+          set -euo pipefail
+          for pkg in intake companion extension case-store extraction; do
+            echo "== $pkg =="
+            (cd "$pkg" && npm run build --if-present && npm test)
+          done
+      - name: Package tests (depends on extraction install)
+        run: |
+          set -euo pipefail
+          for pkg in analysis chat-editor source-panel; do
+            echo "== $pkg =="
+            (cd "$pkg" && npm run build && npm test)
+          done
       - name: intake public linter
-        if: matrix.package == 'intake'
+        working-directory: intake
         run: npm run lint:public
