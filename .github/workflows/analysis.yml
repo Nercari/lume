@@ -1,0 +1,36 @@
+name: analysis
+
+on:
+  pull_request:
+    paths:
+      - 'analysis/**'
+      - 'extraction/src/**'
+      - 'extraction/test/fixtures.js'
+      - 'extraction/package.json'
+      - 'extraction/package-lock.json'
+      - 'case-store/src/**'
+      - '.github/workflows/analysis.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'analysis/**'
+      - '.github/workflows/analysis.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      # analysis imports extraction (#2), which loads pdfjs-dist at import time.
+      - run: npm ci --omit=optional
+        working-directory: extraction
+      - run: npm run build
+        working-directory: analysis
+      - run: npm test
+        working-directory: analysis
