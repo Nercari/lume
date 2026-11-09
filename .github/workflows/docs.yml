@@ -1,0 +1,61 @@
+name: docs
+
+on:
+  pull_request:
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - '.github/workflows/docs.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  link-sanity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify paths referenced from docs
+        run: |
+          set -euo pipefail
+          test -f README.md
+          test -f docs/packages.md
+          for p in \
+            intake companion extension case-store extraction analysis chat-editor source-panel \
+            intake/docs/data-flow-matrix.md intake/docs/official-sources.md intake/docs/rubric.md \
+            companion/docs/auth-route.md extension/README.md \
+            case-store/docs/design.md extraction/docs/design.md \
+            analysis/docs/design.md chat-editor/docs/design.md source-panel/docs/design.md
+          do
+            test -e "$p" || { echo "missing: $p"; exit 1; }
+          done
+          echo "link-sanity ok"
+
+  repo-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      # Packages #6/#8/#10 import extraction; pdfjs-dist must be installed once.
+      - name: Install extraction dependencies
+        run: npm ci --omit=optional
+        working-directory: extraction
+      - name: Package tests (leaf packages)
+        run: |
+          set -euo pipefail
+          for pkg in intake companion extension case-store extraction; do
+            echo "== $pkg =="
+            (cd "$pkg" && npm run build --if-present && npm test)
+          done
+      - name: Package tests (depends on extraction install)
+        run: |
+          set -euo pipefail
+          for pkg in analysis chat-editor source-panel; do
+            echo "== $pkg =="
+            (cd "$pkg" && npm run build && npm test)
+          done
+      - name: intake public linter
+        working-directory: intake
+        run: npm run lint:public
