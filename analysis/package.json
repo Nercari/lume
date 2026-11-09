@@ -1,0 +1,14 @@
+{
+  "name": "lume-analysis",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Lume whole-case analysis: coverage ledger, classified findings with inspectable support, invalidation, and the provisional-draft gate",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "exports": "./src/index.js",
+  "scripts": {
+    "build": "node --check src/*.js && node -e \"import('./src/index.js').then(()=>console.log('build: syntax and imports ok'))\"",
+    "test": "node --test --test-reporter=spec test/*.test.js"
+  }
+}
