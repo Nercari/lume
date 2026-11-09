@@ -5,25 +5,23 @@ Pacote do Lume para PJe (TRF1/SJDF) + ChatGPT. O passo a passo curto está em `g
 ## O que vem neste pacote
 
 - **extension/** — extensão do Chrome (carregar sem compactação).
-- **extension/manual/** — página do pacote do caso (aberta pelo botão **Gerar pacote do caso** do painel).
-- **chatgpt/** — `PROJETO-LUME.md` (instruções do Projeto no ChatGPT), `LEIA-ME.md` e `plugin/` (opcional).
+- **plugin/lume-jef/** — plugin "Lume JEF", com `instalar\instalar-plugin.cmd` e `instalar-plugin.ps1`.
+- **plugin/lume-jef-0.2.0.zip** — o mesmo plugin compactado.
+- **plugin/lume-jef-projeto/** — fallback de Projeto na web (`COLE-NO-PROJETO.md`).
 - **guias/** — guias para usuários e TI.
 
-## Instalar (uma vez)
+## Instalar e usar
 
-1. Descompacte o zip numa pasta fixa, por exemplo `Documentos\Lume` (botão direito → Extrair tudo). Não apague essa pasta depois.
-2. Chrome → `chrome://extensions` → ligue **Modo do desenvolvedor** → **Carregar sem compactação** → escolha a pasta `extension` deste zip.
-3. Fixe o Lume no ícone de quebra-cabeça do Chrome.
-4. ChatGPT → **Projetos** → **Novo projeto** "Lume" → **Instruções** → cole todo o texto de `chatgpt\PROJETO-LUME.md` → salve.
+Descompacte o zip numa pasta fixa, por exemplo `Documentos\Lume` (botão direito → Extrair tudo). Não apague essa pasta depois.
 
-## A cada processo
+1. Instale: no Chrome, carregue a pasta extension (chrome://extensions > Modo do desenvolvedor > Carregar sem compactação); depois dê dois cliques em plugin\lume-jef\instalar\instalar-plugin.cmd, reinicie o app ChatGPT e instale "Lume JEF" em Plugins > Lume.
+2. No PJe, abra o processo e clique "Lume: Estudar processo" (ou peça no Work: "prepare este processo com o Lume"). Espere o título da aba "Lume: pronto".
+3. No ChatGPT (painel lateral nessa aba, chat normal), peça o relatório ou a minuta. Caso grande: anexe as partes salvas.
 
-| Etapa | Ação |
-|-------|------|
-| PJe | Pegue os autos: o PDF (Download dos autos, inclui páginas escaneadas via OCR local) ou o texto do PJe+R ("extrair autos em texto", sem imagens). |
-| Lume | **Gerar pacote do caso** → escolha o PDF ou cole o texto → **Baixar pacote do caso (.md)**. |
-| ChatGPT | No projeto Lume, comece uma conversa, **anexe** `lume-pacote-do-caso.md` e peça resumo, linha do tempo ou minuta. |
-| Conferir | Cole a resposta em **Conferir citações**, na mesma página do Lume. |
+Plano B: clique você no botão Lume: Estudar processo na página do processo. A aba e os próximos passos são os mesmos.
+Sem o app desktop: use a pasta plugin\lume-jef-projeto num Projeto (instruções em COLE-NO-PROJETO.md).
+Se a página não for reconhecida, use o Modo calibração e envie o JSON ao mantenedor.
+Nada além do ChatGPT sai do computador.
 
 ## Desinstalar
 

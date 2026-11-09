@@ -9,6 +9,19 @@ const guiasDir = join(dirname(fileURLToPath(import.meta.url)), '../guias');
 
 const GUIDE_FILES = ['user-guide.md', 'permissions-and-limits.md', 'package-layout.md', 'observer-checklist.md'];
 const STAFF_GUIDE_PATHS = [...GUIDE_FILES.map((f) => join(docsDir, f)), join(guiasDir, 'LEIA-ME-PRIMEIRO.md')];
+const START_GUIDES = [
+  join(guiasDir, 'COMECE-AQUI.txt'),
+  join(guiasDir, 'LEIA-ME-PRIMEIRO.md'),
+  join(docsDir, 'user-guide.md'),
+];
+
+const PLANO_B =
+  'Plano B: clique você no botão Lume: Estudar processo na página do processo. A aba e os próximos passos são os mesmos.';
+const PROJECT_FALLBACK =
+  'Sem o app desktop: use a pasta plugin\\lume-jef-projeto num Projeto (instruções em COLE-NO-PROJETO.md).';
+const CALIBRATION =
+  'Se a página não for reconhecida, use o Modo calibração e envie o JSON ao mantenedor.';
+const PRIVACY = 'Nada além do ChatGPT sai do computador.';
 
 const PASTE_TOKEN = /paste\s+(your\s+)?(token|api\s*key|refresh)/i;
 const PASTE_TOKEN_PT = /\b(cole|colar|insira|digite)\b[^.\n]{0,40}\b(token|tokens|chave|senha)\b/i;
@@ -55,6 +68,29 @@ test('staff-facing guides forbid token paste and paid fallback instructions', ()
   const user = readFileSync(join(docsDir, 'user-guide.md'), 'utf8');
   for (const re of REQUIRED_SAFE) {
     assert.ok(re.test(user), `user-guide.md should state safety: ${re}`);
+  }
+});
+
+test('start guides use exactly three Portuguese steps and drop the old project paste', () => {
+  for (const path of START_GUIDES) {
+    const text = readFileSync(path, 'utf8');
+    const file = path.split('/').pop();
+    const numbered = text.split('\n').filter((line) => /^\d+\.\s/.test(line));
+    assert.equal(numbered.length, 3, `${file} numbered steps: ${numbered.join(' | ')}`);
+    assert.match(numbered[0], /^1\. Instale:/);
+    assert.match(numbered[0], /chrome:\/\/extensions > Modo do desenvolvedor > Carregar sem compactação/);
+    assert.match(numbered[0], /plugin\\lume-jef\\instalar\\instalar-plugin\.cmd/);
+    assert.match(numbered[0], /reinicie o app ChatGPT e instale "Lume JEF" em Plugins > Lume/);
+    assert.match(numbered[1], /^2\. No PJe, abra o processo e clique "Lume: Estudar processo"/);
+    assert.match(numbered[1], /prepare este processo com o Lume/);
+    assert.match(numbered[1], /Espere o título da aba "Lume: pronto"/);
+    assert.match(numbered[2], /^3\. No ChatGPT \(painel lateral nessa aba, chat normal\), peça o relatório ou a minuta/);
+    assert.match(numbered[2], /Caso grande: anexe as partes salvas/);
+    assert.ok(text.includes(PLANO_B), `${file} missing Plano B`);
+    assert.ok(text.includes(PROJECT_FALLBACK), `${file} missing project fallback`);
+    assert.ok(text.includes(CALIBRATION), `${file} missing calibration line`);
+    assert.ok(text.includes(PRIVACY), `${file} missing privacy line`);
+    assert.equal(text.includes('PROJETO-LUME.md'), false, `${file} still tells staff to use PROJETO-LUME.md`);
   }
 });
 

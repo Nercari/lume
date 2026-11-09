@@ -15,7 +15,9 @@ node packaging/scripts/bundle.mjs --out ./lume-install [--zip ./lume-install.zip
 
 **Extension input:** `extension/dist/` (includes `manual/lume-pdf.html` for the case package page).
 
-**ChatGPT input:** `chatgpt/PROJETO-LUME.md`, `LEIA-ME.md`, and `chatgpt/plugin/`.
+**ChatGPT input:** `chatgpt/PROJETO-LUME.md`, `LEIA-ME.md`, and `chatgpt/plugin/` stay in the tree. The start guide does not ask staff to paste that file.
+
+**Plugin input:** `bundle.mjs` runs `plugins/scripts/build-zip.mjs` and copies `plugin/lume-jef/`, `plugin/lume-jef-0.2.0.zip`, and `plugin/lume-jef-projeto/`.
 
 ## Directory tree handed to staff (`lume-install/`)
 
@@ -23,6 +25,10 @@ node packaging/scripts/bundle.mjs --out ./lume-install [--zip ./lume-install.zip
 lume-install/
   extension/              → extension/dist/
   chatgpt/                → project instructions + optional plugin
+  plugin/
+    lume-jef/             → desktop plugin, including instalar/instalar-plugin.cmd
+    lume-jef-0.2.0.zip
+    lume-jef-projeto/     → web Project fallback (COLE-NO-PROJETO.md)
   guias/
     LEIA-ME-PRIMEIRO.md   → one-page quick start (Portuguese)
     user-guide.md         → copy of packaging/docs/user-guide.md
