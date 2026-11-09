@@ -62,6 +62,7 @@ function render(v) {
   }
   $('start').disabled = !v.canStart;
   $('stop').disabled = !v.canStop;
+  $('pdf-hint').hidden = v.statusKey !== 'not_pje';
 }
 
 function note(text) { $('cal-action').textContent = text; }
@@ -70,8 +71,8 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
   if (msg?.type === 'lume:state' && sender.tab?.id === tabId) show(msg.state);
 });
 chrome.tabs.onActivated.addListener(bind);
-// changeInfo.status needs no "tabs" permission. A load clears the panel; when it ends, the panel
-// asks the new page, and a page without the content script (outside PJe) leaves it cleared.
+// changeInfo.status needs no "tabs" permission. A load clears the inventory; when it ends, the
+// panel asks the new page. Outside PJe nothing answers, so the panel shows not_pje and the PDF hint.
 chrome.tabs.onUpdated.addListener(async (id, info) => {
   if (id !== tabId) return;
   if (info.status === 'loading' && sync.navigated(id)) render(panelView(null));
@@ -79,6 +80,9 @@ chrome.tabs.onUpdated.addListener(async (id, info) => {
 });
 $('start').addEventListener('click', async () => show(await ask('start')));
 $('stop').addEventListener('click', async () => show(await ask('stop')));
+$('pdf-mode').addEventListener('click', () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL('manual/lume-pdf.html') });
+});
 $('calibrate').addEventListener('click', async () => {
   $('calibration').hidden = false;
   const snap = await ask('calibrate');
