@@ -5,7 +5,7 @@ import { writeLogo } from "./render-logo.mjs";
 
 const scriptsDir = path.dirname(fileURLToPath(import.meta.url));
 export const pluginRoot = path.resolve(scriptsDir, "../lume-jef");
-export const zipPath = path.resolve(scriptsDir, "../dist/lume-jef-0.1.0.zip");
+export const zipPath = path.resolve(scriptsDir, "../dist/lume-jef-0.2.0.zip");
 export const projectDir = path.resolve(scriptsDir, "../dist/lume-jef-projeto");
 
 const projectPaste = `# Instruções do Project

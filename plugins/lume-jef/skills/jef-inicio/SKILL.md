@@ -15,4 +15,6 @@ Três passos, nesta ordem:
 2. Abrir o processo no PJe.
 3. No painel lateral, Estudar processo e fazer o pedido neste chat, relatório ou minuta. Se o controle visível for Gerar pacote do caso, use-o para estudar o processo aberto e traga o texto para cá.
 
-O plugin não busca o processo. Sem o texto reunido pelo Lume, peça o pacote ou as partes e não invente peça. A instalação deste plugin está descrita no LEIA-ME da raiz do plugin.
+No Work, quem busca o processo já aberto é o skill jef-work, com um clique no botão da aba em que você já entrou. Sem o texto reunido pelo Lume, peça o pacote ou as partes e não invente peça. A instalação deste plugin está descrita no LEIA-ME da raiz do plugin.
+
+Plano B: clique você no botão Lume: Estudar processo na página do processo. A aba e os próximos passos são os mesmos.

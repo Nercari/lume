@@ -119,7 +119,7 @@ test("project folder flattens each skill and a paste note", async () => {
   const written = await buildProject();
   assert.ok(written.includes("jef-director.md"));
   assert.ok(written.includes("COLE-NO-PROJETO.md"));
-  assert.equal(written.length, 12);
+  assert.equal(written.length, 13);
   const director = await readFile(path.join(projectDir, "jef-director.md"), "utf8");
   assert.match(director, /revisão C8 do modelo/);
   assert.match(director, /IDP-001/);
