@@ -211,12 +211,32 @@ test('a decisive assertion without an inspectable citation cannot present as con
   const lc = { docId: 'D1', assertion: { class: 'legal_conclusion', decisive: true, text: 'Liability is established', support: [] } };
   const { c, L } = await caseWith({ extra: [lc] });
   const f = Object.values(L.findings).find((x) => x.class === 'legal_conclusion');
-  assert.equal(f.supported, true, '#6 does not require a citation for a legal conclusion');
-  const s = session(c, L, draftModel());
+  // Analysis may leave this supported (older #6) or mark it unsupported and open a gap
+  // (hardened #6). The citation is missing either way. The draft cites the finding even
+  // when analysis already set supported to false, so this module's own check fails closed.
+  assert.equal(f.decisive, true);
+  assert.deepEqual(f.support, []);
+  const base = draftModel();
+  const model = {
+    calls: base.calls,
+    fn: async (p) => {
+      const out = await base.fn(p);
+      if (p.task !== 'draft' || !out.conclusion) return out;
+      const use = (ids) => (ids.includes(f.id) ? ids : [...ids, f.id]);
+      return {
+        ...out,
+        sections: out.sections.map((s) => ({ ...s, uses: use(s.uses) })),
+        conclusion: { ...out.conclusion, uses: use(out.conclusion.uses) },
+      };
+    },
+  };
+  const s = session(c, L, model);
   assert.equal(s.context().findings.find((x) => x.id === f.id).inspectable, false);
 
   const v = await s.generate('d1', { request: 'sentença' });
-  assert.ok(v.issues.some((i) => i.check === 'facts_from_case_only' && i.message === `conclusion uses decisive legal_conclusion ${f.id} without an inspectable cited passage`));
+  const message = `conclusion uses decisive legal_conclusion ${f.id} without an inspectable cited passage`;
+  assert.ok(v.issues.some((i) => i.check === 'facts_from_case_only' && i.message === message));
+  assert.ok(v.reasons.some((r) => r === `check facts_from_case_only: ${message}`));
   assert.ok(v.panel.entries.some((e) => e.finding === f.id && e.verification === 'unsupported'));
   assert.equal(v.state, 'provisional');
   await assert.rejects(s.presentConclusive('d1'), ProvisionalDraftError);
