@@ -1,11 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
-import { assertBundlePathAllowed, MAX_BUNDLE_BYTES } from '../scripts/bundle-guards.mjs';
+import { assertBundlePathAllowed, isRuntimeNodeSizeExempt, MAX_BUNDLE_BYTES } from '../scripts/bundle-guards.mjs';
+import { archiveBundleDir, ZIP_SKIP_MESSAGE } from '../scripts/bundle-zip.mjs';
 
 const packaging = join(dirname(fileURLToPath(import.meta.url)), '..');
 const repo = join(packaging, '..');
@@ -32,6 +33,17 @@ test('bundle guards refuse pdf, private paths, calibration exports, and huge fil
   assert.doesNotThrow(() => assertBundlePathAllowed('extension/manifest.json', 100));
 });
 
+test('runtime/node/node.exe and LICENSE may exceed 50 MB; other runtime/node files may not', () => {
+  const over = MAX_BUNDLE_BYTES + 1;
+  const portableNode = 86 * 1024 * 1024;
+  assert.ok(isRuntimeNodeSizeExempt('runtime/node/node.exe'));
+  assert.ok(isRuntimeNodeSizeExempt('runtime/node/LICENSE'));
+  assert.doesNotThrow(() => assertBundlePathAllowed('runtime/node/node.exe', portableNode));
+  assert.doesNotThrow(() => assertBundlePathAllowed('runtime/node/LICENSE', over));
+  assert.throws(() => assertBundlePathAllowed('runtime/node/node.pdb', over), /50 MB/);
+  assert.throws(() => assertBundlePathAllowed('runtime/node/CHANGELOG.md', over), /50 MB/);
+});
+
 test('bundle.mjs assembles lume-install tree with manifest and without pdf', () => {
   execFileSync('npm', ['--prefix', join(repo, 'extension'), 'run', 'build'], { stdio: 'pipe' });
   const out = mkdtempSync(join(tmpdir(), 'lume-bundle-'));
@@ -47,4 +59,21 @@ test('bundle.mjs assembles lume-install tree with manifest and without pdf', () 
 
   const manifestBody = readFileSync(join(out, 'MANIFEST.txt'), 'utf8');
   assert.match(manifestBody, /extension\/manifest\.json\t[0-9a-f]{64}\t\d+/);
+});
+
+test('--zip writes an archive when zip CLI is available, otherwise reports skip', () => {
+  execFileSync('npm', ['--prefix', join(repo, 'extension'), 'run', 'build'], { stdio: 'pipe' });
+  const out = mkdtempSync(join(tmpdir(), 'lume-bundle-'));
+  const zipPath = join(tmpdir(), `lume-install-${Date.now()}.zip`);
+  const log = execFileSync(process.execPath, [bundleScript, '--out', out, '--zip', zipPath], {
+    encoding: 'utf8',
+  });
+  const direct = archiveBundleDir(out, join(tmpdir(), `lume-zip-direct-${Date.now()}.zip`));
+  if (direct.ok) {
+    assert.ok(existsSync(zipPath), 'bundle --zip should create the archive when zip is available');
+    assert.match(log, /zipped with/);
+  } else {
+    assert.match(log, /--zip skipped/);
+    assert.equal(direct.message, ZIP_SKIP_MESSAGE);
+  }
 });

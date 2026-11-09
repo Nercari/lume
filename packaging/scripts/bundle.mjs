@@ -15,20 +15,24 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assertBundlePathAllowed } from './bundle-guards.mjs';
+import { archiveBundleDir } from './bundle-zip.mjs';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const PACKAGING = join(SCRIPT_DIR, '..');
 const REPO = join(PACKAGING, '..');
-import { assertBundlePathAllowed, MAX_BUNDLE_BYTES } from './bundle-guards.mjs';
 
 function parseArgs(argv) {
-  const opts = { out: null, nodeWin: null };
+  const opts = { out: null, nodeWin: null, zip: null };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--out' && argv[i + 1]) opts.out = resolve(argv[++i]);
     else if (a === '--node-win' && argv[i + 1]) opts.nodeWin = resolve(argv[++i]);
+    else if (a === '--zip' && argv[i + 1]) opts.zip = resolve(argv[++i]);
     else if (a === '--help' || a === '-h') {
-      console.log('Usage: node packaging/scripts/bundle.mjs --out <dir> [--node-win <extracted-node-win-x64-dir>]');
+      console.log(
+        'Usage: node packaging/scripts/bundle.mjs --out <dir> [--node-win <extracted-node-win-x64-dir>] [--zip <file.zip>]',
+      );
       process.exit(0);
     } else throw new Error(`unknown argument: ${a}`);
   }
@@ -94,7 +98,7 @@ function writeReleasePin(outDir) {
 }
 
 function main() {
-  const { out, nodeWin } = parseArgs(process.argv);
+  const { out, nodeWin, zip } = parseArgs(process.argv);
   if (existsSync(out)) rmSync(out, { recursive: true, force: true });
   mkdirSync(out, { recursive: true });
 
@@ -136,6 +140,12 @@ function main() {
   writeFileSync(join(out, 'MANIFEST.txt'), header + manifestLines.join('\n') + '\n');
 
   console.log(`bundle: wrote ${manifestLines.length} files to ${out}`);
+
+  if (zip) {
+    const archived = archiveBundleDir(out, zip);
+    if (archived.ok) console.log(`bundle: zipped with ${archived.tool} → ${archived.path}`);
+    else console.warn(archived.message);
+  }
 }
 
 main();
