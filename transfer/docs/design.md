@@ -52,6 +52,16 @@ An in-memory lock stops a second transfer while one runs. Thus a double click do
 - All arguments must be plain strings. A token from page content is not a known ticket.
 - The controller and the editor adapter have no sign, file, publish, save or submit method. Draft text with instructions is data; the controller writes it as text and does not run it.
 
+## Diagnostics
+
+Errors from the controller do not carry case ids, PJe case numbers, document ids, finding ids or caller strings:
+
+- `TransferStop` details are fixed text or counts. `unsupported_decisive` gives `{ entries, unaccounted, sections }`. A section name that is not a plain section key becomes `other`. `mode_not_offered` does not repeat the mode.
+- #8 `ProvisionalDraftError` and `GateError` carry the draft view. The controller throws a new copy with only the state and the check names. The UI gets the details from `session.view()`, which stays local.
+- Tickets keep the draft and editor text in the local case store only. Tickets are not diagnostics.
+
+The #10 research query sanitizer (`source-panel/src/research.js`) is outside this module. It removes the case id and a non-CNJ case number only when the caller passes them in `caseTerms`.
+
 ## Assumptions
 
 - The editor selectors in `EDITOR_PROFILE` are not verified on real PJe.

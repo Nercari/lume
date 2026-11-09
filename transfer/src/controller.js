@@ -3,7 +3,7 @@
 // user-action handler holds. Model output and page content are data and cannot carry a Symbol.
 // It never saves, signs, files or publishes, and it moves one draft per ticket.
 import { USER_ACTION } from '../../chat-editor/src/index.js';
-import { GateError } from '../../analysis/src/index.js';
+import { GateError, ProvisionalDraftError } from '../../analysis/src/index.js';
 import { UNSUPPORTED_LABEL } from '../../source-panel/src/index.js';
 import { AUTOSAVE, TransferStop } from './editor.js';
 
@@ -14,6 +14,7 @@ export const SEPARATOR = '\n\n';
 export const BLOCKING_STATUSES = Object.freeze([...new Set([...Object.values(UNSUPPORTED_LABEL),
   'not_in_case', 'not_found', 'stale', 'quote_mismatch', 'ocr_unreliable', 'not_supported'])]);
 const BLOCKING = new Set(BLOCKING_STATUSES);
+const SECTION = /^[a-z_]{1,32}$/;
 const key = (token) => `transfer.${token}`;
 
 export function compose(mode, before, draft) {
@@ -31,10 +32,20 @@ function userOnly(origin, ...args) {
 // presented: #8 presentConclusive result. panel: #10 buildPanel result for the same draft.
 export function assertSupported(presented, panel) {
   if (!panel?.entries) throw new TransferStop('no_source_panel');
-  const bad = new Set(presented.panel.entries.filter((e) => e.verification !== 'unverified').map((e) => e.finding));
-  for (const e of panel.entries) if (e.decisive && BLOCKING.has(e.status)) bad.add(e.finding);
-  for (const id of panel.unaccounted ?? []) bad.add(id);
-  if (bad.size) throw new TransferStop('unsupported_decisive', [...bad]);
+  const bad = [...presented.panel.entries.filter((e) => e.verification !== 'unverified'), ...panel.entries.filter((e) => e.decisive && BLOCKING.has(e.status))];
+  const unaccounted = (panel.unaccounted ?? []).length;
+  // Diagnostics carry counts and section names only: finding ids contain PJe document ids.
+  if (bad.length || unaccounted) throw new TransferStop('unsupported_decisive', { entries: bad.length, unaccounted, sections: [...new Set(bad.map((e) => SECTION.test(e.ref) ? e.ref : 'other'))] });
+}
+
+// #8 gate errors carry the draft view (text, finding and passage ids). Rethrow without it:
+// only the state and the check names leave the controller. The UI reads details from session.view().
+function clean(e) {
+  if (e instanceof ProvisionalDraftError) {
+    throw new ProvisionalDraftError({ state: SECTION.test(e.state?.state) ? e.state.state : 'provisional', reasons: (e.state?.reasons ?? []).map((r) => /^check [a-z_]+/.exec(r)?.[0] ?? 'gate reason') });
+  }
+  if (e instanceof GateError) throw new GateError('the draft did not pass the conclusive gate');
+  throw e;
 }
 
 export class TransferController {
@@ -49,7 +60,7 @@ export class TransferController {
   }
 
   async #gate(draftId) {
-    const presented = await this.session.presentConclusive(draftId); // #8 + #6 gate; throws if provisional
+    const presented = await this.session.presentConclusive(draftId).catch(clean); // #8 + #6 gate; throws if provisional
     assertSupported(presented, await this.panelFor(draftId, presented));
     return presented;
   }
@@ -94,7 +105,7 @@ export class TransferController {
     const t = await this.caseRec.get('checkpoint', key(token));
     if (!t) throw new TransferStop('unknown_ticket');
     if (t.mode && t.mode !== mode) throw new TransferStop('mode_changed');
-    if (!t.modes.includes(mode)) throw new TransferStop('mode_not_offered', mode);
+    if (!t.modes.includes(mode)) throw new TransferStop('mode_not_offered'); // no echo: the mode string comes from the caller
     if (t.state === 'done') return { status: 'already_done', token, mode, wrote: false };
     if (t.state === 'uncertain') throw new TransferStop('uncertain_editor_state', 'review the editor and start a new review');
 

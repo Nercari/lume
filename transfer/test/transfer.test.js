@@ -192,3 +192,29 @@ test('autosave contract: shown in the flow, unmeasured, and it keeps a live edit
   const measured = x.mk({ editor: live, autosave: { ...AUTOSAVE, measured: true } });
   assert.ok((await measured.review('d1', USER_ACTION)).token, 'only a measured autosave contract enables a live editor');
 });
+
+test('diagnostics never carry case ids, case numbers, document ids or caller strings', async () => {
+  const errors = [];
+  const grab = async (p) => { try { await p; } catch (e) { errors.push(e); } };
+  const secret = 'SYNTH-9999';
+  const x = await setup();
+  const ids = [x.c.caseId, 'SYNTH-0001', secret, ...Object.keys(x.L.findings), ...Object.values(x.L.passages).map((p) => p.docId)];
+  const r = await x.ctl.review('d1', USER_ACTION);
+  await grab(x.ctl.transfer(r.token, `${secret} replace`, USER_ACTION));
+  await grab(x.ctl.transfer(secret, 'empty', USER_ACTION));
+  await grab(x.ctl.review(secret, 'USER_ACTION'));
+  x.pg.caseEl.textContent = secret;
+  await grab(x.ctl.transfer(r.token, 'empty', USER_ACTION));
+  const finding = Object.keys(x.L.findings)[0];
+  for (const panel of [{ entries: [{ ref: 'reasoning', finding, decisive: true, status: 'unsupported_allegation' }], unaccounted: [finding] }, { entries: [{ ref: `D1 ${secret}`, finding, decisive: true, status: 'not_found' }], unaccounted: [] }]) {
+    await grab(x.mk({ panelFor: async () => panel }).review('d1', USER_ACTION));
+  }
+  await grab((await setup({ model: draftModel({ noReasoning: true }) })).ctl.review('d1', USER_ACTION));
+  assert.equal(errors.length, 7);
+  const unsupported = errors.filter((e) => e.reason === 'unsupported_decisive');
+  assert.deepEqual(unsupported.map((e) => e.detail), [{ entries: 1, unaccounted: 1, sections: ['reasoning'] }, { entries: 1, unaccounted: 0, sections: ['other'] }]);
+  for (const e of errors) {
+    const text = `${e.message} ${JSON.stringify(e.detail ?? null)} ${JSON.stringify(e)}`;
+    for (const id of ids) assert.ok(!text.includes(id), `${e.constructor.name} leaks ${id}: ${text}`);
+  }
+});
