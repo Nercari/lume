@@ -228,7 +228,18 @@ export async function collectCase({
       }
       item.state = 'processed';
       item.detail = null;
-      const doc = { id: item.id, version: item.version || '1', contentType: type, bytes, source: 'document', rule: rule.id, index, total: items.length };
+      const doc = {
+        id: item.id,
+        version: item.version || '1',
+        contentType: type,
+        bytes,
+        source: 'document',
+        rule: rule.id,
+        index,
+        total: items.length,
+        date: item.date ?? null,
+        fetchMs: res.fetchMs ?? null,
+      };
       documents.push({ id: doc.id, contentType: type, bytes: bytes.byteLength, rule: rule.id });
       emit();
       await onDocument(doc);

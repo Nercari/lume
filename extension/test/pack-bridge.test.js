@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { PART_MAX_CHARS, packParts } from '../src/pack-bridge.js';
 
 test('parts split only above about 100k tokens', async () => {
@@ -16,4 +17,7 @@ test('parts split only above about 100k tokens', async () => {
   assert.equal(parts.length, 1);
   assert.equal(parts[0].name, 'lume-caso-parte-01-de-01.md');
   assert.match(parts[0].text, /peticao|D1/);
+  const source = readFileSync(new URL('../src/pack-bridge.js', import.meta.url), 'utf8');
+  assert.equal(/from\s+['"][^'"]*parts\.js['"]/.test(source), false);
+  assert.equal(source.includes('buildCasePack'), false);
 });

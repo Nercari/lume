@@ -62,16 +62,12 @@ function toClassic(source) {
 
 const bundled = [...INLINE.map((name) => toClassic(readFileSync(join(src, name), 'utf8'))), toClassic(readFileSync(join(src, 'content.js'), 'utf8'))];
 writeFileSync(join(dist, 'content.js'), `(() => {\n'use strict';\n${bundled.join('\n')}\n})();\n`);
-// chatgpt.js is a content script. Chrome loads it as a classic script, same as content.js.
-// The source keeps its exports so node tests can import the selectors and attach helper.
-writeFileSync(join(dist, 'chatgpt.js'), toClassic(readFileSync(join(src, 'chatgpt.js'), 'utf8')));
 
 cpSync(manualDist, join(dist, 'manual'), { recursive: true });
 if (!manualReady(join(dist, 'manual'))) throw new Error('failed to copy manual/dist into dist/manual');
 
 const requireManual = createRequire(join(root, '../manual/package.json'));
 const esbuild = requireManual('esbuild');
-const partsPath = join(root, '../manual/src/parts.js');
 await esbuild.build({
   entryPoints: [join(src, 'study.js')],
   bundle: true,
@@ -82,18 +78,6 @@ await esbuild.build({
   legalComments: 'none',
   logLevel: 'warning',
   plugins: [
-    {
-      name: 'optional-parts',
-      setup(build) {
-        build.onResolve({ filter: /manual\/src\/parts\.js$/ }, () => ({ path: partsPath, namespace: 'optional-parts' }));
-        build.onLoad({ filter: /.*/, namespace: 'optional-parts' }, () => {
-          if (!existsSync(partsPath)) return { contents: 'export {}\n', loader: 'js' };
-          const text = readFileSync(partsPath, 'utf8');
-          if (!text.includes('function buildCasePackParts')) return { contents: 'export {}\n', loader: 'js' };
-          return { contents: text, loader: 'js', resolveDir: dirname(partsPath) };
-        });
-      },
-    },
     {
       name: 'no-ocr-cdn',
       setup(build) {

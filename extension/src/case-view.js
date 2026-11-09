@@ -1,9 +1,10 @@
 // Full-case text for the PJe tab the ChatGPT side panel is reading.
-// Document page and PDF page stay distinct. A missing document page is not filled in.
+// A document page number is printed only when the file says it. It is never estimated.
 
-import { PART_MAX_CHARS } from './pack-bridge.js';
+export const PART_MAX_CHARS = 350000;
 
 const HOSTS = new Set(['pje1g.trf1.jus.br', 'pje2g.trf1.jus.br']);
+const SITUATIONS = ['legível', 'OCR', 'ilegível', 'imagem sem texto', 'binário'];
 
 export function caseViewUrl(pageUrl, part = 1) {
   let url;
@@ -13,42 +14,60 @@ export function caseViewUrl(pageUrl, part = 1) {
   return url.href;
 }
 
+export function partFileName(n, total) {
+  const width = Math.max(2, String(total).length);
+  return `lume-caso-parte-${String(n).padStart(width, '0')}-de-${String(total).padStart(width, '0')}.md`;
+}
+
 export function passageTag(page) {
   const id = page?.docId ?? '';
   const docPage = page?.pageInDoc;
-  const pdfPage = page?.pdfPage;
-  const hasDoc = docPage != null && docPage !== '';
-  const hasPdf = pdfPage != null && pdfPage !== '';
-  if (hasDoc && hasPdf && Number(docPage) !== Number(pdfPage)) {
-    return `[ID ${id}, pág. documento ${docPage}, pág. PDF ${pdfPage}]`;
-  }
-  if (hasDoc) return `[ID ${id}, pág. ${docPage}]`;
-  if (hasPdf) return `[ID ${id}, pág. PDF ${pdfPage}]`;
+  if (docPage != null && docPage !== '') return `[ID ${id}, pág. ${docPage}]`;
   return `[ID ${id}]`;
 }
 
-function situation(docId, pages, items) {
-  const item = (items ?? []).find((row) => String(row?.id) === String(docId));
-  if (item?.state === 'restricted') return 'restrito';
-  if (item?.state === 'missing') return 'ausente';
-  if (!pages.length) {
-    if (item?.state === 'failed' || item?.state === 'unsupported') return 'falhou';
-    return 'ausente';
+export function situation(doc, pages, items) {
+  const item = (items ?? []).find((row) => String(row?.id) === String(doc?.docId));
+  const kind = doc?.kind || '';
+  if (item?.state === 'unsupported' || kind === 'binary') return 'binário';
+  const readable = (pages ?? []).filter((page) => page.hasText && String(page.text ?? '').trim());
+  if (!readable.length) return kind === 'image' ? 'imagem sem texto' : 'ilegível';
+  if (readable.some((page) => page.method === 'ocr')) return 'OCR';
+  return 'legível';
+}
+
+function documentPageCount(pages) {
+  const known = (pages ?? []).filter((page) => page.pageInDoc != null && page.pageInDoc !== '');
+  return known.length ? String(known.length) : '—';
+}
+
+function headerLines(caseResult, items) {
+  const counts = Object.fromEntries(SITUATIONS.map((label) => [label, 0]));
+  for (const doc of caseResult?.documents ?? []) {
+    const pages = (caseResult.pages ?? []).filter((page) => String(page.docId) === String(doc.docId));
+    const label = situation(doc, pages, items);
+    if (counts[label] != null) counts[label] += 1;
   }
-  const readable = pages.filter((page) => page.hasText && String(page.text ?? '').trim());
-  if (!readable.length) return 'ilegível';
-  if (readable.length < pages.length) return 'parcial';
-  return 'lido';
+  return [
+    `Documentos: ${(caseResult?.documents ?? []).length}`,
+    `Páginas: ${(caseResult?.pages ?? []).length}`,
+    `Legível: ${counts['legível']}`,
+    `OCR: ${counts.OCR}`,
+    `Ilegível: ${counts['ilegível']}`,
+    `Imagem sem texto: ${counts['imagem sem texto']}`,
+    `Binário: ${counts['binário']}`,
+    `Lacunas: ${(caseResult?.gaps ?? []).length}`,
+  ];
 }
 
 function indexLines(caseResult, items) {
-  const lines = ['ID | Tipo | Data | Págs. | Situação'];
-  const dates = new Map((items ?? []).filter((row) => row?.id != null).map((row) => [String(row.id), row.date || '—']));
+  const lines = ['ID | Tipo | Data | Págs. do documento | Situação'];
+  const dates = new Map((items ?? []).filter((row) => row?.id != null).map((row) => [String(row.id), row.date || null]));
   for (const doc of caseResult?.documents ?? []) {
     const id = String(doc.docId);
     const pages = (caseResult.pages ?? []).filter((page) => String(page.docId) === id);
-    const pags = pages.length ? String(pages.length) : '—';
-    lines.push([id, doc.piece || 'outros', dates.get(id) || '—', pags, situation(id, pages, items)].join(' | '));
+    const date = doc.date || dates.get(id) || '—';
+    lines.push([id, doc.piece || 'outros', date, documentPageCount(pages), situation(doc, pages, items)].join(' | '));
   }
   return lines;
 }
@@ -92,10 +111,10 @@ function chunkPassages(passages, maxChars) {
   return chunks;
 }
 
-function renderPart(n, total, index, gaps, passages) {
+function renderPart(n, total, header, index, gaps, passages) {
   const lines = [`Parte ${n} de ${total}`];
   if (n === 1) {
-    lines.push('', 'Índice', ...index, '', 'Lacunas', ...(gaps.length ? gaps : ['- nenhuma']));
+    lines.push('', ...header, '', 'Índice', ...index, '', 'Lacunas', ...(gaps.length ? gaps : ['- nenhuma']));
   }
   lines.push('');
   if (!passages.length && n === 1) lines.push('Nenhum trecho com texto.');
@@ -104,6 +123,7 @@ function renderPart(n, total, index, gaps, passages) {
 }
 
 export function renderCaseParts(caseResult, items = [], maxChars = PART_MAX_CHARS) {
+  const header = headerLines(caseResult, items);
   const index = indexLines(caseResult, items);
   const gaps = gapLines(caseResult);
   const chunks = chunkPassages(passagesOf(caseResult), maxChars);
@@ -111,8 +131,9 @@ export function renderCaseParts(caseResult, items = [], maxChars = PART_MAX_CHAR
   const parts = chunks.map((passages, i) => ({
     n: i + 1,
     total,
-    text: renderPart(i + 1, total, index, gaps, passages),
+    name: partFileName(i + 1, total),
+    text: renderPart(i + 1, total, header, index, gaps, passages),
   }));
-  const allText = renderPart(1, 1, index, gaps, passagesOf(caseResult)).replace(/^Parte 1 de 1\n/, 'Caso completo\n');
+  const allText = renderPart(1, 1, header, index, gaps, passagesOf(caseResult)).replace(/^Parte 1 de 1\n/, 'Caso completo\n');
   return { parts, allText };
 }

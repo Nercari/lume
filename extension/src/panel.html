@@ -15,8 +15,6 @@
     table { border-collapse: collapse; width: 100%; margin-top: 8px; }
     th, td { text-align: left; padding: 2px 4px; border-bottom: 1px solid #ddd; }
     button, a.button { margin-right: 6px; }
-    label { display: block; margin: 8px 0; }
-    input[type="url"] { width: 100%; box-sizing: border-box; }
     @media (prefers-color-scheme: dark) {
       body { color: #eee; background: #1e1e1e; }
       dt, .note, #cal-note { color: #aaa; }
@@ -33,12 +31,11 @@
   <p id="hint" hidden></p>
   <p id="pdf-hint" hidden>Baixe o processo completo no PJe (Download dos autos) e abra o PDF aqui.</p>
   <p><button id="study" type="button">Estudar processo</button></p>
-  <p class="note">O texto integral abre numa aba do PJe, na ordem da linha do tempo, para o painel do ChatGPT. Copiar tudo fica nessa aba.</p>
+  <p class="note">O texto integral abre numa aba do PJe, na ordem da linha do tempo, para o painel do ChatGPT. Salvar partes e Copiar parte k ficam na página de estudo.</p>
   <p><button id="package-mode" type="button">Gerar pacote do caso</button></p>
   <dl id="counts"></dl>
   <button id="start" type="button">Ler processo</button><button id="stop" type="button">Parar</button>
   <p class="note"><a href="#" id="calibrate" class="button">Calibrar PJe</a></p>
-  <label>URL do Projeto Lume <input id="project-url" type="url" value="https://chatgpt.com/" autocomplete="off"></label>
   <table>
     <thead><tr><th>ID</th><th>Versão</th><th>Tipo</th><th>Págs.</th><th>Estado</th><th>Detalhe</th></tr></thead>
     <tbody id="items"></tbody>

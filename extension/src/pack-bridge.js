@@ -1,19 +1,15 @@
-// V owns buildCasePackParts. Parts split only above about 100k tokens.
-// 350000 characters is that cap. Until the export is in this checkout, one
-// buildCasePack file is the whole study: the full pack, not a truncated slice.
+// Part files are the same text as the PJe view parts. The splitter lives here,
+// in the extension, and does not import manual/src/parts.js.
 
-import { buildCasePack } from '../../manual/src/pack.js';
+import { PART_MAX_CHARS, renderCaseParts } from './case-view.js';
 
-export const PART_MAX_CHARS = 350000;
+export { PART_MAX_CHARS };
 
-export async function packParts(caseResult) {
-  try {
-    const mod = await import('../../manual/src/parts.js');
-    if (typeof mod.buildCasePackParts === 'function') {
-      return mod.buildCasePackParts(caseResult, { maxChars: PART_MAX_CHARS });
-    }
-  } catch {
-    // parts.js is not in this checkout yet.
-  }
-  return [{ name: 'lume-caso-parte-01-de-01.md', text: buildCasePack(caseResult) }];
+export function packParts(caseResult, items = []) {
+  return renderCaseParts(caseResult, items).parts.map((part) => ({
+    n: part.n,
+    total: part.total,
+    name: part.name,
+    text: part.text,
+  }));
 }

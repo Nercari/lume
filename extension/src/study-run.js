@@ -19,16 +19,25 @@ export async function processCollected(bundle, deps) {
       },
     });
     const caseResult = mergeAutos(segmented, bundle.items);
-    const parts = await packParts(caseResult);
-    return { caseResult, parts };
+    const parts = packParts(caseResult, bundle.items ?? []);
+    return { caseResult, parts, timings: [] };
   }
   const documents = [];
+  const timings = [];
   const incoming = bundle.documents ?? [];
   let index = 0;
   for (const doc of incoming) {
     index += 1;
     deps.onDocument?.({ index, total: incoming.length, id: doc.id });
-    documents.push(await ingestOne(doc, deps));
+    const ingested = await ingestOne(doc, deps);
+    documents.push(ingested);
+    timings.push({
+      id: String(doc.id),
+      fetchMs: doc.fetchMs ?? null,
+      textMs: ingested.timing?.textMs ?? 0,
+      ocrMs: ingested.timing?.ocrMs ?? 0,
+      ocrPages: (ingested.timing?.ocrPages ?? []).map((page) => ({ id: String(doc.id), page: page.page, ms: page.ms })),
+    });
   }
   const caseResult = caseFromDocuments(documents, gapsFromMisses(missedIds(documents, misses)));
   for (const miss of missedIds(documents, misses)) {
@@ -39,8 +48,10 @@ export async function processCollected(bundle, deps) {
       piece: 'outros',
       pages: [],
       version: '1',
+      date: null,
+      kind: miss.reason === 'unsupported' ? 'binary' : null,
     });
   }
-  const parts = await packParts(caseResult);
-  return { caseResult, parts };
+  const parts = packParts(caseResult, bundle.items ?? []);
+  return { caseResult, parts, timings };
 }

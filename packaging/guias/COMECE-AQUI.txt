@@ -4,16 +4,14 @@ Instale uma vez. Depois, cada processo é um clique.
 
 1. Instale a extensao (Chrome, carregar sem compactacao, pasta extension).
 2. No ChatGPT, crie o Projeto Lume e cole chatgpt/PROJETO-LUME.md nas Instrucoes.
-3. No painel da Lume, deixe a URL do Projeto (padrao https://chatgpt.com/).
+3. Use o painel oficial do ChatGPT no chat normal, sobre a aba do PJe. A extensao nao anexa arquivos.
 
 Cada processo:
 
 1. Abra o processo no PJe, ja logado.
 2. Clique no icone da Lume.
-3. Clique Estudar processo. A Lume busca o PDF ou a imagem de cada documento, na ordem da linha do tempo, na memoria.
-4. Abre uma aba do PJe com o texto integral (#lume-autos) para o painel do ChatGPT. Copiar tudo esta nessa aba. O anexo dos arquivos continua na pagina de estudo.
-
-Se nao anexar: na pagina de estudo, Anexar no ChatGPT ou Salvar partes.
+3. Clique Estudar processo. A Lume busca cada documento da linha do tempo, nessa ordem, na memoria.
+4. Abre uma aba do PJe com o caso inteiro (#lume-autos) para o painel do ChatGPT. Na pagina de estudo: Salvar partes e Copiar parte k.
 Se o painel nao achar a lista: Calibrar PJe, salve lume-calibracao.json, envie ao Grok.
 Fallback: Gerar pacote do caso, com o PDF baixado no PJe.
 

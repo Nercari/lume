@@ -83,6 +83,7 @@ export function caseFromDocuments(documents, extraGaps = []) {
       pages: docPages,
       version: doc.version || '1',
       date: doc.date ?? null,
+      kind: doc.kind ?? null,
     });
   }
   for (const gap of extraGaps) gaps.push(gap);
@@ -122,23 +123,41 @@ export function gapsFromMisses(misses) {
   return gaps;
 }
 
+function timingOf(textMs, ocrPages) {
+  const ocrMs = ocrPages.reduce((sum, page) => sum + page.ms, 0);
+  return { textMs, ocrMs, ocrPages };
+}
+
 export async function ingestOne(doc, deps) {
   const type = String(doc.contentType ?? '').split(';')[0].trim().toLowerCase();
+  const base = { id: doc.id, version: doc.version || '1', date: doc.date ?? null };
   if (type === 'text/html' || type === 'text/plain') {
+    const started = performance.now();
     const text = type === 'text/plain'
       ? new TextDecoder().decode(doc.bytes).trim()
       : htmlToText(new TextDecoder().decode(doc.bytes));
-    return { id: doc.id, version: doc.version || '1', date: doc.date ?? null, pages: [{ pageInDoc: 1, pdfPage: 1, text, method: 'text', detail: text ? null : 'sem texto' }] };
+    return {
+      ...base,
+      kind: 'text',
+      timing: timingOf(performance.now() - started, []),
+      pages: [{ pageInDoc: 1, pdfPage: 1, text, method: 'text', detail: text ? null : 'sem texto' }],
+    };
   }
   if (type === 'application/pdf') {
+    const ocrPages = [];
+    const started = performance.now();
     const segmented = await deps.segmentAutos(doc.bytes, {
       version: doc.version || '1',
       signal: deps.signal,
       ocr: async (info) => {
         deps.onOcr?.({ page: info.pageNumber, pages: info.pageCount, docId: doc.id });
-        return { text: await deps.ocrPdfPage(info.pdfPage) };
+        const ocrStarted = performance.now();
+        const text = await deps.ocrPdfPage(info.pdfPage);
+        ocrPages.push({ page: info.pageNumber, ms: performance.now() - ocrStarted });
+        return { text };
       },
     });
+    const ocrMs = ocrPages.reduce((sum, page) => sum + page.ms, 0);
     const pages = (segmented.pages ?? []).map((page, index) => ({
       pageInDoc: page.pageInDoc ?? null,
       pdfPage: page.n ?? index + 1,
@@ -146,28 +165,32 @@ export async function ingestOne(doc, deps) {
       method: page.method === 'ocr' ? 'ocr' : 'text',
       detail: page.hasText ? null : 'ilegível',
     }));
-    return { id: doc.id, version: doc.version || '1', date: doc.date ?? null, pages };
+    return { ...base, kind: 'pdf', timing: timingOf(Math.max(0, performance.now() - started - ocrMs), ocrPages), pages };
   }
   if (type === 'image/jpeg' || type === 'image/png' || type === 'image/tiff' || type === 'image/tif') {
     deps.onOcr?.({ page: 1, pages: 1, docId: doc.id });
+    const ocrStarted = performance.now();
     let text = '';
     try {
       text = String(await deps.ocrImage(doc.bytes) ?? '');
     } catch (error) {
       if (error?.name === 'AbortError') throw error;
-      return { id: doc.id, version: doc.version || '1', date: doc.date ?? null, pages: [{ pageInDoc: 1, pdfPage: 1, text: '', method: 'ocr', detail: 'ilegível' }] };
+      const ms = performance.now() - ocrStarted;
+      return { ...base, kind: 'image', timing: timingOf(0, [{ page: 1, ms }]), pages: [{ pageInDoc: 1, pdfPage: 1, text: '', method: 'ocr', detail: 'ilegível' }] };
     }
+    const ms = performance.now() - ocrStarted;
     const readable = text.trim();
     return {
-      id: doc.id,
-      version: doc.version || '1',
-      date: doc.date ?? null,
+      ...base,
+      kind: 'image',
+      timing: timingOf(0, [{ page: 1, ms }]),
       pages: [{ pageInDoc: 1, pdfPage: 1, text: readable, method: 'ocr', detail: readable ? null : 'ilegível' }],
     };
   }
   return {
-    id: doc.id,
-    version: doc.version || '1',
+    ...base,
+    kind: 'binary',
+    timing: timingOf(0, []),
     pages: [],
     gaps: [{ reason: 'corrupt_file', docId: String(doc.id), detail: type || 'tipo desconhecido' }],
   };
