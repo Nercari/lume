@@ -1,7 +1,7 @@
 {
-  "ExtensionInstallForcelist": {
-    "1": "odjfiioakpihgkikmjadmohgckkhkjhi;https://SEU_SERVIDOR_INTERNO/lume/update.xml"
-  },
+  "ExtensionInstallForcelist": [
+    "odjfiioakpihgkikmjadmohgckkhkjhi;https://SEU_SERVIDOR_INTERNO/lume/update.xml"
+  ],
   "ExtensionSettings": {
     "odjfiioakpihgkikmjadmohgckkhkjhi": {
       "installation_mode": "force_installed",

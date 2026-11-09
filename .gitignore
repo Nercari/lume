@@ -7,6 +7,11 @@ lume-install/
 private/
 lume-private/
 lume-cases/
+cases/
+casos/
+private/**/*.pdf
+lume-private/**/*.pdf
+lume-cases/**/*.pdf
 *.case.pdf
 lume-calibracao-*.json
 **/private-eval*/

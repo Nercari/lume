@@ -33,13 +33,13 @@ test('bundle guards refuse pdf, private paths, calibration exports, and huge fil
   assert.doesNotThrow(() => assertBundlePathAllowed('extension/manifest.json', 100));
 });
 
-test('runtime/node/node.exe and LICENSE may exceed 50 MB; other runtime/node files may not', () => {
+test('runtime/node/node.exe may exceed 50 MB; other runtime/node files may not', () => {
   const over = MAX_BUNDLE_BYTES + 1;
   const portableNode = 86 * 1024 * 1024;
   assert.ok(isRuntimeNodeSizeExempt('runtime/node/node.exe'));
-  assert.ok(isRuntimeNodeSizeExempt('runtime/node/LICENSE'));
+  assert.ok(!isRuntimeNodeSizeExempt('runtime/node/LICENSE'));
   assert.doesNotThrow(() => assertBundlePathAllowed('runtime/node/node.exe', portableNode));
-  assert.doesNotThrow(() => assertBundlePathAllowed('runtime/node/LICENSE', over));
+  assert.throws(() => assertBundlePathAllowed('runtime/node/LICENSE', over), /50 MB/);
   assert.throws(() => assertBundlePathAllowed('runtime/node/node.pdb', over), /50 MB/);
   assert.throws(() => assertBundlePathAllowed('runtime/node/CHANGELOG.md', over), /50 MB/);
 });
@@ -52,6 +52,8 @@ test('bundle.mjs assembles lume-install tree with manifest and without pdf', () 
   const files = walkFiles(out);
   assert.ok(files.some((f) => f === 'extension/manifest.json'));
   assert.ok(files.some((f) => f === 'guias/LEIA-ME-PRIMEIRO.md'));
+  assert.ok(files.some((f) => f === 'guias/user-guide.md'));
+  assert.ok(files.some((f) => f === 'guias/permissions-and-limits.md'));
   assert.ok(files.some((f) => f === 'windows/instalar.ps1'));
   assert.ok(files.some((f) => f === 'MANIFEST.txt'));
   assert.ok(files.some((f) => f === 'RELEASE-PIN.txt'));

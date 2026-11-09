@@ -4,10 +4,10 @@ Part of #13. Guia rapido para servidoras e servidores do tribunal. **English sum
 
 ## O que o Lume faz hoje
 
-O Lume e uma extensao do Google Chrome que ajuda a ler o **inventario de documentos** de um processo aberto no PJe (TRF1 / SJDF) usando a sessao ja aberta no navegador. Voce pode:
+O Lume e uma extensao do Google Chrome que ajuda a ler o **inventario de documentos** de um processo aberto no PJe (TRF1 / SJDF) usando a sessao ja aberta no navegador. No painel lateral, use os botoes:
 
-- **Modo calibracao** — conferir se a leitura da lista esta correta e gerar um arquivo JSON de calibracao para enviar ao time tecnico (nao coloque dados pessoais de terceiros no e-mail sem autorizacao).
-- **Modo PDF (“Download dos autos”)** — orientar a extrair texto de PDFs **que voce baixa manualmente** no PJe; o Lume nao envia o PDF para a internet sozinho.
+- **Modo calibração** — conferir se a leitura da lista esta correta e gerar um arquivo JSON de calibracao para enviar ao time tecnico (nao coloque dados pessoais de terceiros no e-mail sem autorizacao).
+- **Abrir modo PDF** — extrair texto de PDFs **que voce baixa manualmente** no PJe (“Download dos autos”); o Lume nao envia o PDF para a internet sozinho.
 
 O login opcional com ChatGPT (companion) so funciona se o Node.js estiver disponivel na estacao. **Sem Node, o modo manual (calibracao e copiar/colar no ChatGPT) continua.**
 
@@ -25,13 +25,13 @@ No macOS ou Linux, execute `macos/instalar.sh` ou `linux/instalar.sh` no termina
 
 1. Entre no PJe e abra o processo permitido.
 2. Abra o painel lateral do Lume.
-3. Siga as instrucoes na tela para o **modo calibracao**.
+3. Clique **Modo calibração** e siga as instrucoes na tela.
 4. Quando o JSON estiver pronto, envie-o apenas pelos canais que seu setor autorizar (e-mail interno, chamado, etc.). **Nao cole tokens, senhas ou chaves de API.**
 
 ## Como usar com PDFs
 
 1. Baixe o PDF pelo proprio PJe (“Download dos autos”), como voce ja faria sem o Lume.
-2. Use o fluxo indicado no painel para extrair o texto **no seu computador**.
+2. Clique **Abrir modo PDF** e siga o fluxo no painel para extrair o texto **no seu computador**.
 3. Se for usar ChatGPT, **cole voce mesma** o trecho no site; o Lume **nao envia** documentos para fora da maquina automaticamente.
 
 ## O que sai do computador

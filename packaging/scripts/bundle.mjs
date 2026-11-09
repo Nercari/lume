@@ -124,6 +124,18 @@ function main() {
     copyTree(src, join(out, platform), manifestLines, platform);
   }
 
+  for (const doc of ['user-guide.md', 'permissions-and-limits.md']) {
+    const src = join(PACKAGING, 'docs', doc);
+    const dest = join(out, 'guias', doc);
+    const bytes = readFileSync(src);
+    mkdirSync(dirname(dest), { recursive: true });
+    writeFileSync(dest, bytes);
+    assertAllowedCopy(`guias/${doc}`, bytes.length);
+    manifestLines.push(
+      `guias/${doc}\t${createHash('sha256').update(bytes).digest('hex')}\t${bytes.length}`,
+    );
+  }
+
   if (nodeWin) {
     if (!existsSync(join(nodeWin, 'node.exe'))) throw new Error('--node-win must contain node.exe');
     copyTree(nodeWin, join(out, 'runtime/node'), manifestLines, 'runtime/node');

@@ -8,7 +8,7 @@ Quando o **Modo do desenvolvedor** do Chrome e bloqueado por politica, use as po
 
 | Policy Chrome | Uso neste pacote |
 |---------------|------------------|
-| **ExtensionInstallForcelist** | Entrada `EXTENSION_ID;https://SEU_SERVIDOR/lume/update.xml` para forcar a extensao com ID fixo `odjfiioakpihgkikmjadmohgckkhkjhi`. *(Nao verificado em maquina gerenciada real neste PR.)* |
+| **ExtensionInstallForcelist** | Array com uma entrada `EXTENSION_ID;https://SEU_SERVIDOR/lume/update.xml` (ver `sample-policies.json`). ID fixo `odjfiioakpihgkikmjadmohgckkhkjhi`. *(Nao verificado em maquina gerenciada real neste PR.)* |
 | **ExtensionSettings** | Bloco JSON por ID com `installation_mode: force_installed` e `update_url` apontando para o XML interno. *(Nao verificado em maquina gerenciada real.)* |
 
 O `update.xml` e o `.crx` sao publicados em servidor HTTPS interno pelo mantenedor. Substitua `SEU_SERVIDOR` nos exemplos.

@@ -15,6 +15,11 @@ const readPs1 = (name) => readFileSync(join(packaging, 'windows', name), 'utf8')
 
 test('native messaging manifest shape and Windows path escaping', () => {
   const winPath = 'C:\\Users\\juiz\\AppData\\Local\\Lume\\windows\\lume-host.bat';
+  const jsonPath = escapeWindowsPathForJson(winPath);
+  assert.notEqual(jsonPath, winPath);
+  const embedded = `{"path":"${jsonPath}"}`;
+  assert.equal(JSON.parse(embedded).path, winPath);
+
   const manifest = buildHostManifest({ hostPath: winPath });
   assert.equal(manifest.name, HOST_NAME);
   assert.equal(manifest.type, 'stdio');
@@ -37,6 +42,8 @@ test('Windows install scripts stay user-level (HKCU) and offline', () => {
   const instalarBat = readFileSync(join(packaging, 'windows', 'instalar.bat'), 'utf8');
   assert.match(instalarBat, /ExecutionPolicy Bypass/i);
   const instalar = readPs1('instalar.ps1');
+  assert.match(instalar, /if \(\$nodeOk\)/);
+  assert.match(instalar, /companion.*opcional|opcional.*companion/i);
   assert.match(instalar, /com\.lume\.chatgpt/);
   assert.match(instalar, /odjfiioakpihgkikmjadmohgckkhkjhi/);
 });
@@ -61,4 +68,7 @@ test('IT sample policies name Chrome Enterprise keys', () => {
   ]) {
     assert.ok(json.includes(`"${key}"`), key);
   }
+  const policies = JSON.parse(json);
+  assert.ok(Array.isArray(policies.ExtensionInstallForcelist));
+  assert.match(policies.ExtensionInstallForcelist[0], /;/);
 });

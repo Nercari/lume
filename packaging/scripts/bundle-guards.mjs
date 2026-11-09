@@ -7,10 +7,10 @@ const BLOCKED_REL = [
   (rel) => /(?:^|\/)private-eval[^/]*(?:\/|$)/i.test(rel.replace(/\\/g, '/')),
 ];
 
-/** Portable Node win-x64: node.exe is ~86 MB; only this file and LICENSE skip the 50 MB cap. */
+/** Portable Node win-x64: node.exe is ~86 MB; only this file skips the 50 MB cap. */
 export function isRuntimeNodeSizeExempt(manifestPath) {
   const norm = manifestPath.replace(/\\/g, '/');
-  return norm === 'runtime/node/node.exe' || norm === 'runtime/node/LICENSE';
+  return norm === 'runtime/node/node.exe';
 }
 
 export function assertBundlePathAllowed(rel, size) {

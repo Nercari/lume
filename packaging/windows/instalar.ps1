@@ -14,28 +14,6 @@ if (-not (Test-Path $InstallRoot)) { New-Item -ItemType Directory -Path $Install
 robocopy $BundleRoot $InstallRoot /MIR /XD lume-install /NFL /NDL /NJH /NJS /NC /NS | Out-Null
 if ($LASTEXITCODE -ge 8) { throw "robocopy falhou com codigo $LASTEXITCODE" }
 
-$nmDir = Split-Path $ManifestPath -Parent
-if (-not (Test-Path $nmDir)) { New-Item -ItemType Directory -Path $nmDir -Force | Out-Null }
-
-$jsonPath = $HostBat -replace '\\', '\\'
-$manifest = @"
-{
-  "name": "com.lume.chatgpt",
-  "description": "Lume companion: Native Messaging host for the Lume extension",
-  "path": "$jsonPath",
-  "type": "stdio",
-  "allowed_origins": ["chrome-extension://$ExtensionId/"]
-}
-"@
-Set-Content -Path $ManifestPath -Value $manifest -Encoding UTF8
-
-$regChrome = 'HKCU:\Software\Google\Chrome\NativeMessagingHosts\com.lume.chatgpt'
-$regEdge = 'HKCU:\Software\Microsoft\Edge\NativeMessagingHosts\com.lume.chatgpt'
-New-Item -Path $regChrome -Force | Out-Null
-Set-ItemProperty -Path $regChrome -Name '(default)' -Value $ManifestPath
-New-Item -Path $regEdge -Force | Out-Null
-Set-ItemProperty -Path $regEdge -Name '(default)' -Value $ManifestPath
-
 $nodeBundled = Join-Path $InstallRoot 'runtime\node\node.exe'
 $nodeOk = $false
 if (Test-Path $nodeBundled) { $nodeOk = $true }
@@ -44,11 +22,35 @@ else {
     if ($nodeCmd) { $nodeOk = $true }
 }
 
-if (-not $nodeOk) {
+if ($nodeOk) {
+    $nmDir = Split-Path $ManifestPath -Parent
+    if (-not (Test-Path $nmDir)) { New-Item -ItemType Directory -Path $nmDir -Force | Out-Null }
+
+    $jsonPath = $HostBat -replace '\\', '\\'
+    $manifest = @"
+{
+  "name": "com.lume.chatgpt",
+  "description": "Lume companion: Native Messaging host for the Lume extension",
+  "path": "$jsonPath",
+  "type": "stdio",
+  "allowed_origins": ["chrome-extension://$ExtensionId/"]
+}
+"@
+    Set-Content -Path $ManifestPath -Value $manifest -Encoding UTF8
+
+    $regChrome = 'HKCU:\Software\Google\Chrome\NativeMessagingHosts\com.lume.chatgpt'
+    $regEdge = 'HKCU:\Software\Microsoft\Edge\NativeMessagingHosts\com.lume.chatgpt'
+    New-Item -Path $regChrome -Force | Out-Null
+    Set-ItemProperty -Path $regChrome -Name '(default)' -Value $ManifestPath
+    New-Item -Path $regEdge -Force | Out-Null
+    Set-ItemProperty -Path $regEdge -Name '(default)' -Value $ManifestPath
+}
+else {
     Write-Host ''
     Write-Host 'Node.js nao foi encontrado (nem em runtime\node, nem no PATH).'
-    Write-Host 'O companion (login opcional com ChatGPT) nao vai registrar ate haver Node.'
-    Write-Host 'O modo manual da extensao (calibracao e copiar texto para o ChatGPT) continua funcionando.'
+    Write-Host 'O companion (login opcional com ChatGPT) NAO sera registrado nesta instalacao.'
+    Write-Host 'A extensao Lume funciona sem o companion: use o painel no PJe normalmente.'
+    Write-Host 'Para o login opcional depois, instale o Node 22+ ou inclua runtime\node no pacote e rode instalar.bat novamente.'
     Write-Host ''
 }
 

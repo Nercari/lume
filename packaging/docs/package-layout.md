@@ -1,89 +1,73 @@
 # Reproducible package layout
 
-Part of #13. Describes the smallest supported installation path for the MV3 extension and
-the minimum Sign-in companion on a representative workstation (Linux or macOS with Google
-Chrome ≥ 116). Windows follows the same logic with platform-specific host manifest paths.
+Part of #13. Describes the install tree produced by `node packaging/scripts/bundle.mjs`
+and the smallest supported path for staff (Windows double-click, macOS/Linux shell installer).
 
 ## Build order
 
-All commands run from the repository root. Versions are pinned by the commit you build;
-record that commit in `packaging/RELEASE-PIN.txt` before handing the tree to staff.
+From the repository root:
 
 ```bash
 cd extension && npm install && npm run build && npm test
 cd ../companion && npm install && npm run build && npm test
+node packaging/scripts/bundle.mjs --out ./lume-install [--node-win <node-v22-win-x64-dir>] [--zip ./lume-install.zip]
 ```
 
-**Extension output:** `extension/dist/` — load this folder as an unpacked extension.
+**Extension input:** `extension/dist/` (built MV3 tree).
 
-**Companion output:** `companion/src/` executed by Node ≥ 22 on the host. There is no separate
-bundle step today; `npm run build` checks syntax only.
+**Companion input:** `companion/src/` + `companion/package.json` (Node ≥ 22 when the optional
+companion is registered).
 
-Optional packages (`case-store`, UI libraries, transfer) ship inside the extension build as
-that integration matures. This layout documents only what a nontechnical install needs on day
-one: **extension + companion**.
+**Optional:** `manual/dist/` is copied when that directory exists (#2).
 
-## Directory tree handed to staff
+## Directory tree handed to staff (`lume-install/`)
 
 ```
 lume-install/
-  extension/          → copy of extension/dist/ (built MV3 tree)
+  extension/              → extension/dist/
   companion/
-    src/              → companion source (or a maintainer-built single-file host later)
+    src/
     package.json
-  native-messaging/
-    com.lume.chatgpt.json   → host manifest (see below)
-  guides/
-    user-guide.md             → copy from packaging/docs/user-guide.md
+  manual/                 → optional, from manual/dist/
+  runtime/node/           → optional, from --node-win (node.exe ~86 MB)
+  windows/                → instalar.bat, instalar.ps1, lume-host.bat, desinstalar.*
+  macos/                  → instalar.sh, lume-host.sh
+  linux/                  → instalar.sh, lume-host.sh
+  guias/
+    LEIA-ME-PRIMEIRO.md   → one-page quick start (Portuguese)
+    user-guide.md         → copy of packaging/docs/user-guide.md
     permissions-and-limits.md
-  RELEASE-PIN.txt             → git commit hash + extension manifest version
+  it/                     → managed-Chrome policy samples (BLOCKED on live GPO until verified)
+  LICENSES/
+  RELEASE-PIN.txt
+  MANIFEST.txt            → sha256 of every bundled file (MANIFEST itself not hashed)
 ```
 
+After `windows\instalar.bat`, staff load the extension from
+`%LOCALAPPDATA%\Lume\extension`. The Windows installer registers Native Messaging under
+**HKCU** only when Node is available (bundled `runtime\node` or `node.exe` on PATH).
+
 Keep **real case exports**, **private evaluation manifests**, and **token exports** out of
-`lume-install/`. Synthetic samples belong in a separate folder marked `synthetic-only`.
+the bundle. `bundle.mjs` refuses `*.pdf`, `private/`, `lume-private/`, calibration exports,
+and files larger than 50 MB (except `runtime/node/node.exe`).
 
 ## Native messaging host manifest
 
-Chrome expects a manifest named `com.lume.chatgpt.json` (lowercase alphanumerics, dots,
-underscores). Adjust `path` to the absolute companion entry script on the workstation.
-
-```json
-{
-  "name": "com.lume.chatgpt",
-  "description": "Lume companion: Sign in with ChatGPT for the Lume extension",
-  "path": "/ABSOLUTE/PATH/TO/companion/src/host.js",
-  "type": "stdio",
-  "allowed_origins": ["chrome-extension://EXTENSION_ID_HERE/"]
-}
-```
-
-Install locations (Chrome documentation):
+Fixed extension id when keyed: `odjfiioakpihgkikmjadmohgckkhkjhi`. Host name:
+`com.lume.chatgpt`. Windows manifest path points at `windows\lume-host.bat` under the install
+root.
 
 | OS | User install |
 |----|----------------|
+| Windows | HKCU registry → JSON under `%LOCALAPPDATA%\Lume\native-messaging\` |
 | Linux | `~/.config/google-chrome/NativeMessagingHosts/` |
 | macOS | `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/` |
-| Windows | Registry + manifest beside the host binary (maintainer documents path) |
-
-After loading the unpacked extension, copy its 32-character extension ID into
-`allowed_origins`. Only that origin may call the host (#5).
-
-## Managed distribution (BLOCKED until policy)
-
-Enterprise Chrome can push the extension via policy (`ExtensionInstallForcelist`). That path
-needs institution approval, an update URL, and often code signing. Document the policy IDs here
-when #14 records release evidence; do not infer permission from this file alone.
 
 ## Version pin file
 
-`RELEASE-PIN.txt` example:
+`RELEASE-PIN.txt` records commit hash, extension/companion versions, extension id, build date.
 
-```
-commit=abc1234
-extension_version=0.0.1
-companion_version=0.0.0
-built=2026-11-09
-```
+## Managed distribution
 
-Staff compare `chrome://extensions` and the companion `--version` output (when added) against
-this file after updates.
+See `lume-install/it/README.md`. Enterprise force-install uses
+`ExtensionInstallForcelist` as an **array** of `extension_id;update_url` strings.
