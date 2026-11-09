@@ -1,0 +1,44 @@
+name: transfer
+
+on:
+  pull_request:
+    paths:
+      - 'transfer/**'
+      - 'source-panel/src/**'
+      - 'source-panel/test/fixtures.js'
+      - 'chat-editor/src/**'
+      - 'chat-editor/test/fixtures.js'
+      - 'analysis/src/**'
+      - 'analysis/test/fixtures.js'
+      - 'extraction/src/**'
+      - 'extraction/test/fixtures.js'
+      - 'extraction/package.json'
+      - 'extraction/package-lock.json'
+      - 'case-store/src/**'
+      - 'intake/src/**'
+      - 'extension/test/dom.js'
+      - '.github/workflows/transfer.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'transfer/**'
+      - '.github/workflows/transfer.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      # transfer imports source-panel (#10), chat-editor (#8), analysis (#6) and extraction (#2); extraction loads pdfjs-dist at import time.
+      - run: npm ci --omit=optional
+        working-directory: extraction
+      - run: npm run build
+        working-directory: transfer
+      - run: npm test
+        working-directory: transfer
