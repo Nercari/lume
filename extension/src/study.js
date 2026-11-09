@@ -1,7 +1,6 @@
 import { createOcrSession, createTesseractWorker, renderPdfPage } from '../../manual/src/ocr.js';
 import { segmentAutos, setWorkerSrc } from '../../manual/src/segment.js';
 import { joinChunks } from './chunks.js';
-import { DEFAULT_PROJECT_URL, projectUrlOrDefault } from './settings.js';
 import { caseViewUrl, renderCaseParts } from './case-view.js';
 import { processCollected } from './study-run.js';
 
@@ -50,25 +49,29 @@ function listParts(parts) {
     link.href = URL.createObjectURL(new Blob([part.text], { type: 'text/markdown' }));
     link.download = part.name;
     link.textContent = part.name;
-    li.append(link);
+    const copy = document.createElement('button');
+    copy.type = 'button';
+    copy.textContent = `Copiar parte ${part.n}`;
+    copy.addEventListener('click', () => {
+      if (!navigator.clipboard?.writeText) return;
+      navigator.clipboard.writeText(part.text).then(() => { copy.textContent = 'Copiado'; }).catch(() => {});
+    });
+    li.append(link, document.createTextNode(' '), copy);
     $('parts').append(li);
   }
-  const first = parts[0];
-  if (!first) return;
-  $('save').hidden = false;
-  $('save').href = URL.createObjectURL(new Blob([first.text], { type: 'text/markdown' }));
-  $('save').download = first.name;
-  $('save').textContent = parts.length === 1 ? 'Salvar partes' : `Salvar partes (${first.name})`;
+  $('save').hidden = parts.length === 0;
   $('preview').textContent = parts.map((part) => part.text).join('\n\n').slice(0, 4000);
 }
 
-function attachFailure(reason) {
-  const why = reason === 'timeout' ? 'O ChatGPT não confirmou o anexo a tempo.'
-    : reason === 'no-parts' ? 'As partes não chegaram ao ChatGPT.'
-      : reason === 'composer-missing' ? 'O compositor do ChatGPT não foi encontrado.'
-        : reason === 'attach-threw' ? 'O navegador recusou os arquivos no compositor.'
-          : 'Não anexou no ChatGPT.';
-  return `${why} Use Anexar no ChatGPT para tentar de novo, ou Salvar partes para baixar os arquivos.`;
+function saveParts(parts) {
+  for (const part of parts) {
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob([part.text], { type: 'text/markdown' }));
+    link.download = part.name;
+    document.body.append(link);
+    link.dispatchEvent(new MouseEvent('click'));
+    link.remove();
+  }
 }
 
 function outcome(kind, text) {
@@ -77,22 +80,8 @@ function outcome(kind, text) {
   result.textContent = text;
 }
 
-async function projectUrl() {
-  try {
-    const stored = await chrome.storage.local.get('lumeProjectUrl');
-    const verdict = projectUrlOrDefault(stored.lumeProjectUrl);
-    return verdict.ok ? verdict.url : DEFAULT_PROJECT_URL;
-  } catch {
-    return DEFAULT_PROJECT_URL;
-  }
-}
-
-async function openChatGPT() {
-  const url = await projectUrl();
-  await chrome.tabs.create({ url });
-}
-
 const port = chrome.runtime.connect({ name: `lume-study:${studyId}` });
+let savedParts = [];
 
 $('cancel').addEventListener('click', () => {
   ctrl.abort('user');
@@ -102,10 +91,7 @@ $('cancel').addEventListener('click', () => {
   $('cancel').disabled = true;
 });
 
-$('retry').addEventListener('click', () => {
-  outcome('retrying', 'Tentando anexar no ChatGPT de novo.');
-  openChatGPT();
-});
+$('save').addEventListener('click', () => saveParts(savedParts));
 
 port.onMessage.addListener(async (msg) => {
   if (msg?.type === 'chunk') {
@@ -125,6 +111,8 @@ port.onMessage.addListener(async (msg) => {
       version: bag.meta.version,
       contentType: bag.meta.contentType,
       source: bag.meta.source,
+      date: bag.meta.date ?? null,
+      fetchMs: bag.meta.fetchMs ?? null,
       bytes,
     });
     $('progress').textContent = `Documento ${msg.docIndex ?? documents.length} de ${msg.docTotal ?? '?' } recebido`;
@@ -143,7 +131,8 @@ port.onMessage.addListener(async (msg) => {
         documents: documents.filter((doc) => doc.source !== 'download-autos'),
         autosDoc: documents.find((doc) => doc.source === 'download-autos') ?? null,
       };
-      const { caseResult, parts } = await processCollected(bundle, {
+      const started = performance.now();
+      const { caseResult, parts, timings } = await processCollected(bundle, {
         signal: ctrl.signal,
         segmentAutos,
         ocrPdfPage: async (pdfPage) => (await session.recognize({ pdfPage })).text ?? '',
@@ -163,34 +152,26 @@ port.onMessage.addListener(async (msg) => {
           $('ocr').textContent = `OCR página ${page} de ${pages}`;
         },
       });
+      savedParts = parts;
       listParts(parts);
       $('cancel').disabled = true;
       const view = renderCaseParts(caseResult, msg.items ?? []);
+      const ocrPerPage = (timings ?? []).flatMap((row) => row.ocrPages ?? []);
+      $('measure').textContent = JSON.stringify({
+        documents: (timings ?? []).length,
+        fetchMs: (timings ?? []).reduce((sum, row) => sum + (row.fetchMs || 0), 0),
+        textMs: (timings ?? []).reduce((sum, row) => sum + (row.textMs || 0), 0),
+        ocrMs: (timings ?? []).reduce((sum, row) => sum + (row.ocrMs || 0), 0),
+        ocrPerPage,
+        wallMs: performance.now() - started,
+      });
       port.postMessage({ type: 'view', pageUrl: msg.pageUrl ?? null, parts: view.parts, allText: view.allText });
       const viewTarget = caseViewUrl(msg.pageUrl);
       if (viewTarget) {
         try { await chrome.tabs.create({ url: viewTarget }); } catch { /* the study page still lists the files */ }
-      }
-      port.postMessage({ type: 'parts', parts: parts.map((part) => ({ name: part.name, text: part.text })) });
-      const attached = new Promise((resolve) => {
-        const timer = setTimeout(() => resolve({ ok: false, reason: 'timeout' }), 20000);
-        const onMsg = (next) => {
-          if (next?.type !== 'attached') return;
-          clearTimeout(timer);
-          port.onMessage.removeListener(onMsg);
-          resolve(next);
-        };
-        port.onMessage.addListener(onMsg);
-      });
-      await openChatGPT();
-      const result = await attached;
-      $('retry').hidden = false;
-      if (result.ok) {
-        outcome('attached', 'A aba do PJe mostra o caso na ordem da linha do tempo, para o painel do ChatGPT. As partes também foram anexadas. Revise e envie você mesmo. O Lume não enviou a mensagem.');
-      } else if (viewTarget) {
-        outcome('view', 'A aba do PJe mostra o caso na ordem da linha do tempo. O anexo no ChatGPT não entrou. Use Anexar no ChatGPT ou Salvar partes.');
+        outcome('view', 'A aba do PJe mostra o caso inteiro, na ordem da linha do tempo. O painel do ChatGPT lê essa aba. Salvar partes e Copiar parte k estão nesta página.');
       } else {
-        outcome('failed', attachFailure(result.reason));
+        outcome('failed', 'Não foi possível abrir a aba do PJe. Use Salvar partes.');
       }
     } catch (error) {
       if (error?.name === 'AbortError' || ctrl.signal.aborted) {
@@ -199,9 +180,5 @@ port.onMessage.addListener(async (msg) => {
       }
       outcome('failed', 'Não foi possível montar o pacote. Use Salvar partes se os arquivos aparecerem, ou tente de novo.');
     }
-  } else if (msg?.type === 'attached' && finished) {
-    $('retry').hidden = false;
-    if (msg.ok) outcome('attached', 'Anexado no ChatGPT. O texto do pedido já está no compositor. Revise e envie você mesmo. O Lume não enviou a mensagem.');
-    else outcome('failed', attachFailure(msg.reason));
   }
 });

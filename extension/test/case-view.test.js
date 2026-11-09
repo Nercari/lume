@@ -17,8 +17,8 @@ const caseResult = {
 };
 
 test('the case view keeps timeline order and does not invent a document page', () => {
-  assert.equal(passageTag({ docId: 'DOC2', pageInDoc: null, pdfPage: 3 }), '[ID DOC2, pág. PDF 3]');
-  assert.equal(passageTag({ docId: 'DOC2', pageInDoc: 4, pdfPage: 2 }), '[ID DOC2, pág. documento 4, pág. PDF 2]');
+  assert.equal(passageTag({ docId: 'DOC2', pageInDoc: null, pdfPage: 3 }), '[ID DOC2]');
+  assert.equal(passageTag({ docId: 'DOC2', pageInDoc: 4, pdfPage: 2 }), '[ID DOC2, pág. 4]');
   assert.equal(passageTag({ docId: 'DOC1', pageInDoc: 1, pdfPage: 1 }), '[ID DOC1, pág. 1]');
   const view = renderCaseParts(caseResult, [
     { id: 'DOC2', date: '02/02/2020', state: 'processed' },
@@ -26,13 +26,16 @@ test('the case view keeps timeline order and does not invent a document page', (
   ]);
   assert.equal(view.parts.length, 1);
   assert.match(view.parts[0].text, /Parte 1 de 1/);
-  assert.match(view.parts[0].text, /ID \| Tipo \| Data \| Págs\. \| Situação/);
+  assert.match(view.parts[0].text, /Documentos: 2/);
+  assert.match(view.parts[0].text, /ID \| Tipo \| Data \| Págs\. do documento \| Situação/);
   const index = view.allText.split('\n');
   const doc2 = index.find((line) => line.startsWith('DOC2 |'));
   const doc1 = index.find((line) => line.startsWith('DOC1 |'));
   assert.ok(index.indexOf(doc2) < index.indexOf(doc1));
-  assert.match(doc2, /02\/02\/2020 \| 2 \| parcial/);
-  assert.match(view.allText, /\[ID DOC2, pág\. PDF 1\]/);
+  assert.match(doc2, /02\/02\/2020 \| 1 \| legível/);
+  assert.match(doc1, /\| 1 \| OCR/);
+  assert.match(view.allText, /\[ID DOC2\]\nprimeiro/);
+  assert.equal(view.allText.includes('pág. PDF 1'), false);
   assert.equal(view.allText.includes('pág. 2]'), false);
   assert.match(view.allText, /\[ID DOC1, pág\. 1\]/);
   assert.match(view.allText, /primeiro/);
@@ -57,7 +60,11 @@ test('a long case is split into ordered parts without cutting a passage', () => 
   assert.match(view.parts[0].text, /Parte 1 de/);
   assert.match(view.parts[1].text, /Parte 2 de/);
   assert.match(view.parts[0].text, /Índice/);
+  assert.match(view.parts[0].text, /Documentos: 1/);
   assert.equal(view.parts[1].text.includes('Índice'), false);
+  assert.equal(view.parts[1].text.includes('Documentos:'), false);
+  assert.match(view.parts[0].name, /^lume-caso-parte-01-de-\d{2}\.md$/);
+  assert.equal(view.parts.at(-1).name, view.parts[0].name.replace('01-de', `${String(view.parts.length).padStart(2, '0')}-de`));
   const joined = view.parts.map((part) => part.text).join('\n');
   assert.equal(joined.split(text).length - 1, 5);
   assert.equal(PART_MAX_CHARS, 350000);

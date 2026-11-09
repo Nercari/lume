@@ -24,13 +24,14 @@ const tracker = createTracker({
 });
 
 async function fetchBytes(url, signal) {
+  const started = performance.now();
   const res = await fetch(url, { credentials: 'same-origin', cache: 'no-store', signal });
   const contentType = res.headers.get('content-type') ?? '';
   const bytes = new Uint8Array(await res.arrayBuffer());
   const doc = contentType.includes('text/html')
     ? new DOMParser().parseFromString(new TextDecoder().decode(bytes), 'text/html')
     : null;
-  return { status: res.status, contentType, size: bytes.byteLength, bytes, doc };
+  return { status: res.status, contentType, size: bytes.byteLength, bytes, doc, fetchMs: performance.now() - started };
 }
 
 function useStoredProfile(raw) {
@@ -122,6 +123,14 @@ function paintCaseView(payload) {
     next.textContent = 'Parte seguinte';
     bar.append(next, document.createTextNode(' '));
   }
+  const copyPart = document.createElement('button');
+  copyPart.type = 'button';
+  copyPart.id = 'lume-copiar-parte';
+  copyPart.textContent = `Copiar parte ${part}`;
+  copyPart.addEventListener('click', () => {
+    if (!navigator.clipboard?.writeText) return;
+    navigator.clipboard.writeText(text).then(() => { copyPart.textContent = 'Copiado'; }).catch(() => {});
+  });
   const copy = document.createElement('button');
   copy.type = 'button';
   copy.id = 'lume-copiar';
@@ -132,7 +141,7 @@ function paintCaseView(payload) {
       if (navigator.clipboard?.writeText) navigator.clipboard.writeText(value).then(() => { copy.textContent = 'Copiado'; }).catch(() => {});
     });
   });
-  bar.append(copy);
+  bar.append(copyPart, document.createTextNode(' '), copy);
   document.body.replaceChildren(bar, pre);
 }
 
@@ -236,6 +245,8 @@ async function runStudy(studyId) {
           id: doc.id,
           version: doc.version,
           contentType: doc.contentType,
+          date: doc.date ?? null,
+          fetchMs: doc.fetchMs ?? null,
           source: doc.source,
           rule: doc.rule,
           docIndex: doc.index,

@@ -22,7 +22,7 @@ test('build emits a loadable unpacked extension with only the documented permiss
   const m = JSON.parse(readFileSync(join(root, 'dist/manifest.json'), 'utf8'));
   assert.equal(m.manifest_version, 3);
   assert.deepEqual(m.permissions, ['sidePanel', 'storage']);
-  assert.deepEqual(m.host_permissions, ['https://chatgpt.com/*']);
+  assert.equal(m.host_permissions, undefined);
   assert.equal(m.optional_permissions, undefined);
   assert.equal(m.optional_host_permissions, undefined);
   assert.equal(m.web_accessible_resources, undefined);
@@ -30,7 +30,6 @@ test('build emits a loadable unpacked extension with only the documented permiss
   assert.ok(m.key?.startsWith('MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA'));
   assert.deepEqual(m.content_scripts.map((c) => c.matches), [
     ['https://pje1g.trf1.jus.br/*', 'https://pje2g.trf1.jus.br/*'],
-    ['https://chatgpt.com/*'],
   ]);
   const csp = m.content_security_policy.extension_pages;
   assert.equal(csp, "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'");
@@ -46,9 +45,7 @@ test('build emits a loadable unpacked extension with only the documented permiss
   assert.ok(existsSync(join(root, 'dist/pages/README.md')));
   const content = readFileSync(join(root, 'dist/content.js'), 'utf8');
   assert.ok(!/^\s*(import|export)\b/m.test(content), 'content script is a classic script');
-  const chatgpt = readFileSync(join(root, 'dist/chatgpt.js'), 'utf8');
-  assert.ok(!/^\s*(import|export)\b/m.test(chatgpt), 'chatgpt script is a classic script');
-  assert.match(chatgpt, /function attachToComposer/);
+  assert.equal(existsSync(join(root, 'dist/chatgpt.js')), false);
   assert.match(content, /function createTracker/);
   assert.match(content, /function snapshotDocument/);
   assert.match(content, /function validateStoredProfile/);

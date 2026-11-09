@@ -21,7 +21,7 @@ Lume helps you read a PJe case in Chrome and work in **your own ChatGPT plan**. 
 1. Open `lume-install/chatgpt/LEIA-ME.md` and follow **Opção 1**:
    - ChatGPT → **Projects** → **New project** named **Lume**.
    - Paste the contents of `PROJETO-LUME.md` into **Instructions** and save.
-2. Open the Lume panel once and check **URL do Projeto Lume**. The default is `https://chatgpt.com/`. If the project has its own `https://chatgpt.com/...` address, paste that once. It stays in this browser.
+2. Open the official ChatGPT side panel on the PJe tab, in a regular chat. It reads the page Lume opens. The extension does not attach files and does not store a project address.
 3. Optional: install the plugin from `chatgpt/plugin/` if your plan supports Agent Plugins.
 
 ## Daily workflow
@@ -29,11 +29,9 @@ Lume helps you read a PJe case in Chrome and work in **your own ChatGPT plan**. 
 1. Sign in to PJe in Chrome as usual and open the case.
 2. Click the Lume icon. The side panel opens.
 3. Click **Estudar processo**.
-4. Lume fetches each document's own PDF or image, in timeline order, through the session already open in that tab (in memory, no download dialog and no file on disk) and runs OCR on this computer. It then opens the same PJe address with `#lume-autos`. That tab is the full case, so the ChatGPT side panel can read it. **Copiar tudo** is on that tab. Attaching the part files in ChatGPT stays available from the study page. The full-autos PDF is not this path.
-5. The prompt is already filled. Read it and send it yourself. Lume does not send the message.
-6. Review every citation `[Id X, fl. Y]` before using text in court systems.
-
-If attach fails, the study page says so. Use **Anexar no ChatGPT** to try again, or **Salvar partes** to download the files and attach them yourself.
+4. Lume fetches every document in the left timeline, in that order, through the session already open in that tab (in memory, no download dialog and no file on disk). HTML and plain text are read directly. PDF text comes from pdf.js. Pages with no text, and image documents, go through local Portuguese OCR. It then opens the same PJe address with `#lume-autos`. That one tab is the whole case, so the ChatGPT side panel can read it. A long case is split into `Parte k de N`.
+5. On the study page, **Salvar partes** downloads `lume-caso-parte-01-de-NN.md` and **Copiar parte k** copies that part. Lume does not open ChatGPT and does not attach files.
+6. Review every citation `[ID X, pág. Y]` before using text in court systems. A page number appears only when the document states it.
 
 The manual page is the fallback: **Gerar pacote do caso**, then the PDF you downloaded in PJe (Download dos autos).
 
@@ -59,7 +57,7 @@ The manual page is the fallback: **Gerar pacote do caso**, then the PDF you down
 | Symptom | What to try |
 |--------|----------------|
 | Panel says it cannot find the document list | Open **Calibrar PJe** on the case, click **Salvar calibração**, and send `lume-calibracao.json` to the maintainer. The file has no case text. |
-| ChatGPT opens without the files | On the study page, click **Anexar no ChatGPT**. If it still fails, **Salvar partes** and attach the files yourself. |
+| The side panel does not show the case | Stay on the PJe tab whose address ends in `#lume-autos`. Use **Parte seguinte** for the next part, or **Copiar parte k** / **Salvar partes** on the study page. |
 | Package page will not open | Rebuild or reinstall `extension/dist` with the manual bundle. |
 | ChatGPT ignores citations | Confirm Project instructions still contain `PROJETO-LUME.md`. |
 

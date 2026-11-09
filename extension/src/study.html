@@ -19,18 +19,18 @@
 </head>
 <body>
   <h1>Estudo do processo</h1>
-  <p class="note">A leitura acontece neste computador. Avisos não bloqueiam documento nenhum. O Lume não envia a mensagem no ChatGPT.</p>
+  <p class="note">A leitura acontece neste computador. O caso abre numa aba do PJe para o painel do ChatGPT. Salvar partes e Copiar parte k ficam aqui.</p>
   <p id="progress" role="status" aria-live="polite">Aguardando os documentos…</p>
   <p id="ocr" role="status" aria-live="polite"></p>
   <p id="result" role="status"></p>
   <ul id="misses"></ul>
   <p>
     <button id="cancel" type="button">Cancelar</button>
-    <button id="retry" type="button" hidden>Anexar no ChatGPT</button>
-    <a id="save" class="button" hidden>Salvar partes</a>
+    <button id="save" type="button" hidden>Salvar partes</button>
   </p>
   <ul id="parts"></ul>
   <pre id="preview"></pre>
+  <pre id="measure" hidden></pre>
   <script type="module" src="study.js"></script>
 </body>
 </html>

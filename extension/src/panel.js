@@ -1,8 +1,6 @@
 import { CALIBRATION_DOWNLOAD_NAME, calibrationReport } from './calibrate.js';
 import { createPanelSync, panelView } from './core.js';
 import { CALIBRATION_HINT, ERROR_COPY, validateStoredProfile } from './profile.js';
-import { projectUrlOrDefault } from './settings.js';
-
 const $ = (id) => document.getElementById(id);
 const COUNTS = { identified: 'Identificados', processed: 'Processados', pending: 'Pendentes', failed: 'Falhas', restricted: 'Restritos', missing: 'Ausentes', unsupported: 'Não suportados' };
 const STATUS = {
@@ -177,20 +175,5 @@ $('cal-profile').addEventListener('change', async () => {
   } catch {
     note('Não foi possível guardar o perfil.');
   }
-});
-$('project-url').addEventListener('change', async () => {
-  const verdict = projectUrlOrDefault($('project-url').value.trim());
-  if (!verdict.ok) { note(verdict.error); return; }
-  $('project-url').value = verdict.url;
-  try {
-    await chrome.storage.local.set({ lumeProjectUrl: verdict.url });
-    note('URL do Projeto Lume guardada neste navegador.');
-  } catch {
-    note('Não foi possível guardar a URL.');
-  }
-});
-chrome.storage?.local?.get('lumeProjectUrl', (got) => {
-  const verdict = projectUrlOrDefault(got?.lumeProjectUrl);
-  if (verdict.ok) $('project-url').value = verdict.url;
 });
 bind();
