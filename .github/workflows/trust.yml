@@ -1,0 +1,49 @@
+name: trust
+
+on:
+  pull_request:
+    paths:
+      - 'trust/**'
+      - 'companion/src/**'
+      - 'case-store/src/**'
+      - 'chat-editor/src/**'
+      - 'chat-editor/test/fixtures.js'
+      - 'transfer/src/**'
+      - 'transfer/test/fixtures.js'
+      - 'source-panel/src/**'
+      - 'source-panel/test/fixtures.js'
+      - 'analysis/src/**'
+      - 'analysis/test/fixtures.js'
+      - 'extraction/src/**'
+      - 'extraction/test/fixtures.js'
+      - 'extraction/package.json'
+      - 'extraction/package-lock.json'
+      - 'extension/src/core.js'
+      - 'extension/manifest.json'
+      - 'extension/test/dom.js'
+      - 'intake/src/**'
+      - '.github/workflows/trust.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'trust/**'
+      - '.github/workflows/trust.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      # trust imports analysis and extraction; extraction loads pdfjs-dist at import time.
+      - run: npm ci --omit=optional
+        working-directory: extraction
+      - run: npm run build
+        working-directory: trust
+      - run: npm test
+        working-directory: trust
