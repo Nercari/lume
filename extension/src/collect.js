@@ -1,7 +1,10 @@
 // Collects every document of the open case through the page session.
-// Bytes stay in memory. A link that matches no named URL rule is listed and not fetched.
-// When the bound profile has a Download dos autos control whose URL matches
-// download-autos, that PDF is fetched instead of each document.
+// Each document's own PDF, HTML or image is fetched in memory. There is no
+// download dialog, no chrome.downloads call, and no file on disk.
+// A link that matches no named URL rule is listed and not fetched.
+// The full-autos PDF is optional. Only a profile with useDownloadAutos fetches
+// that endpoint, and only then instead of each document. Scanned pages are
+// read from the document binary, then OCR'd locally.
 
 import { sameOriginDocuments } from './calibrate.js';
 import { parseListPage, Stop } from './core.js';
@@ -116,36 +119,38 @@ export async function collectCase({
       page = parseListPage(res.doc, page.next, bound);
     }
 
-    const autos = findDownloadAutos(startDoc, bound);
-    for (const miss of autos.misses) misses.push(miss);
-    if (autos.raw) {
-      const autosUrl = absolute(autos.raw, startUrl);
-      const res = await get(autosUrl);
-      const type = typeOf(res.contentType);
-      const bytes = res.bytes instanceof Uint8Array ? res.bytes : new Uint8Array(res.bytes ?? []);
-      if (res.status === 403) {
-        misses.push({ id: null, reason: 'autos', detail: 'http 403', hrefPattern: urlPattern(autosUrl) });
-      } else if (res.status < 200 || res.status > 299 || type !== 'application/pdf' || bytes.byteLength === 0) {
-        misses.push({
-          id: null,
-          reason: 'autos',
-          detail: bytes.byteLength === 0 ? 'corpo vazio' : `http ${res.status} ${type || 'sem tipo'}`,
-          hrefPattern: urlPattern(autosUrl),
-        });
-      } else {
-        state.mode = 'autos';
-        const doc = { id: 'autos', version: '1', contentType: type, bytes, source: 'download-autos', rule: autos.rule, index: 1, total: 1 };
-        documents.push({ id: doc.id, contentType: type, bytes: bytes.byteLength, rule: autos.rule });
-        for (const item of items) {
-          item.state = 'processed';
-          item.detail = 'download-autos';
-          item.rule = autos.rule;
+    if (bound.useDownloadAutos === true) {
+      const autos = findDownloadAutos(startDoc, bound);
+      for (const miss of autos.misses) misses.push(miss);
+      if (autos.raw) {
+        const autosUrl = absolute(autos.raw, startUrl);
+        const res = await get(autosUrl);
+        const type = typeOf(res.contentType);
+        const bytes = res.bytes instanceof Uint8Array ? res.bytes : new Uint8Array(res.bytes ?? []);
+        if (res.status === 403) {
+          misses.push({ id: null, reason: 'autos', detail: 'http 403', hrefPattern: urlPattern(autosUrl) });
+        } else if (res.status < 200 || res.status > 299 || type !== 'application/pdf' || bytes.byteLength === 0) {
+          misses.push({
+            id: null,
+            reason: 'autos',
+            detail: bytes.byteLength === 0 ? 'corpo vazio' : `http ${res.status} ${type || 'sem tipo'}`,
+            hrefPattern: urlPattern(autosUrl),
+          });
+        } else {
+          state.mode = 'autos';
+          const doc = { id: 'autos', version: '1', contentType: type, bytes, source: 'download-autos', rule: autos.rule, index: 1, total: 1 };
+          documents.push({ id: doc.id, contentType: type, bytes: bytes.byteLength, rule: autos.rule });
+          for (const item of items) {
+            item.state = 'processed';
+            item.detail = 'download-autos';
+            item.rule = autos.rule;
+          }
+          emit();
+          await onDocument(doc);
+          state.status = 'complete';
+          emit();
+          return { ...state, autosDoc: doc, listDoc: guardDoc };
         }
-        emit();
-        await onDocument(doc);
-        state.status = 'complete';
-        emit();
-        return { ...state, autosDoc: doc, listDoc: guardDoc };
       }
     }
 
