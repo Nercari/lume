@@ -1,0 +1,108 @@
+// Source panel verification (#10). A citation is checked on four separate axes. Only a human
+// inspection can confirm semantic support; a literal string match proves at most quote accuracy.
+import { openSource, canSupportDecisive } from '../../extraction/src/index.js';
+import { buildContext, sourcePanel, USER_ACTION } from '../../chat-editor/src/index.js';
+import { GateError } from '../../analysis/src/index.js';
+
+export const VERDICTS = Object.freeze(['supports', 'partial', 'does_not_support']);
+// Labels for a decisive assertion without inspectable support, by #6 class.
+export const UNSUPPORTED_LABEL = Object.freeze({
+  fact: 'unsupported_allegation', allegation: 'unsupported_allegation',
+  legal_conclusion: 'inference', unknown: 'uncertainty', contradiction: 'uncertainty',
+});
+const UNSUPPORTED = new Set(Object.values(UNSUPPORTED_LABEL));
+
+const norm = (s) => String(s).normalize('NFC').replace(/\s+/g, ' ').trim();
+// Quoted text in a draft section: "..." or “...”.
+export const quotesIn = (text) => [...String(text).matchAll(/"([^"]+)"|“([^”]+)”/g)].map((m) => norm(m[1] ?? m[2]));
+const reviewKey = (findingId, passageId) => `${findingId}|${passageId}`;
+
+// Records a human inspection of one citation. Only the UI user-action handler holds USER_ACTION
+// (#8), so model output or page content cannot mark a citation as supporting. The review keeps the
+// claim and passage text it saw; a later change to either makes the review stale.
+export function recordReview(reviews, { finding, passageId, claimText, passageText }, verdict, origin, { by, now = Date.now() } = {}) {
+  if (origin !== USER_ACTION) throw new GateError('a citation review needs a user action');
+  if (!VERDICTS.includes(verdict)) throw new TypeError(`invalid verdict ${String(verdict)}`);
+  if (!by) throw new TypeError('a review needs a reviewer');
+  reviews[reviewKey(finding, passageId)] = { verdict, by, at: now, claimText, passageText };
+  return reviews;
+}
+
+// Checks one citation: finding -> passage. Returns the four axes and one honest status.
+export async function checkCitation(caseRec, L, finding, passageId, { quotes = [], reviews = {} } = {}) {
+  const src = await openSource(caseRec, passageId);
+  const current = Boolean(L.passages[passageId]) && !finding.stale;
+  const out = {
+    passageId, docId: src.docId, version: src.version, page: src.page,
+    excerpt: src.passage?.text ?? null, link: src.link ?? null,
+    image: src.image ?? null, imageStatus: src.imageStatus ?? null,
+    existence: !src.found ? 'not_found' : current ? 'found' : 'stale',
+    quote: 'none', ocr: 'not_applicable', semantic: 'uninspected', review: null,
+  };
+  if (src.found) {
+    // Quote accuracy: every quote must appear in the cited page text. It does not prove support.
+    if (quotes.length) out.quote = quotes.every((q) => norm(src.pageText).includes(q)) ? 'exact' : 'mismatch';
+    if (src.passage.method.startsWith('ocr:')) {
+      const ok = canSupportDecisive(src.passage);
+      out.ocr = ok.ok ? 'reliable' : ok.reason;
+    }
+    const r = reviews[reviewKey(finding.id, passageId)];
+    if (r) {
+      out.review = { verdict: r.verdict, by: r.by, at: r.at };
+      out.semantic = r.claimText === finding.text && r.passageText === src.passage.text ? r.verdict : 'review_stale';
+    }
+  }
+  out.status = out.existence !== 'found' ? out.existence
+    : out.quote === 'mismatch' ? 'quote_mismatch'
+      : !['reliable', 'not_applicable'].includes(out.ocr) ? 'ocr_unreliable'
+        : out.semantic === 'review_stale' ? 'stale'
+          : out.semantic === 'uninspected' ? 'unverified'
+            : out.semantic === 'supports' ? 'verified' : 'not_supported';
+  return out;
+}
+
+// Opens one finding's sources: every cited passage, and every passage #6 rejected (for example
+// low-confidence OCR), with document ID, version, page, excerpt, link and OCR page image.
+export async function openClaim(caseRec, L, findingId, opts = {}) {
+  const f = L.findings[findingId];
+  if (!f) return { found: false, finding: findingId };
+  const citations = [];
+  for (const id of f.support) citations.push(await checkCitation(caseRec, L, f, id, opts));
+  const rejected = [];
+  for (const r of f.rejected ?? []) {
+    const src = await openSource(caseRec, r.id).catch(() => ({ found: false }));
+    rejected.push({ passageId: r.id, reason: r.reason, found: src.found, excerpt: src.passage?.text ?? null, image: src.image ?? null, imageStatus: src.imageStatus ?? null });
+  }
+  return { found: true, finding: f.id, class: f.class, text: f.text, decisive: f.decisive, stale: f.stale, citations, rejected };
+}
+
+// The entry status: verified only when every citation is verified.
+function entryStatus(f, e, citations) {
+  if (!f) return 'not_in_case';
+  if (f.stale) return 'stale';
+  if (e.verification === 'unsupported') return UNSUPPORTED_LABEL[f.class] ?? 'uncertainty';
+  if (!citations.length) return 'unverified';
+  const order = ['not_found', 'stale', 'quote_mismatch', 'ocr_unreliable', 'not_supported', 'unverified'];
+  return order.find((s) => citations.some((c) => c.status === s)) ?? 'verified';
+}
+
+// Builds the panel for a #8 draft ({ sections: [{ id, text, uses }], conclusion }). It replaces the
+// #8 'unverified' stub with the checks above. The draft text is not changed.
+export async function buildPanel(caseRec, L, draft, { reviews = {} } = {}) {
+  const base = sourcePanel(buildContext(L), draft);
+  const textOf = new Map(draft.sections.map((s) => [s.id, s.text]));
+  if (draft.conclusion) textOf.set('conclusion', `${draft.conclusion.text ?? ''} ${draft.conclusion.reasoning ?? ''}`);
+  const entries = [];
+  for (const e of base.entries) {
+    const f = L.findings[e.finding];
+    const opened = f ? await openClaim(caseRec, L, f.id, { quotes: quotesIn(textOf.get(e.ref) ?? ''), reviews }) : null;
+    const citations = opened?.citations ?? [];
+    entries.push({ ref: e.ref, finding: e.finding, class: e.class, text: e.text, decisive: f?.decisive ?? false, citations, rejected: opened?.rejected ?? [], status: entryStatus(f, e, citations) });
+  }
+  // A decisive entry must have an inspectable source (one found, current citation) or an
+  // unsupported label. Anything else is listed here, never hidden.
+  const unaccounted = entries.filter((e) => e.decisive && !UNSUPPORTED.has(e.status) && !e.citations.some((c) => c.existence === 'found')).map((e) => e.finding);
+  const counts = {};
+  for (const e of entries) counts[e.status] = (counts[e.status] ?? 0) + 1;
+  return { entries, counts, unaccounted };
+}
