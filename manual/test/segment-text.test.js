@@ -21,7 +21,21 @@ test('footer_num_pag keeps Num. and Pág. and groups pages of the same id', () =
   assert.ok(first.rules.includes(TEXT_RULES.footerNumPag.id));
   assert.deepEqual(result.pages.filter((page) => page.docId === '1001').map((page) => page.pageInDoc), [1, 2]);
   assert.equal(result.pages.find((page) => page.docId === '1002').pageInDoc, 1);
+  assert.equal(result.passages.every((passage) => passage.pdfPage == null), true);
   assert.match(buildCasePack(result), /\[Id 1001, fl\. 2\]/);
+});
+
+test('documents stay in source order when later ids are smaller', () => {
+  const text = [
+    `${BODY} Primeira.`,
+    'Num. 1002 - Pág. 1',
+    `${BODY} Segunda.`,
+    'Num. 1001 - Pág. 3',
+  ].join('\n');
+  const result = segmentText(text);
+  assert.deepEqual(result.documents.map((doc) => doc.docId), ['1002', '1001']);
+  assert.deepEqual(result.passages.map((passage) => passage.pageInDoc), [1, 3]);
+  assert.deepEqual(result.passages.map((passage) => passage.pdfPage), [null, null]);
 });
 
 test('numero_documento splits pieces on Número do documento', () => {
@@ -61,7 +75,8 @@ test('form_feed is a page break inside one document when no id follows', () => {
   assert.equal(result.rules.includes(TEXT_RULES.fallbackSemId.id), false);
   assert.equal(result.documents.length, 1);
   assert.equal(result.documents[0].docId, 'sem-id');
-  assert.deepEqual(result.pages.map((page) => page.pageInDoc), [1, 2]);
+  assert.deepEqual(result.pages.map((page) => page.pageInDoc), [null, null]);
+  assert.deepEqual(result.passages.map((passage) => passage.pdfPage), [null, null]);
   assert.equal(result.pages.every((page) => page.hasText), true);
 });
 
@@ -127,7 +142,8 @@ test('fallback_sem_id cuts unmarked prose into numbered blocks', () => {
   assert.equal(result.documents.length, 1);
   assert.equal(result.documents[0].docId, TEXT_RULES.fallbackSemId.docId);
   assert.ok(result.pages.length >= 2);
-  assert.deepEqual(result.pages.map((page) => page.pageInDoc), result.pages.map((_, index) => index + 1));
+  assert.equal(result.pages.every((page) => page.pageInDoc == null), true);
+  assert.equal(result.passages.every((passage) => passage.pdfPage == null), true);
   assert.ok(result.pages.every((page) => page.text.length <= TEXT_BLOCK_CHARS));
   assert.equal(result.pages.map((page) => page.text).join('').replace(/\s/g, ''), text.replace(/\s/g, ''));
 });
