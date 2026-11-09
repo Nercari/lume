@@ -14,8 +14,7 @@ Pacote para o Chrome e para um Projeto ChatGPT chamado Lume. Nada sai do computa
 1. Descompacte o pacote `lume-install` se recebeu um ZIP.
 2. No Windows, execute `windows\instalar.ps1` (ou `instalar.bat`).
 3. Chrome → `chrome://extensions` → Modo do desenvolvedor → Carregar sem compactação → pasta `extension`.
-4. ChatGPT → Projetos → novo projeto **Lume** → cole o texto de `chatgpt\PROJETO-LUME.md` nas Instruções.
-5. No painel da Lume, confira a URL do Projeto. O padrão é `https://chatgpt.com/`. Se o projeto tiver um endereço próprio em chatgpt.com, cole esse endereço uma vez.
+4. ChatGPT → Projetos → novo projeto **Lume** → cole o texto de `chatgpt\PROJETO-LUME.md` nas Instruções. O painel oficial do ChatGPT, no chat normal, lê a aba do PJe. A extensão não anexa arquivos.
 
 Nao cole tokens nem chaves de API. O Lume nao oferece fallback pago.
 
@@ -24,10 +23,8 @@ Nao cole tokens nem chaves de API. O Lume nao oferece fallback pago.
 1. Entre no PJe no Chrome, como de costume, e abra o processo.
 2. Clique no ícone da Lume. O painel abre ao lado.
 3. Clique **Estudar processo**.
-4. A Lume busca o PDF ou a imagem de cada documento, na ordem da linha do tempo, na sessão já aberta e na memória. Abre a mesma página do PJe com `#lume-autos`: o texto integral fica nessa aba para o painel do ChatGPT. **Copiar tudo** está nessa aba. O anexo dos arquivos continua na página de estudo.
-5. Leia o pedido que já está no campo e envie você mesmo. A Lume não envia a mensagem.
-
-Se o anexo falhar, a página de estudo mostra **Anexar no ChatGPT** e **Salvar partes**.
+4. A Lume busca cada documento da linha do tempo, nessa ordem, na sessão já aberta e na memória. Texto nativo entra direto. PDF passa pelo leitor local. Página sem texto e imagem passam pelo OCR em português neste computador. Abre a mesma página do PJe com `#lume-autos`: o caso inteiro fica nessa aba para o painel do ChatGPT.
+5. Na página de estudo, **Salvar partes** grava `lume-caso-parte-01-de-NN.md` e **Copiar parte k** copia essa parte. A Lume não abre o ChatGPT.
 
 Se o painel disser que não achou a lista, use **Calibrar PJe** uma vez, salve `lume-calibracao.json` e envie esse arquivo ao Grok. Não é o texto do processo.
 
