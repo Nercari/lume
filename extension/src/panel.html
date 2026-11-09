@@ -6,25 +6,46 @@
   <style>
     body { font: 13px/1.4 system-ui, sans-serif; margin: 12px; color: #1b1b1b; background: #fff; }
     h1 { font-size: 15px; margin: 0 0 4px; }
-    #status[data-kind="stop"] { color: #a40000; font-weight: 600; }
+    h2 { font-size: 14px; margin: 12px 0 4px; }
+    #status[data-kind="stop"], #hint { color: #a40000; font-weight: 600; }
+    .note, #cal-note { color: #444; }
+    #calibration { margin-top: 12px; padding-top: 8px; border-top: 1px solid #ddd; }
     dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; }
     dt { color: #555; } dd { margin: 0; font-variant-numeric: tabular-nums; }
     table { border-collapse: collapse; width: 100%; margin-top: 8px; }
     th, td { text-align: left; padding: 2px 4px; border-bottom: 1px solid #ddd; }
-    button { margin-right: 6px; }
-    @media (prefers-color-scheme: dark) { body { color: #eee; background: #1e1e1e; } dt { color: #aaa; } th, td { border-color: #444; } #status[data-kind="stop"] { color: #ff8a80; } }
+    button, a.button { margin-right: 6px; }
+    @media (prefers-color-scheme: dark) {
+      body { color: #eee; background: #1e1e1e; }
+      dt, .note, #cal-note { color: #aaa; }
+      th, td, #calibration { border-color: #444; }
+      #status[data-kind="stop"], #hint { color: #ff8a80; }
+    }
   </style>
 </head>
 <body>
   <h1>Lume</h1>
   <p>Processo: <strong id="case">—</strong></p>
+  <p id="unverified" class="note">Os seletores embutidos não foram verificados neste tribunal.</p>
   <p id="status" role="status" aria-live="polite"></p>
+  <p id="hint" hidden></p>
   <dl id="counts"></dl>
-  <button id="start" type="button">Ler processo</button><button id="stop" type="button">Parar</button>
+  <button id="start" type="button">Ler processo</button><button id="stop" type="button">Parar</button><button id="calibrate" type="button">Modo calibração</button>
   <table>
     <thead><tr><th>ID</th><th>Versão</th><th>Tipo</th><th>Págs.</th><th>Estado</th><th>Detalhe</th></tr></thead>
     <tbody id="items"></tbody>
   </table>
+  <section id="calibration" hidden>
+    <h2>Modo calibração</h2>
+    <p id="cal-note">Este arquivo descreve só a estrutura da página: etiquetas, ids mascarados, classes e nomes de atributos. Não contém texto do processo, nomes, números ou valores de campos. Pode ser enviado ao mantenedor para corrigir os seletores.</p>
+    <p id="cal-summary" role="status"></p>
+    <p>
+      <a id="cal-download" href="#">Baixar JSON de calibração</a>
+      <button id="cal-copy" type="button">Copiar</button>
+    </p>
+    <p><label>Carregar perfil <input id="cal-profile" type="file" accept="application/json,.json"></label></p>
+    <p id="cal-action" role="status"></p>
+  </section>
   <script type="module" src="panel.js"></script>
 </body>
 </html>

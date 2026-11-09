@@ -1,4 +1,4 @@
-// Chrome wiring for the adapter. scripts/build.mjs puts core.js in front of this file.
+// Chrome wiring for the adapter. scripts/build.mjs puts the pure modules in front of this file.
 // Requests go through the page's own fetch on the same origin, so the browser attaches the PJe
 // session itself. Lume never reads cookies, credentials or certificates, and never navigates.
 const tracker = createTracker({
@@ -18,6 +18,20 @@ const tracker = createTracker({
   publish: (state) => chrome.runtime.sendMessage({ type: 'lume:state', state }).catch(() => {}),
 });
 
+function useStoredProfile(raw) {
+  const verdict = validateStoredProfile(raw);
+  setInstalledProfile(verdict.ok ? verdict.profile : null);
+  tracker.refresh();
+}
+
+try {
+  chrome.storage?.local?.get('lumeProfile', (got) => useStoredProfile(got?.lumeProfile));
+  chrome.storage?.onChanged?.addListener((changes, area) => {
+    if (area !== 'local' || !Object.prototype.hasOwnProperty.call(changes, 'lumeProfile')) return;
+    useStoredProfile(changes.lumeProfile.newValue);
+  });
+} catch { /* storage is unavailable until the permission is present */ }
+
 // Debounced: a burst of DOM changes costs one re-parse. Reads stay safe in the gap because
 // readCase calls refresh() itself before it uses each response.
 let pending = null;
@@ -31,8 +45,10 @@ addEventListener('hashchange', () => tracker.refresh());
 chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
   if (msg?.type === 'start') tracker.start();
   else if (msg?.type === 'stop') tracker.stop();
-  else if (msg?.type !== 'status') return;
-  reply(tracker.status());
+  else if (msg?.type === 'calibrate') {
+    try { reply(snapshotDocument(document)); }
+    catch { reply({ error: 'snapshot_failed' }); }
+  } else if (msg?.type === 'status') reply(tracker.status());
 });
 
 chrome.runtime.sendMessage({ type: 'lume:state', state: tracker.status() }).catch(() => {});
