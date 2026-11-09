@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -114,20 +115,28 @@ test('the page button reads fifty documents, then a second case cannot paint ove
     const viewPage = await waitFor(opened, (page) => page.url().includes('#lume-autos') || page.url().startsWith('chrome-error://'));
     await viewPage.goto(`${CASE_A}#lume-autos`, { waitUntil: 'domcontentloaded' });
     await viewPage.locator('#lume-caso').waitFor({ timeout: 20_000 });
-    const root = viewPage.locator('#lume-caso-root');
+    const root = viewPage.locator('#lume-caso');
     assert.equal(await root.getAttribute('data-formato'), 'lume-caso/1');
     assert.equal(await root.getAttribute('data-origem'), 'botao');
-    const full = await viewPage.locator('#lume-caso').textContent();
-    assert.match(full ?? '', /^---\nformato: lume-caso\/1\nprocesso: TEST-CASE-A\nparte: 1\ntotal: 1\norigem: botao\n---/);
+    assert.equal(await root.getAttribute('data-parte'), '1');
+    assert.equal(await root.getAttribute('data-total'), '1');
+    assert.equal(await viewPage.locator('[data-campo="processo"]').textContent(), 'TEST-CASE-A');
+    assert.equal(await viewPage.locator('[data-campo="origem"]').textContent(), 'botao');
+    const full = await viewPage.locator('[data-lume-texto]').textContent();
+    assert.match(full ?? '', /^lume-caso\/1\nProcesso: TEST-CASE-A\n/);
+    assert.match(full ?? '', /Ids: H01,/);
     assert.match(full ?? '', /Índice/);
     await viewPage.waitForFunction(() => document.title.startsWith('Lume: pronto'));
-    const gaps = Number(/Lacunas: (\d+)/.exec(full ?? '')?.[1]);
+    const gaps = Number(/(\d+) lacunas/.exec(full ?? '')?.[1]);
     assert.equal(await viewPage.title(), `Lume: pronto · 50 docs · ${gaps} lacunas · parte 1 de 1`);
-    assert.match(full ?? '', /Documentos: 50/);
+    assert.match(full ?? '', /Contagens: 50 documentos,/);
     assert.match(full ?? '', /ID \| Tipo \| Data \| Págs\. do documento \| Situação/);
-    assert.match(full ?? '', /H01 \| .* \| 01\/01\/2020 \| 1 \| legível/);
-    assert.match(full ?? '', /P01 \| .* \| 01\/01\/2020 \| (?:1|—) \| legível/);
-    assert.match(full ?? '', /S01 \| .* \| 01\/01\/2020 \| 1 \| OCR/);
+    assert.match(full ?? '', /H01 \| .* \| 2020-01-01 \| — \| lido/);
+    assert.match(full ?? '', /P01 \| .* \| 2020-01-01 \| — \| lido/);
+    assert.match(full ?? '', /S01 \| .* \| 2020-01-01 \| — \| lido/);
+    assert.match(full ?? '', /\[ID H01\]\nH01TXT/);
+    assert.match(full ?? '', /\[ID P01, pág\. PDF 1\]\nTEXTO/);
+    assert.match(full ?? '', /\[ID S01\]\nLAUDO/);
     assert.ok(full.indexOf('H01 |') < full.indexOf('H40 |'));
     assert.ok(full.indexOf('H40 |') < full.indexOf('P01 |'));
     assert.ok(full.indexOf('P05 |') < full.indexOf('S01 |'));
@@ -137,6 +146,23 @@ test('the page button reads fifty documents, then a second case cannot paint ove
     assert.equal(measure.ocrPerPage.length, 5);
     assert.ok(measure.fetchMs >= 50 * 140, `fetch ${measure.fetchMs}`);
     console.log(`MEASURE ${JSON.stringify({ totalSec: Number((totalMs / 1000).toFixed(2)), ...measure })}`);
+    const dumped = await study.evaluate(async () => {
+      const files = [];
+      for (const link of document.querySelectorAll('#parts a')) {
+        files.push({ name: link.download, text: await (await fetch(link.href)).text() });
+      }
+      return { files, sidecar: document.querySelector('#sidecar')?.textContent || '' };
+    });
+    const caseDir = await mkdtemp(join(tmpdir(), 'lume-caso-'));
+    for (const file of dumped.files) await writeFile(join(caseDir, file.name), file.text);
+    if (dumped.sidecar) await writeFile(join(caseDir, 'lume-caso.json'), dumped.sidecar);
+    const validated = spawnSync(process.execPath, [fileURLToPath(new URL('../../format/src/validate.mjs', import.meta.url)), caseDir], { encoding: 'utf8' });
+    assert.equal(validated.status, 0, validated.stdout || validated.stderr);
+    const report = JSON.parse(validated.stdout);
+    assert.equal(report.ok, true, JSON.stringify(report.errors));
+    assert.equal(report.counts.parts, 1);
+    assert.equal(report.counts.ids, 50);
+    await rm(caseDir, { recursive: true, force: true });
 
     const seen = new Set(opened);
     const pjeB = await context.newPage();
@@ -147,15 +173,15 @@ test('the page button reads fifty documents, then a second case cannot paint ove
     assert.equal(await studyB.locator('#result').getAttribute('data-state'), 'view');
     const viewB = await waitFor(opened, (page) => !seen.has(page) && (page.url().includes('#lume-autos') || page.url().startsWith('chrome-error://')));
     await viewB.goto(`${CASE_B}#lume-autos`, { waitUntil: 'domcontentloaded' });
-    await viewB.locator('#lume-caso').waitFor({ timeout: 20_000 });
-    const textB = await viewB.locator('#lume-caso').textContent();
+    await viewB.locator('[data-lume-texto]').waitFor({ timeout: 20_000 });
+    const textB = await viewB.locator('[data-lume-texto]').textContent();
     assert.match(textB ?? '', /CASEBTXT/);
-    assert.match(textB ?? '', /processo: TEST-CASE-B/);
+    assert.match(textB ?? '', /Processo: TEST-CASE-B/);
     assert.equal(await viewB.title(), 'Lume: pronto · 1 docs · 0 lacunas · parte 1 de 1');
     await viewPage.goto(`${CASE_A}#lume-autos`, { waitUntil: 'domcontentloaded' });
-    await viewPage.locator('#lume-caso').waitFor({ timeout: 20_000 });
-    const again = await viewPage.locator('#lume-caso').textContent();
-    assert.match(again ?? '', /processo: TEST-CASE-A/);
+    await viewPage.locator('[data-lume-texto]').waitFor({ timeout: 20_000 });
+    const again = await viewPage.locator('[data-lume-texto]').textContent();
+    assert.match(again ?? '', /Processo: TEST-CASE-A/);
     assert.equal((again ?? '').includes('CASEBTXT'), false);
     assert.equal(await viewPage.title(), `Lume: pronto · 50 docs · ${gaps} lacunas · parte 1 de 1`);
   } finally {

@@ -16,7 +16,7 @@ test('parts split only above about 100k tokens', async () => {
   });
   assert.equal(parts.length, 1);
   assert.equal(parts[0].name, 'lume-caso-parte-01-de-01.md');
-  assert.match(parts[0].text, /^---\nformato: lume-caso\/1\nprocesso: ""\nparte: 1\ntotal: 1\norigem: botao\n---/);
+  assert.match(parts[0].text, /^---\nformato: lume-caso\/1\nprocesso: —\nparte: 1\ntotal: 1\nids: D1\norigem: botao\n---/);
   assert.match(parts[0].text, /Índice/);
   assert.match(parts[0].text, /peticao|D1/);
   const source = readFileSync(new URL('../src/pack-bridge.js', import.meta.url), 'utf8');

@@ -30,7 +30,7 @@ function pageRecord(doc, page, index, n) {
     pageInDoc,
     pdfPage,
     hasText,
-    method: hasText ? (page.method === 'ocr' ? 'ocr' : 'text') : null,
+    method: page.method === 'ocr' ? 'ocr' : (hasText ? 'text' : null),
     text,
     chars: text.length,
   };
@@ -140,7 +140,7 @@ export async function ingestOne(doc, deps) {
       ...base,
       kind: 'text',
       timing: timingOf(performance.now() - started, []),
-      pages: [{ pageInDoc: 1, pdfPage: 1, text, method: 'text', detail: text ? null : 'sem texto' }],
+      pages: [{ pageInDoc: null, pdfPage: null, text, method: 'text', detail: text ? null : 'sem texto' }],
     };
   }
   if (type === 'application/pdf') {
@@ -176,7 +176,7 @@ export async function ingestOne(doc, deps) {
     } catch (error) {
       if (error?.name === 'AbortError') throw error;
       const ms = performance.now() - ocrStarted;
-      return { ...base, kind: 'image', timing: timingOf(0, [{ page: 1, ms }]), pages: [{ pageInDoc: 1, pdfPage: 1, text: '', method: 'ocr', detail: 'ilegível' }] };
+      return { ...base, kind: 'image', timing: timingOf(0, [{ page: 1, ms }]), pages: [{ pageInDoc: null, pdfPage: null, text: '', method: 'ocr', detail: 'imagem sem texto' }] };
     }
     const ms = performance.now() - ocrStarted;
     const readable = text.trim();
@@ -184,7 +184,7 @@ export async function ingestOne(doc, deps) {
       ...base,
       kind: 'image',
       timing: timingOf(0, [{ page: 1, ms }]),
-      pages: [{ pageInDoc: 1, pdfPage: 1, text: readable, method: 'ocr', detail: readable ? null : 'ilegível' }],
+      pages: [{ pageInDoc: null, pdfPage: null, text: readable, method: 'ocr', detail: readable ? null : 'imagem sem texto' }],
     };
   }
   return {

@@ -66,6 +66,15 @@ function listParts(parts) {
 }
 
 function saveParts(parts) {
+  const sidecar = $('sidecar')?.textContent;
+  if (sidecar) {
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob([sidecar], { type: 'application/json' }));
+    link.download = 'lume-caso.json';
+    document.body.append(link);
+    link.dispatchEvent(new MouseEvent('click'));
+    link.remove();
+  }
   for (const part of parts) {
     const link = document.createElement('a');
     link.href = URL.createObjectURL(new Blob([part.text], { type: 'text/markdown' }));
@@ -140,7 +149,7 @@ port.onMessage.addListener(async (msg) => {
         autosDoc: documents.find((doc) => doc.source === 'download-autos') ?? null,
       };
       const started = performance.now();
-      const { caseResult, parts, timings } = await processCollected(bundle, {
+      const { caseResult, timings } = await processCollected(bundle, {
         signal: ctrl.signal,
         segmentAutos,
         ocrPdfPage: async (pdfPage) => (await session.recognize({ pdfPage })).text ?? '',
@@ -160,8 +169,6 @@ port.onMessage.addListener(async (msg) => {
           $('ocr').textContent = `OCR página ${page} de ${pages}`;
         },
       });
-      savedParts = parts;
-      listParts(parts);
       $('cancel').disabled = true;
       const view = renderCaseParts(caseResult, msg.items ?? [], undefined, { processo: msg.caseNumber ?? '' });
       const ocrPerPage = (timings ?? []).flatMap((row) => row.ocrPages ?? []);
@@ -173,16 +180,18 @@ port.onMessage.addListener(async (msg) => {
         ocrPerPage,
         wallMs: performance.now() - started,
       });
-      const documentCount = (caseResult.documents ?? []).length;
-      const gapCount = (caseResult.gaps ?? []).length;
-      document.title = readyTitle({ documents: documentCount, gaps: gapCount, part: 1, total: view.parts.length || 1 });
+      savedParts = view.parts;
+      listParts(view.parts);
+      if ($('sidecar')) $('sidecar').textContent = JSON.stringify(view.sidecar);
+      document.title = readyTitle({ documents: view.documents, gaps: view.gaps, part: 1, total: view.parts.length || 1 });
       port.postMessage({
         type: 'view',
         pageUrl: msg.pageUrl ?? null,
-        parts: view.parts,
+        parts: view.parts.map((part) => ({ n: part.n, total: part.total, name: part.name, text: part.body })),
         allText: view.allText,
-        documents: documentCount,
-        gaps: gapCount,
+        documents: view.documents,
+        gaps: view.gaps,
+        header: view.header,
       });
       const viewTarget = caseViewUrl(msg.pageUrl);
       if (viewTarget) {

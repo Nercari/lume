@@ -22,15 +22,15 @@ test('html becomes text and the pack uses the PJe id and sheet', async () => {
     items: [],
   }, {});
   assert.equal(caseResult.documents[0].docId, 'DOC1');
-  assert.equal(caseResult.pages[0].pageInDoc, 1);
+  assert.equal(caseResult.pages[0].pageInDoc, null);
   assert.equal(parts.length, 1);
   assert.equal(parts[0].name, 'lume-caso-parte-01-de-01.md');
-  assert.match(parts[0].text, /\[ID DOC1, pág\. 1\]/);
-  assert.match(parts[0].text, /legível/);
-  assert.match(parts[0].text, /binário/);
+  assert.match(parts[0].text, /\[ID DOC1\]\nTOKENHTML/);
+  assert.match(parts[0].text, /lido/);
+  assert.match(parts[0].text, /ilegível/);
+  assert.match(parts[0].text, /- ID DOC9: binario/);
   assert.match(parts[0].text, /TOKENHTML/);
   assert.match(parts[0].text, /DOC9/);
-  assert.match(parts[0].text, /video\/mp4/);
 });
 
 test('an image-only PDF page is OCR and the text is kept under the list id', async () => {
@@ -57,15 +57,12 @@ test('an image-only PDF page is OCR and the text is kept under the list id', asy
     async ocrPdfPage() { return 'LAUDO'; },
     async ocrImage() { return 'LAUDO'; },
   });
-  assert.match(parts[0].text, /\[ID DOC2, pág\. 1\]/);
-  assert.match(parts[0].text, /TOKENPDF/);
+  assert.match(parts[0].text, /\[ID DOC2, pág\. 1, pág\. PDF 1\]\nTOKENPDF/);
   assert.equal(caseResult.pages[1].pageInDoc, null);
   assert.equal(caseResult.pages[1].pdfPage, 2);
-  assert.match(parts[0].text, /\[ID DOC2\]\nLAUDO/);
-  assert.equal(parts[0].text.includes('pág. 2'), false);
-  assert.match(parts[0].text, /LAUDO/);
-  assert.match(parts[0].text, /\[ID DOC3, pág\. 1\]/);
-  assert.match(parts[0].text, /OCR/);
+  assert.match(parts[0].text, /\[ID DOC2, pág\. PDF 2\]\nLAUDO/);
+  assert.match(parts[0].text, /\[ID DOC3\]\nLAUDO/);
+  assert.match(parts[0].text, /lido/);
   const again = await packParts({ origin: 'pje', pages: [], documents: [], gaps: [] });
-  assert.equal(again[0].name, 'lume-caso-parte-01-de-01.md');
+  assert.equal(again.length, 0);
 });

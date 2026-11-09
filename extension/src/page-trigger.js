@@ -39,6 +39,7 @@ export function holdCaseView(reply, here) {
       allText: reply.allText ?? '',
       documents: Number(reply.documents) || 0,
       gaps: Number(reply.gaps) || 0,
+      header: reply.header ?? null,
     },
   };
 }
@@ -55,6 +56,7 @@ export function createViewStore() {
         allText: view.allText ?? '',
         documents: Number(view.documents) || 0,
         gaps: Number(view.gaps) || 0,
+        header: view.header ?? null,
       });
     },
     take(pageUrl) {

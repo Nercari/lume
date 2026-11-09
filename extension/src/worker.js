@@ -102,6 +102,7 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
         pageUrl,
         documents: stored?.documents ?? 0,
         gaps: stored?.gaps ?? 0,
+        header: stored?.header ?? null,
       });
       return true;
     }
@@ -116,6 +117,7 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
       pageUrl,
       documents: stored?.documents ?? 0,
       gaps: stored?.gaps ?? 0,
+      header: stored?.header ?? null,
     });
     return true;
   }

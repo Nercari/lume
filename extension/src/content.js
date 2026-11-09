@@ -115,17 +115,33 @@ function paintCaseView(payload) {
   } else if (payload?.documents != null) {
     document.title = readyTitle({ documents: payload.documents, gaps: payload.gaps, part, total });
   }
+  const header = payload?.header || heldView?.header || null;
   const root = document.createElement('article');
-  root.id = 'lume-caso-root';
+  root.id = 'lume-caso';
   root.dataset.formato = 'lume-caso/1';
-  root.dataset.origem = 'botao';
+  root.dataset.origem = header?.origem || 'botao';
+  root.dataset.parte = String(part);
+  root.dataset.total = String(total);
+  const head = document.createElement('header');
+  for (const [campo, value] of [
+    ['processo', header?.processo || '—'],
+    ['orgao', header?.orgao || '—'],
+    ['gerado-em', header?.geradoEm || ''],
+    ['origem', header?.origem || 'botao'],
+    ['contagens', header?.contagens || ''],
+  ]) {
+    const p = document.createElement('p');
+    p.dataset.campo = campo;
+    p.textContent = value;
+    head.append(p);
+  }
   const pre = document.createElement('pre');
-  pre.id = 'lume-caso';
+  pre.dataset.lumeTexto = '';
   pre.textContent = text;
   const bar = document.createElement('p');
   if (part > 1) {
     const prev = document.createElement('a');
-    prev.href = `#lume-autos/${part - 1}`;
+    prev.href = part === 2 ? '#lume-autos' : `#lume-autos/${part - 1}`;
     prev.textContent = 'Parte anterior';
     bar.append(prev, document.createTextNode(' '));
   }
@@ -152,7 +168,7 @@ function paintCaseView(payload) {
     if (navigator.clipboard?.writeText) navigator.clipboard.writeText(value).then(() => { copy.textContent = 'Copiado'; }).catch(() => {});
   });
   bar.append(copyPart, document.createTextNode(' '), copy);
-  root.append(bar, pre);
+  root.append(head, bar, pre);
   document.body.replaceChildren(root);
 }
 
@@ -164,6 +180,7 @@ function paintHeld(part) {
     total: heldView.parts.length || 1,
     documents: heldView.documents,
     gaps: heldView.gaps,
+    header: heldView.header,
   });
 }
 
