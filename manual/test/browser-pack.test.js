@@ -80,10 +80,10 @@ test('headless Chromium OCRs an image-only PDF page into the case pack', { timeo
       return pack && /LAUDO/.test(pack.value) && pack.value.includes('(texto por OCR, pode conter erros)');
     }, null, { timeout: 150_000 });
     const pack = await page.locator('#pack').inputValue();
-    assert.match(pack, /\[Id pdfp1, fl\. 1\]/);
+    assert.match(pack, /\[ID pdfp1, pág\. 1\]/);
     assert.match(pack, /LAUDO/);
     assert.match(pack, /\(texto por OCR, pode conter erros\)/);
-    assert.match(pack, /Não invente conteúdo de páginas listadas como lacuna/);
+    assert.match(pack, /não têm texto recuperável; não invente/i);
     const [download] = await Promise.all([
       page.waitForEvent('download'),
       page.click('#download'),

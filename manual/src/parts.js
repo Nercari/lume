@@ -1,22 +1,16 @@
 // Multi-part case pack for ChatGPT when one part would exceed ~100k tokens (~350k chars pt-BR).
-export const DEFAULT_PACK_PART_MAX_CHARS = 350_000;
 import { OCR_MARK } from './ocr-text.js';
+import {
+  packNoticeLines,
+  passageTag,
+  renderPackGaps,
+  renderPackIndex,
+} from './pack.js';
 import { formatSpan, pagesByDoc, sheetNumber } from './sheets.js';
 
+export const DEFAULT_PACK_PART_MAX_CHARS = 350_000;
+
 const TEXT_GAPS = new Set(['unreadable_page', 'image_no_text', 'corrupt_file', 'empty_text']);
-
-const NOTICE = [
-  'Pacote do caso para anexar no ChatGPT. O texto foi extraído neste computador.',
-  'Cite no formato [Id X, fl. Y], em que Y é a folha dentro do documento.',
-  'Não invente conteúdo de páginas listadas como lacuna.',
-  'Onde houver a marca de OCR, o texto pode conter erros de leitura.',
-  'Nada deste arquivo foi enviado a um servidor.',
-];
-
-function cell(value) {
-  const text = String(value ?? '—').replace(/\|/g, '/').replace(/\s+/g, ' ').trim();
-  return text || '—';
-}
 
 function padPartNumber(n, total) {
   const width = String(total).length;
@@ -25,20 +19,6 @@ function padPartNumber(n, total) {
 
 export function partFileName(partIndex, totalParts) {
   return `lume-caso-parte-${padPartNumber(partIndex, totalParts)}-de-${padPartNumber(totalParts, totalParts)}.md`;
-}
-
-function renderGaps(caseResult) {
-  const listed = (caseResult?.gaps ?? []).filter((gap) => TEXT_GAPS.has(gap.reason));
-  if (!listed.length) return 'Nenhuma lacuna.';
-  return listed.map((gap) => {
-    const bits = [];
-    if (gap.docId) bits.push(`Id ${gap.docId}`);
-    if (gap.pageInDoc != null) bits.push(`fl. ${gap.pageInDoc}`);
-    if (gap.page != null) {
-      bits.push(caseResult?.origin === 'text' ? `trecho ${gap.page}` : `página ${gap.page} do PDF`);
-    }
-    return `- ${bits.join(', ') || 'arquivo'}: ${gap.detail || gap.reason}`;
-  }).join('\n');
 }
 
 function collectPassageBlocks(caseResult) {
@@ -53,7 +33,7 @@ function collectPassageBlocks(caseResult) {
       const text = String(page.text ?? '').trim();
       if (!page.hasText || !text) return;
       const sheet = sheetNumber(page, index + 1);
-      const tag = `[Id ${page.docId}, fl. ${sheet}]`;
+      const tag = passageTag(page.docId, sheet);
       const lines = [tag, text];
       if (page.method === 'ocr') lines.push(OCR_MARK);
       blocks.push({ docId: String(page.docId), text: lines.join('\n') });
@@ -111,20 +91,13 @@ function splitOversizedBlock(block, maxBodyChars) {
 }
 
 function renderIndex(caseResult, docPartMap, totalParts) {
-  const head = '| Id | tipo | título | fls. | partes onde está | OCR? |';
-  const rule = '| --- | --- | --- | --- | --- | --- |';
-  const groups = pagesByDoc(caseResult);
-  const docs = caseResult?.documents ?? [];
-  if (!docs.length) return `${head}\n${rule}\n| — | — | — | — | — | — |`;
-  const rows = docs.map((doc) => {
-    const pages = groups.get(String(doc.docId)) ?? [];
-    const sheets = pages.map((page, index) => sheetNumber(page, index + 1));
-    const partList = docPartMap.get(String(doc.docId));
-    const partes = partList?.length ? partList.map((n) => `${n}/${totalParts}`).join(', ') : '—';
-    const ocr = pages.some((page) => page.method === 'ocr') ? 'sim' : 'não';
-    return `| ${cell(doc.docId)} | ${cell(doc.piece)} | ${cell(doc.title)} | ${cell(formatSpan(sheets))} | ${cell(partes)} | ${ocr} |`;
+  return renderPackIndex(caseResult, {
+    partColForDoc: (docId) => {
+      const list = docPartMap.get(String(docId));
+      if (!list?.length) return '—';
+      return list.map((n) => `${n}/${totalParts}`).join(', ');
+    },
   });
-  return [head, rule, ...rows].join('\n');
 }
 
 function statsLine(caseResult) {
@@ -167,13 +140,17 @@ function packUnitsIntoParts(units, maxChars, headerSizes) {
   return partBodies;
 }
 
+function docIdFromPassageTag(passage) {
+  const match = passage.match(/^\[ID\s+([^,\]]+)/i);
+  return match?.[1] ?? '—';
+}
+
 function buildDocPartMap(partBodies) {
   const map = new Map();
   partBodies.forEach((body, partIndex) => {
     const partNumber = partIndex + 1;
     for (const passage of body) {
-      const match = passage.match(/^\[Id\s+([^,\]]+)/);
-      const docId = match?.[1] ?? '—';
+      const docId = docIdFromPassageTag(passage);
       if (!map.has(docId)) map.set(docId, []);
       const list = map.get(docId);
       if (!list.includes(partNumber)) list.push(partNumber);
@@ -186,17 +163,16 @@ function buildDocPartMap(partBodies) {
 function idsInPart(passages) {
   const ids = new Set();
   for (const passage of passages) {
-    const match = passage.match(/^\[Id\s+([^,\]]+)/);
-    if (match) ids.add(match[1]);
+    ids.add(docIdFromPassageTag(passage));
   }
   return [...ids].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 }
 
 function renderPartTexts(caseResult, partBodies, docPartMap, totalParts) {
-  const gaps = renderGaps(caseResult);
+  const gaps = renderPackGaps(caseResult);
   const index = renderIndex(caseResult, docPartMap, totalParts);
   const stats = statsLine(caseResult);
-  const notice = NOTICE.join('\n');
+  const notice = packNoticeLines().join('\n');
 
   return partBodies.map((passages, partIndex) => {
     const partNumber = partIndex + 1;
@@ -210,7 +186,7 @@ function renderPartTexts(caseResult, partBodies, docPartMap, totalParts) {
         '',
         stats,
         '',
-        '## Índice das peças',
+        '## Índice',
         '',
         index,
         '',
@@ -227,7 +203,7 @@ function renderPartTexts(caseResult, partBodies, docPartMap, totalParts) {
       body = [
         `# parte ${partNumber} de ${totalParts}`,
         '',
-        `Ids nesta parte: ${idList}.`,
+        `IDs nesta parte: ${idList}.`,
         '',
         passageBlock,
         '',
@@ -239,9 +215,9 @@ function renderPartTexts(caseResult, partBodies, docPartMap, totalParts) {
 }
 
 function estimateHeaders(caseResult, partCountGuess) {
-  const gaps = renderGaps(caseResult);
+  const gaps = renderPackGaps(caseResult);
   const stats = statsLine(caseResult);
-  const notice = NOTICE.join('\n');
+  const notice = packNoticeLines().join('\n');
   const placeholderMap = new Map((caseResult?.documents ?? []).map((doc) => [String(doc.docId), [1]]));
   const index = renderIndex(caseResult, placeholderMap, Math.max(1, partCountGuess));
   const part1 = [
@@ -251,7 +227,7 @@ function estimateHeaders(caseResult, partCountGuess) {
     '',
     stats,
     '',
-    '## Índice das peças',
+    '## Índice',
     '',
     index,
     '',
@@ -266,7 +242,7 @@ function estimateHeaders(caseResult, partCountGuess) {
   const partN = [
     `# parte 2 de ${partCountGuess}`,
     '',
-    'Ids nesta parte: —.',
+    'IDs nesta parte: —.',
     '',
     '## Passagens',
     '',

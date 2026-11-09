@@ -15,10 +15,11 @@ test('buildCasePack includes index, gaps and tagged passages', () => {
     gaps: [],
   };
   const pack = buildCasePack(caseResult);
-  assert.match(pack, /## Índice das peças/);
+  assert.match(pack, /## Índice/);
+  assert.match(pack, /\| ID \| Tipo \| Título \| Data de juntada \| Págs\. do documento \| Partes \| Situação \|/);
   assert.match(pack, /## Lacunas/);
   assert.match(pack, /## Texto/);
-  assert.match(pack, /\[Id 1001, fl\. 1\]/);
+  assert.match(pack, /\[ID 1001, pág\. 1\]/);
   assert.match(pack, /Conteúdo sintético/);
 });
 

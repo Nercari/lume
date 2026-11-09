@@ -28,7 +28,7 @@ function assertFullCoverage(result, parts) {
   const packPassages = extractPassagesFromPack(buildCasePack(result));
   const joined = parts.map((part) => extractPassagesFromPartText(part.text)).join('\n\n');
   assert.equal(joined, packPassages);
-  const indexSection = parts[0].text.match(/## Índice das peças\s*\n\n([\s\S]*?)\n\n## Lacunas/)?.[1] ?? '';
+  const indexSection = parts[0].text.match(/## Índice\s*\n\n([\s\S]*?)\n\n## Lacunas/)?.[1] ?? '';
   for (const doc of result.documents) {
     assert.match(indexSection, new RegExp(`\\| ${doc.docId} \\|`));
   }
@@ -79,20 +79,22 @@ test('every document Id is in the index and only in the parts listed', () => {
   const result = syntheticCaseResult(8, 4000);
   const parts = buildCasePackParts(result, { maxChars: 12000 });
   assert.ok(parts.length > 1);
-  const indexSection = parts[0].text.match(/## Índice das peças\s*\n\n([\s\S]*?)\n\n## Lacunas/)?.[1] ?? '';
+  const indexSection = parts[0].text.match(/## Índice\s*\n\n([\s\S]*?)\n\n## Lacunas/)?.[1] ?? '';
   for (const doc of result.documents) {
     assert.match(indexSection, new RegExp(`\\| ${doc.docId} \\|`));
     const row = indexSection.split('\n').find((line) => line.includes(`| ${doc.docId} |`));
-    const partCol = row?.split('|').map((c) => c.trim())[5] ?? '';
+    const cells = row?.split('|').map((c) => c.trim()).filter(Boolean) ?? [];
+    const partCol = cells[cells.length - 2] ?? '';
     const listed = partCol.split(',').map((p) => p.trim()).filter(Boolean);
     assert.ok(listed.length >= 1);
     for (const label of listed) {
       const partNum = Number(label.split('/')[0]);
       const partText = parts[partNum - 1].text;
-      assert.ok(partText.includes(`Id ${doc.docId}`), `doc ${doc.docId} should appear in part ${partNum}`);
+      const hasPassage = partText.includes(`[ID ${doc.docId},`);
+      assert.ok(hasPassage, `doc ${doc.docId} should have a passage in part ${partNum}`);
     }
     for (const [index, part] of parts.entries()) {
-      const hasId = part.text.includes(`Id ${doc.docId}`);
+      const hasId = part.text.includes(`[ID ${doc.docId},`);
       const partNum = index + 1;
       const should = listed.some((p) => Number(p.split('/')[0]) === partNum);
       assert.equal(hasId, should, `doc ${doc.docId} presence in part ${partNum}`);
@@ -138,5 +140,5 @@ test('oversized single passage splits at paragraphs with continuation tag', () =
   };
   const parts = buildCasePackParts(caseResult, { maxChars: 50_000 });
   const allText = parts.map((p) => p.text).join('\n');
-  assert.match(allText, /\[Id 9001, fl\. 1\] \(continuação\)/);
+  assert.match(allText, /\[ID 9001, pág\. 1\] \(continuação\)/);
 });
