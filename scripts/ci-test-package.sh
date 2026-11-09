@@ -32,16 +32,27 @@ install_pkg() {
   popd >/dev/null
 }
 
+install_extraction_deps() {
+  if [[ ! -f "$root/extraction/package.json" ]]; then
+    echo "extraction package missing; cannot install pdfjs-dist" >&2
+    exit 1
+  fi
+  (
+    cd "$root/extraction"
+    npm ci --omit=optional
+  )
+}
+
 needs_extraction_deps() {
   case "$pkg" in
-    analysis | chat-editor | source-panel) return 0 ;;
+    analysis | chat-editor | source-panel | transfer) return 0 ;;
     *) return 1 ;;
   esac
 }
 
 case "$pkg" in
   extraction)
-    install_pkg extraction omit
+    install_extraction_deps
     ;;
   extension)
     install_pkg extension
@@ -51,8 +62,8 @@ case "$pkg" in
       install_pkg "$pkg"
     fi
     if needs_extraction_deps; then
-      # Build/tests import ../../extraction, which loads pdfjs-dist at import time.
-      install_pkg extraction omit
+      # Build/tests import extraction, which loads pdfjs-dist at import time.
+      install_extraction_deps
     fi
     ;;
 esac
