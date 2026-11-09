@@ -22,8 +22,9 @@ The controller does not offer `empty` when the editor has text. Thus it cannot o
 - `case_changed`: the open PJe case number is different, or the case record (ledger `rev`) changed after review.
 - `draft_changed`: the draft text changed after review. Do a new review.
 - `editor_changed`: another editor is open, or the editor text changed after review.
-- `unsupported_decisive`: a decisive citation is unsupported in #10, or #10 has unaccounted entries, or #8 marks a citation as not unverified.
+- `unsupported_decisive`: a decisive #10 entry does not have the status `verified`, or #10 has unaccounted entries, or #8 marks a citation as not unverified. An entry without a `decisive` flag counts as decisive.
 - `no_source_panel`: no #10 panel is available.
+- `source_panel_failed`: the #10 panel check threw an error (for example, a passage without `method`). The controller treats this as unverified and writes nothing. The error text is not kept.
 - `ProvisionalDraftError` / `GateError` from #8: the draft is provisional, or the gate fails.
 - `mode_not_offered`, `mode_changed`, `unknown_ticket`, `transfer_in_progress`.
 - `uncertain_editor_state`: see below.
@@ -59,11 +60,14 @@ Errors from the controller do not carry case ids, PJe case numbers, document ids
 - `TransferStop` details are fixed text or counts. `unsupported_decisive` gives `{ entries, unaccounted, sections }`. A section name that is not a plain section key becomes `other`. `mode_not_offered` does not repeat the mode.
 - #8 `ProvisionalDraftError` and `GateError` carry the draft view. The controller throws a new copy with only the state and the check names. The UI gets the details from `session.view()`, which stays local.
 - Tickets keep the draft and editor text in the local case store only. Tickets are not diagnostics.
+- Party names never go into a diagnostic. The controller does not copy the panel `ref`, the error text of a failed panel check, or any research data into an error.
 
 The #10 research query sanitizer (`source-panel/src/research.js`) is outside this module. It removes the case id and a non-CNJ case number only when the caller passes them in `caseTerms`.
 
 ## Assumptions
 
 - The editor selectors in `EDITOR_PROFILE` are not verified on real PJe.
-- A #10 status `unverified` does not block. Only decisive entries with a blocking status block. Non-decisive entries do not block.
+- A decisive entry must have the #10 status `verified`. #10 gives `verified` only after a human review records `supports` for each citation. Every other status blocks, `unverified` included. Non-decisive entries do not block.
+- The controller does not use the legal-source `currency` field. #10 `currencyOf` can return `current` for a date that is not valid or is in the future, so `current` is not proof that a source is fresh.
+- The controller does no quote check of its own. A multi-passage `quote_mismatch` can be a false positive in #10; it blocks only because it is not `verified`.
 - The editor content is plain text (`textContent`). Rich-text format is out of scope.

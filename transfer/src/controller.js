@@ -4,16 +4,15 @@
 // It never saves, signs, files or publishes, and it moves one draft per ticket.
 import { USER_ACTION } from '../../chat-editor/src/index.js';
 import { GateError, ProvisionalDraftError } from '../../analysis/src/index.js';
-import { UNSUPPORTED_LABEL } from '../../source-panel/src/index.js';
 import { AUTOSAVE, TransferStop } from './editor.js';
 
 export const MODES = Object.freeze(['empty', 'replace', 'append']);
 export const SEPARATOR = '\n\n';
-// #10 entry statuses that block a transfer when the entry is decisive. 'unverified' (no human
-// semantic review yet) does not block; the panel shows it to the user before the transfer.
-export const BLOCKING_STATUSES = Object.freeze([...new Set([...Object.values(UNSUPPORTED_LABEL),
-  'not_in_case', 'not_found', 'stale', 'quote_mismatch', 'ocr_unreliable', 'not_supported'])]);
-const BLOCKING = new Set(BLOCKING_STATUSES);
+// A decisive #10 entry must have this status. #10 gives it only when every citation exists, its
+// quote and OCR pass, and a person confirmed support. Everything else blocks, also 'unverified'.
+// Only the #10 status counts: a legal-source 'currency' field is not proof of freshness (#23 review),
+// and the controller adds no quote check of its own (#10 quote_mismatch blocks as #10 labels it).
+export const REQUIRED_STATUS = 'verified';
 const SECTION = /^[a-z_]{1,32}$/;
 const key = (token) => `transfer.${token}`;
 
@@ -31,8 +30,9 @@ function userOnly(origin, ...args) {
 
 // presented: #8 presentConclusive result. panel: #10 buildPanel result for the same draft.
 export function assertSupported(presented, panel) {
-  if (!panel?.entries) throw new TransferStop('no_source_panel');
-  const bad = [...presented.panel.entries.filter((e) => e.verification !== 'unverified'), ...panel.entries.filter((e) => e.decisive && BLOCKING.has(e.status))];
+  if (!Array.isArray(panel?.entries)) throw new TransferStop('no_source_panel');
+  // An entry without a boolean 'decisive' counts as decisive: unknown is not safe.
+  const bad = [...presented.panel.entries.filter((e) => e.verification !== 'unverified'), ...panel.entries.filter((e) => e?.decisive !== false && e?.status !== REQUIRED_STATUS)];
   const unaccounted = (panel.unaccounted ?? []).length;
   // Diagnostics carry counts and section names only: finding ids contain PJe document ids.
   if (bad.length || unaccounted) throw new TransferStop('unsupported_decisive', { entries: bad.length, unaccounted, sections: [...new Set(bad.map((e) => SECTION.test(e.ref) ? e.ref : 'other'))] });
@@ -61,7 +61,11 @@ export class TransferController {
 
   async #gate(draftId) {
     const presented = await this.session.presentConclusive(draftId).catch(clean); // #8 + #6 gate; throws if provisional
-    assertSupported(presented, await this.panelFor(draftId, presented));
+    let panel;
+    // A #10 check can throw (for example a passage without 'method'). That refuses the transfer;
+    // the error message is dropped because it can name passages or documents.
+    try { panel = await this.panelFor(draftId, presented); } catch { throw new TransferStop('source_panel_failed'); }
+    assertSupported(presented, panel);
     return presented;
   }
 

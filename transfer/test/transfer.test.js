@@ -163,20 +163,61 @@ test('a draft that becomes provisional after review is refused at transfer', asy
   assert.equal(x.writes.length, 0);
 });
 
-test('#10 unsupported decisive citations, unaccounted entries or a missing panel are refused', async () => {
+test('#10: a decisive entry must be verified; unverified, unsupported, unaccounted or no panel is refused', async () => {
   const entry = { ref: 'reasoning', finding: 'f1', decisive: true, citations: [] };
   for (const [panel, reason] of [
+    [{ entries: [{ ...entry, status: 'unverified' }], unaccounted: [] }, 'unsupported_decisive'],
     [{ entries: [{ ...entry, status: 'unsupported_allegation' }], unaccounted: [] }, 'unsupported_decisive'],
     [{ entries: [{ ...entry, status: 'quote_mismatch' }], unaccounted: [] }, 'unsupported_decisive'],
+    [{ entries: [{ ref: 'reasoning', finding: 'f1', status: 'unverified' }], unaccounted: [] }, 'unsupported_decisive'], // no decisive flag
     [{ entries: [], unaccounted: ['f1'] }, 'unsupported_decisive'],
+    [{ entries: 'all verified' }, 'no_source_panel'],
     [null, 'no_source_panel'],
   ]) {
     const x = await setup({ panelFor: async () => panel });
     await assert.rejects(x.ctl.review('d1', USER_ACTION), stop(reason));
     assert.equal(x.writes.length, 0);
   }
-  const ok = await setup({ panelFor: async () => ({ entries: [{ ...entry, status: 'unverified' }, { ...entry, decisive: false, status: 'inference' }], unaccounted: [] }) });
-  assert.deepEqual((await ok.ctl.review('d1', USER_ACTION)).modes, ['empty'], 'unverified or non-decisive entries do not block');
+  const ok = await setup({ panelFor: async () => ({ entries: [{ ...entry, status: 'verified' }, { ...entry, decisive: false, status: 'inference' }], unaccounted: [] }) });
+  assert.deepEqual((await ok.ctl.review('d1', USER_ACTION)).modes, ['empty'], 'verified decisive and non-decisive entries do not block');
+});
+
+test('real #10 panel: without a human review the decisive citations are unverified and the transfer is refused', async () => {
+  const x = await setup({ reviewed: false });
+  await assert.rejects(x.ctl.review('d1', USER_ACTION), stop('unsupported_decisive'));
+  assert.equal(x.writes.length, 0);
+});
+
+test('#23 review: a current legal-source currency is not proof; only the #10 status counts', async () => {
+  const fresh = { status: 'current', asOf: '2099-01-01' }; // #10 currencyOf can say current for a future date
+  const panel = { entries: [{ ref: 'reasoning', finding: 'f1', decisive: true, citations: [{ status: 'unverified', currency: fresh }], currency: fresh, verification: 'verified', status: 'unverified' }], unaccounted: [] };
+  const x = await setup({ panelFor: async () => panel });
+  await assert.rejects(x.ctl.review('d1', USER_ACTION), stop('unsupported_decisive'));
+});
+
+test('#23 review: quote_mismatch blocks only as #10 labels it; the controller adds no quote check', async () => {
+  const x = await setup({ text: '' });
+  const r = await x.ctl.review('d1', USER_ACTION); // verified by #10, though the draft text has no quotes
+  assert.ok(r.token);
+  const quoted = await setup({ panelFor: async () => ({ entries: [{ ref: 'reasoning', finding: 'f1', decisive: true, citations: [{ quote: 'mismatch', status: 'verified' }], status: 'verified' }], unaccounted: [] }) });
+  assert.ok((await quoted.ctl.review('d1', USER_ACTION)).token, 'a citation field alone does not block when #10 says verified');
+});
+
+test('#23 review: a throwing #10 check (passage without method) refuses the transfer and leaks nothing', async () => {
+  const x = await setup({ panelFor: async () => { const src = { passage: { id: 'D1@1:p1:0-44' } }; return src.passage.method.startsWith('ocr'); } });
+  const r = await x.ctl.review('d1', USER_ACTION).catch((e) => e);
+  assert.ok(stop('source_panel_failed')(r));
+  assert.equal(r.message, 'source_panel_failed');
+  assert.equal(r.detail, null);
+  // The same at transfer time: a panel that breaks after review stops before any write.
+  let broken = false;
+  const y = await setup();
+  const base = y.ctl.panelFor;
+  const ctl = y.mk({ panelFor: async (...a) => { if (broken) throw new TypeError('D1@1:p1 method'); return base(...a); } });
+  const t = await ctl.review('d1', USER_ACTION);
+  broken = true;
+  await assert.rejects(ctl.transfer(t.token, 'empty', USER_ACTION), stop('source_panel_failed'));
+  assert.equal(y.writes.length, 0);
 });
 
 test('autosave contract: shown in the flow, unmeasured, and it keeps a live editor disabled', async () => {
@@ -197,8 +238,9 @@ test('diagnostics never carry case ids, case numbers, document ids or caller str
   const errors = [];
   const grab = async (p) => { try { await p; } catch (e) { errors.push(e); } };
   const secret = 'SYNTH-9999';
+  const party = 'Fulana Sintética'; // synthetic party name
   const x = await setup();
-  const ids = [x.c.caseId, 'SYNTH-0001', secret, ...Object.keys(x.L.findings), ...Object.values(x.L.passages).map((p) => p.docId)];
+  const ids = [x.c.caseId, 'SYNTH-0001', secret, party, ...Object.keys(x.L.findings), ...Object.values(x.L.passages).map((p) => p.docId)];
   const r = await x.ctl.review('d1', USER_ACTION);
   await grab(x.ctl.transfer(r.token, `${secret} replace`, USER_ACTION));
   await grab(x.ctl.transfer(secret, 'empty', USER_ACTION));
@@ -206,11 +248,12 @@ test('diagnostics never carry case ids, case numbers, document ids or caller str
   x.pg.caseEl.textContent = secret;
   await grab(x.ctl.transfer(r.token, 'empty', USER_ACTION));
   const finding = Object.keys(x.L.findings)[0];
-  for (const panel of [{ entries: [{ ref: 'reasoning', finding, decisive: true, status: 'unsupported_allegation' }], unaccounted: [finding] }, { entries: [{ ref: `D1 ${secret}`, finding, decisive: true, status: 'not_found' }], unaccounted: [] }]) {
+  for (const panel of [{ entries: [{ ref: 'reasoning', finding, decisive: true, status: 'unsupported_allegation' }], unaccounted: [finding] }, { entries: [{ ref: `D1 ${secret} ${party}`, finding, decisive: true, status: 'not_found' }], unaccounted: [] }]) {
     await grab(x.mk({ panelFor: async () => panel }).review('d1', USER_ACTION));
   }
+  await grab(x.mk({ panelFor: async () => { throw new Error(`${party} ${x.c.caseId} D1@1:p1`); } }).review('d1', USER_ACTION));
   await grab((await setup({ model: draftModel({ noReasoning: true }) })).ctl.review('d1', USER_ACTION));
-  assert.equal(errors.length, 7);
+  assert.equal(errors.length, 8);
   const unsupported = errors.filter((e) => e.reason === 'unsupported_decisive');
   assert.deepEqual(unsupported.map((e) => e.detail), [{ entries: 1, unaccounted: 1, sections: ['reasoning'] }, { entries: 1, unaccounted: 0, sections: ['other'] }]);
   for (const e of errors) {
