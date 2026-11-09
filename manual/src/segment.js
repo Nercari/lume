@@ -2,8 +2,9 @@
 // A page with no text layer becomes an unreadable_page gap ("precisa OCR"). OCR is an
 // injected callback; this package does not ship an OCR engine or language data.
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist/legacy/build/pdf.mjs';
-import { classifyPiece } from './classify.js';
+import { classifyFromHeadings, classifyPiece, documentTypeSource } from './classify.js';
 import {
+  headingLinesFromPage,
   isIndexHeader,
   matchPageFooter,
   parseIndexRow,
@@ -15,10 +16,17 @@ export const GAP = Object.freeze({
   corrupt_file: 'corrupt_file',
   no_document_signal: 'no_document_signal',
   footer_id_conflict: 'footer_id_conflict',
+  footer_missing_id: 'footer_missing_id',
   index_unplaced: 'index_unplaced',
 });
 
-const SIGNAL_ORDER = ['footer', 'outline', 'index'];
+export function passageIdFor(docId, version, pageInDoc, pdfPage) {
+  if (!docId) return null;
+  if (pageInDoc != null) return `${docId}@${version}:p${pageInDoc}`;
+  return `${docId}@${version}:pdf${pdfPage}`;
+}
+
+const SIGNAL_ORDER = ['footer', 'outline', 'index', 'heading'];
 
 export function setWorkerSrc(src) {
   if (typeof src !== 'string' || !src) throw new TypeError('workerSrc must be a URL string');
@@ -139,7 +147,7 @@ function metaFor(meta, docId) {
   return meta.get(docId);
 }
 
-function assignPages(pages, outlines, indexPages) {
+function assignPages(pages, outlines, indexPages, gaps) {
   const owner = Array(pages.length + 1).fill(null);
   const meta = new Map();
 
@@ -198,19 +206,18 @@ function assignPages(pages, outlines, indexPages) {
     if (current) owner[n] = current;
   }
 
-  let start = null;
-  for (let n = 1; n <= pages.length + 1; n++) {
-    const open = n <= pages.length && !owner[n];
-    if (open) {
-      if (start == null) start = n;
-      continue;
-    }
-    if (start == null) continue;
-    const docId = start === 1 && n - 1 === pages.length ? 'sem-sinal' : `sem-sinal-${start}`;
+  for (let n = 1; n <= pages.length; n++) {
+    if (owner[n]) continue;
+    const docId = `pdfp${n}`;
+    owner[n] = docId;
     const record = metaFor(meta, docId);
     record.weak = true;
-    for (let i = start; i < n; i++) owner[i] = docId;
-    start = null;
+    gaps.push({
+      reason: GAP.footer_missing_id,
+      page: n,
+      docId,
+      detail: 'rodapé sem Num./Pág.',
+    });
   }
 
   return { owner, meta };
@@ -239,11 +246,14 @@ function pageInDocOf(pages, docId, numbers) {
   let next = null;
   for (const n of numbers) {
     const footer = pages[n - 1].footer;
-    let pageInDoc;
-    if (footer?.docId === docId && footer.pageInDoc) pageInDoc = footer.pageInDoc;
-    else if (next != null) pageInDoc = next;
-    else pageInDoc = 1;
-    next = pageInDoc + 1;
+    let pageInDoc = null;
+    if (footer?.docId === docId && footer.pageInDoc != null) {
+      pageInDoc = footer.pageInDoc;
+      next = pageInDoc + 1;
+    } else if (next != null) {
+      pageInDoc = next;
+      next += 1;
+    }
     assigned.push(pageInDoc);
   }
   return assigned;
@@ -266,14 +276,37 @@ function buildDocuments(pages, owner, meta, version, gaps) {
     const numbers = [];
     for (let n = 1; n <= pages.length; n++) if (owner[n] === docId) numbers.push(n);
     const inDoc = pageInDocOf(pages, docId, numbers);
-    const piece = docId === 'indice' || record.weak
+    let piece = docId === 'indice' || record.weak
       ? 'outros'
       : classifyPiece([record.title, record.rawType].filter(Boolean).join('\n'));
+    let typeSource;
+    if (record.rawType && record.signals.has('index') && piece !== 'outros') {
+      typeSource = 'index';
+    } else if (record.title && record.signals.has('outline') && piece !== 'outros') {
+      typeSource = 'outline';
+    } else if (piece === 'outros' && docId !== 'indice' && !record.weak && numbers.length) {
+      const firstPage = pages[numbers[0] - 1];
+      const headings = headingLinesFromPage(firstPage.lines, firstPage.height);
+      const fromHeading = classifyFromHeadings(headings);
+      if (fromHeading.piece !== 'outros') {
+        piece = fromHeading.piece;
+        record.signals.add('heading');
+        typeSource = 'heading';
+        if (fromHeading.weak) record.headingWeak = true;
+      } else {
+        typeSource = 'none';
+      }
+    } else {
+      typeSource = piece === 'outros' ? 'none' : (record.signals.has('index') ? 'index' : 'outline');
+    }
+
     documents.push({
       docId,
       title: record.title,
       type: record.rawType,
       piece,
+      typeSource,
+      headingWeak: record.headingWeak === true,
       startPage: numbers[0],
       endPage: numbers[numbers.length - 1],
       pages: numbers,
@@ -283,7 +316,7 @@ function buildDocuments(pages, owner, meta, version, gaps) {
     numbers.forEach((n, index) => {
       pageInfo.set(n, { docId, pageInDoc: inDoc[index] });
     });
-    if (record.weak) {
+    if (record.weak && !docId.startsWith('pdfp')) {
       gaps.push({
         reason: GAP.no_document_signal,
         page: numbers[0],
@@ -346,7 +379,7 @@ async function segmentPdf(pdf, options) {
   }
   const outlines = await readOutline(pdf);
   const index = parseIndex(loaded);
-  const { owner, meta } = assignPages(loaded, outlines, index.indexPages);
+  const { owner, meta } = assignPages(loaded, outlines, index.indexPages, gaps);
   applyIndexRows(meta, index.rows, gaps);
   const { documents, pageInfo } = buildDocuments(loaded, owner, meta, version, gaps);
 
@@ -354,9 +387,13 @@ async function segmentPdf(pdf, options) {
   const passages = [];
   for (const page of loaded) {
     const info = pageInfo.get(page.n) ?? { docId: null, pageInDoc: null };
-    const passageId = info.docId && info.pageInDoc ? `${info.docId}@${version}:p${info.pageInDoc}` : null;
+    const passageId = passageIdFor(info.docId, version, info.pageInDoc, page.n);
     const text = page.lines.map((line) => line.text).join('\n');
-    const footer = page.footer ? { docId: page.footer.docId, pageInDoc: page.footer.pageInDoc } : null;
+    const footer = page.footer ? {
+      docId: page.footer.docId,
+      pageInDoc: page.footer.pageInDoc,
+      docNumber: page.footer.docNumber ?? null,
+    } : null;
     const record = {
       n: page.n,
       hasText: page.hasText,

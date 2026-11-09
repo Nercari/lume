@@ -28,18 +28,18 @@ export const footerNumPag = {
   re: /(?:num(?:ero)?\.?|n[oº°]\.?)\s*(\d{1,12})\s*[-–—]\s*pag(?:ina)?\.?\s*(\d{1,6})/iu,
 };
 
-// "Número do documento: 123" and close variants.
+// "Número do documento: …" — long PJe id (17–40 digits). Secondary to Num./Pág.
 export const footerNumeroDocumento = {
   id: 'footer_numero_documento',
   specific: false,
-  re: /numero\s+do\s+documento\s*[:\-]?\s*(\d{1,12})/iu,
+  re: /numero\s+do\s+documento\s*[:\-]?\s*(\d{1,40})/iu,
 };
 
-// ".../ConsultaDocumento/listView.seam?x=123" and the same path with an earlier query parameter.
+// ".../ConsultaDocumento/listView.seam?x=…" — same long id in the URL query.
 export const footerConsultaUrl = {
   id: 'footer_consulta_url',
   specific: true,
-  re: /consultadocumento\/listview\.seam\?(?:[^ \n]*&)?x=(\d{1,12})/iu,
+  re: /consultadocumento\/listview\.seam\?(?:[^ \n]*&)?x=(\d{1,40})/iu,
 };
 
 // Presence of an electronic-signature line. The name and the clock time are not kept.
@@ -56,7 +56,20 @@ export const FOOTER_RULES = Object.freeze([
   footerAssinado,
 ]);
 
-const ID_RULES = new Set(['footer_num_pag', 'footer_numero_documento', 'footer_consulta_url']);
+const DOC_NUMBER_RULES = new Set(['footer_numero_documento', 'footer_consulta_url']);
+
+export function numPagMatches(text) {
+  const folded = fold(text);
+  const flags = footerNumPag.re.flags.includes('g') ? footerNumPag.re.flags : `${footerNumPag.re.flags}g`;
+  const re = new RegExp(footerNumPag.re.source, flags);
+  const out = [];
+  let match;
+  while ((match = re.exec(folded))) {
+    out.push({ docId: match[1], pageInDoc: Number(match[2]) });
+    if (match.index === re.lastIndex) re.lastIndex += 1;
+  }
+  return out;
+}
 
 export function applyFooterRules(text) {
   const folded = fold(text);
@@ -68,32 +81,45 @@ export function applyFooterRules(text) {
     if (rule.id === 'footer_num_pag') {
       hit.docId = match[1];
       hit.pageInDoc = Number(match[2]);
-    } else if (ID_RULES.has(rule.id)) {
-      hit.docId = match[1];
+    } else if (DOC_NUMBER_RULES.has(rule.id)) {
+      hit.docNumber = match[1];
     }
     hits.push(hit);
   }
   return hits;
 }
 
-// Prefer the rule that carries both id and page. Disagreeing ids stay visible to the caller.
-export function footerFromHits(hits) {
-  const identified = hits.filter((hit) => hit.docId);
-  if (!identified.length) return null;
-  const preferred = identified.find((hit) => hit.id === 'footer_num_pag')
-    ?? identified.find((hit) => hit.id === 'footer_numero_documento')
-    ?? identified.find((hit) => hit.id === 'footer_consulta_url');
-  const ids = new Set(identified.map((hit) => hit.docId));
-  return {
-    docId: preferred.docId,
-    pageInDoc: preferred.pageInDoc ?? null,
-    rules: hits.map((hit) => hit.id),
-    conflict: ids.size > 1,
-  };
+function buildFooter(zoneHits, fullText) {
+  const numPag = numPagMatches(fullText);
+  const docNumbers = zoneHits.filter((hit) => hit.docNumber).map((hit) => hit.docNumber);
+  const rules = zoneHits.map((hit) => hit.id);
+  if (numPag.length && !rules.includes('footer_num_pag')) rules.push('footer_num_pag');
+
+  let docId = null;
+  let pageInDoc = null;
+  let conflict = false;
+  if (numPag.length) {
+    const preferred = numPag[numPag.length - 1];
+    docId = preferred.docId;
+    pageInDoc = preferred.pageInDoc ?? null;
+    if (new Set(numPag.map((hit) => hit.docId)).size > 1) conflict = true;
+  } else if (docNumbers.length && new Set(docNumbers).size > 1) {
+    conflict = true;
+  }
+
+  const docNumber = docNumbers.length ? docNumbers[docNumbers.length - 1] : null;
+  if (!docId && !docNumber && !conflict) return null;
+
+  return { docId, pageInDoc, docNumber, rules, conflict };
+}
+
+// Num./Pág. is authoritative for docId and pageInDoc. Long ids stay in docNumber only.
+export function footerFromHits(hits, sourceText = '') {
+  return buildFooter(hits, sourceText || '');
 }
 
 export function matchFooterText(text) {
-  return footerFromHits(applyFooterRules(text));
+  return buildFooter(applyFooterRules(text), text);
 }
 
 // Header row of the autos index: Id, Data, Documento/Tipo, in any separator style.
@@ -182,7 +208,14 @@ export const outlineTitle = Object.freeze({
   },
 });
 
-const FULL_PAGE_RULES = new Set(['footer_num_pag', 'footer_consulta_url']);
+export function headingLinesFromPage(lines, pageHeight, limit = 5) {
+  const hasY = lines.some((line) => typeof line.y === 'number') && pageHeight > 0;
+  const body = hasY
+    ? lines.filter((line) => typeof line.y === 'number' && line.y > pageHeight * FOOTER_ZONE_RATIO)
+    : lines.slice(0, Math.max(limit * 2, 12));
+  const ordered = hasY ? [...body].sort((a, b) => b.y - a.y) : body;
+  return ordered.map((line) => line.text).filter(Boolean).slice(0, limit);
+}
 
 // Footer band first. Distinctive id patterns may also appear in the reading order
 // when the extractor did not place them in the band.
@@ -193,8 +226,7 @@ export function matchPageFooter(lines, pageHeight) {
   const zone = hasY
     ? lines.filter((line) => typeof line.y === 'number' && line.y <= pageHeight * FOOTER_ZONE_RATIO).map((line) => line.text)
     : texts.slice(-8);
-  const zoned = footerFromHits(applyFooterRules(zone.join('\n')));
-  if (zoned) return zoned;
-  const fallback = applyFooterRules(texts.join('\n')).filter((hit) => FULL_PAGE_RULES.has(hit.id));
-  return footerFromHits(fallback);
+  const zoneText = zone.join('\n');
+  const fullText = texts.join('\n');
+  return buildFooter(applyFooterRules(zoneText), fullText);
 }

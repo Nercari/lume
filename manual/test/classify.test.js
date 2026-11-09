@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { PIECE_RULES, PIECES, classifyPiece } from '../src/classify.js';
+import { PIECE_RULES, PIECES, classifyFromHeadings, classifyPiece } from '../src/classify.js';
 
 const CASES = [
   ['Petição inicial', 'petição inicial'],
@@ -38,6 +38,13 @@ const CASES = [
 
 test('each Portuguese label is accent-insensitive and first-match', () => {
   for (const [input, piece] of CASES) assert.equal(classifyPiece(input), piece, input);
+});
+
+test('heading lines classify without inventing a title', () => {
+  assert.equal(classifyFromHeadings(['DECISAO INTERLOCUTORIA']).piece, 'decisão');
+  assert.equal(classifyFromHeadings(['FATO QUALQUER']).piece, 'outros');
+  assert.equal(classifyFromHeadings(['EXCELENTISSIMO SENHOR JUIZ']).piece, 'petição inicial');
+  assert.equal(classifyFromHeadings(['EXCELENTISSIMO SENHOR JUIZ']).weak, true);
 });
 
 test('every taxonomy label is reachable or is the fallback', () => {

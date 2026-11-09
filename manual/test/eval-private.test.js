@@ -63,6 +63,14 @@ test('the private eval writes aggregates only', async () => {
     assert.ok(first.signalsUsed.includes('footer'));
     assert.equal(first.pieceTypeCounts['petição inicial'], 1);
     assert.equal(typeof first.footerProvenanceCoveragePct, 'number');
+    assert.equal(typeof first.footerIdConflictPages, 'number');
+    assert.ok(first.documentTypeSources.index >= 1);
+    assert.equal(
+      Object.values(first.documentTypeSources).reduce((sum, n) => sum + n, 0),
+      first.documentsFound,
+    );
+    assert.equal(first.documentPagesMin, 1);
+    assert.ok(first.documentPagesMedian >= 1);
     assert.equal(typeof first.timingMs, 'number');
     assert.equal(report.files[2].readable, false);
     assert.equal(report.files[2].pages, 0);

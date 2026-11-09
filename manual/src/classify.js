@@ -56,3 +56,24 @@ export function classifyPiece(text) {
   }
   return 'outros';
 }
+
+const EXCELENTISSIMO = /\bexcelentissim[oa]\s+senhor\b.*\bjuiz\b/u;
+
+export function classifyFromHeadings(lines) {
+  const text = lines.map((line) => String(line ?? '').trim()).filter(Boolean).join('\n');
+  if (!text) return { piece: 'outros', weak: false };
+  if (EXCELENTISSIMO.test(fold(text))) {
+    return { piece: 'petição inicial', weak: true };
+  }
+  const piece = classifyPiece(text);
+  return { piece, weak: false };
+}
+
+export function documentTypeSource(doc) {
+  if (doc.typeSource) return doc.typeSource;
+  const signals = doc.signals ?? [];
+  if (signals.includes('index') && doc.type) return 'index';
+  if (signals.includes('outline') && doc.title) return 'outline';
+  if (signals.includes('heading')) return 'heading';
+  return 'none';
+}

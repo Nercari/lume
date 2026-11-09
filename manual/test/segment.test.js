@@ -4,11 +4,13 @@ import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { segmentAutos } from '../src/segment.js';
 import { at, makePdf } from './pdf-fixture.js';
 
+const LONG_DOC = '9876543210987654321098765432109876';
+
 function footer(id, page) {
   return [
     at(`Num. ${id} - Pag. ${page}`, 72),
-    at(`Numero do documento: ${id}`, 56),
-    at(`https://exemplo.invalid/pje/ConsultaDocumento/listView.seam?x=${id}`, 40),
+    at(`Numero do documento: ${LONG_DOC}`, 56),
+    at(`https://exemplo.invalid/pje/ConsultaDocumento/listView.seam?x=${LONG_DOC}`, 40),
     at('Assinado eletronicamente por: PARTE ALFA - 01/02/2020 09:00:00', 24),
   ];
 }
@@ -99,7 +101,7 @@ test('outline alone cuts the file, and a title without an id still opens a range
   assert.equal(result.documents[0].signals.includes('outline'), true);
   assert.equal(result.documents[1].piece, 'certidão');
   assert.equal(result.documents[1].docId, 'contorno-2');
-  assert.equal(result.passages[1].id, 'contorno-2@1:p1');
+  assert.equal(result.passages[1].id, 'contorno-2@1:pdf2');
 });
 
 test('footer alone groups a following page that has no text layer', async () => {
@@ -126,16 +128,60 @@ test('index alone does not invent page bounds for later prose', async () => {
   const result = await segmentAutos(pdf);
   assert.ok(result.documents.some((doc) => doc.docId === 'indice'));
   assert.equal(result.gaps.some((gap) => gap.reason === 'index_unplaced' && gap.docId === '1001'), true);
-  assert.equal(result.gaps.some((gap) => gap.reason === 'no_document_signal'), true);
+  assert.equal(result.gaps.some((gap) => gap.reason === 'footer_missing_id' && gap.page === 2), true);
 });
 
-test('no signal yields one document and a visible gap', async () => {
+test('no Num./Pág. yields pdfp id and footer_missing_id gap', async () => {
   const pdf = makePdf({ pages: [[at('Folha solta.', 700)]] });
   const result = await segmentAutos(pdf);
-  assert.equal(result.documents[0].docId, 'sem-sinal');
+  assert.equal(result.documents[0].docId, 'pdfp1');
   assert.equal(result.documents[0].piece, 'outros');
   assert.deepEqual(result.documents[0].signals, []);
-  assert.equal(result.gaps.some((gap) => gap.reason === 'no_document_signal'), true);
+  assert.equal(result.gaps.some((gap) => gap.reason === 'footer_missing_id' && gap.page === 1), true);
+});
+
+const LONG30 = '123456789012345678901234567890';
+
+function assertNoLongIdsInCitations(caseResult, pkg) {
+  const citationLines = pkg.caseFile.split('\n').filter((line) => /^\[Id\s/.test(line) || /^id:\s/.test(line));
+  const hay = [
+    ...(caseResult.passages ?? []).map((passage) => passage.id),
+    ...citationLines,
+  ].join('\n');
+  for (const match of hay.matchAll(/\d{13,}/g)) {
+    assert.fail(`long digit run in citation output: ${match[0]}`);
+  }
+}
+
+test('band-only long rodapé number never appears in passage id or paste citation', async () => {
+  const pdf = makePdf({
+    pages: [[
+      at('Corpo.', 700),
+      at(`Numero do documento: ${LONG30}`, 40),
+    ]],
+  });
+  const result = await segmentAutos(pdf);
+  const pkg = (await import('../src/prompt.js')).buildChatGPTPackage(result, { request: 'teste' });
+  assert.equal(result.documents[0].docId, 'pdfp1');
+  assert.match(result.passages[0].id, /^pdfp1@1:pdf1$/);
+  assert.equal(result.pages[0].footer.docNumber, LONG30);
+  assertNoLongIdsInCitations(result, pkg);
+});
+
+test('Num./Pág. above the band wins and keeps long numbers out of ids', async () => {
+  const pdf = makePdf({
+    pages: [[
+      at('Num. 1001 - Pag. 3', 200),
+      at('Corpo.', 700),
+      at(`Numero do documento: ${LONG30}`, 40),
+    ]],
+  });
+  const result = await segmentAutos(pdf);
+  const pkg = (await import('../src/prompt.js')).buildChatGPTPackage(result, { request: 'teste' });
+  assert.equal(result.documents[0].docId, '1001');
+  assert.equal(result.passages[0].id, '1001@1:p3');
+  assert.equal(result.gaps.some((gap) => gap.reason === 'footer_id_conflict'), false);
+  assertNoLongIdsInCitations(result, pkg);
 });
 
 test('a corrupt file is a gap and does not throw', async () => {
@@ -167,17 +213,58 @@ test('injected OCR fills a blank page and a thrown engine leaves the gap', async
   assert.match(failed.gaps.find((gap) => gap.page === 1 && gap.reason === 'unreadable_page').detail, /precisa OCR/);
 });
 
-test('conflicting footer rules keep the Num./Pág. id and record a gap', async () => {
+test('long rodapé ids with a short Num. do not raise footer_id_conflict', async () => {
   const pdf = makePdf({
     pages: [[
       at('Texto.', 700),
       at('Num. 1001 - Pag. 1', 56),
-      at('Numero do documento: 9999', 40),
+      at(`Numero do documento: ${LONG_DOC}`, 40),
     ]],
   });
   const result = await segmentAutos(pdf);
   assert.equal(result.documents[0].docId, '1001');
+  assert.equal(result.gaps.some((gap) => gap.reason === 'footer_id_conflict'), false);
+});
+
+test('two Num./Pág. ids on one page record footer_id_conflict', async () => {
+  const pdf = makePdf({
+    pages: [[
+      at('Texto.', 700),
+      at('Num. 1001 - Pag. 1', 56),
+      at('Num. 2002 - Pag. 1', 40),
+    ]],
+  });
+  const result = await segmentAutos(pdf);
   assert.equal(result.gaps.some((gap) => gap.reason === 'footer_id_conflict'), true);
+});
+
+test('heading lines classify pieces when index and outline are absent', async () => {
+  const pdf = makePdf({
+    pages: [
+      [at('SENTENCA', 720), at('Corpo.', 700), at('Num. 10 - Pag. 1', 40)],
+      [at('PETICAO INICIAL', 720), at('Mais texto.', 700), at('Num. 11 - Pag. 1', 40)],
+    ],
+  });
+  const result = await segmentAutos(pdf);
+  assert.equal(result.documents.length, 2);
+  assert.equal(result.documents[0].piece, 'sentença');
+  assert.equal(result.documents[0].typeSource, 'heading');
+  assert.ok(result.documents[0].signals.includes('heading'));
+  assert.equal(result.documents[1].piece, 'petição inicial');
+});
+
+test('excelentissimo juiz is peticao inicial with weak heading', async () => {
+  const pdf = makePdf({
+    pages: [[
+      at('EXCELENTISSIMO SENHOR JUIZ DE DIREITO', 720),
+      at('Corpo da peticao.', 700),
+      at('Num. 12 - Pag. 1', 40),
+    ]],
+  });
+  const result = await segmentAutos(pdf);
+  assert.equal(result.documents[0].piece, 'petição inicial');
+  assert.equal(result.documents[0].headingWeak, true);
+  assert.equal(result.documents[0].title, null);
 });
 
 test('a passed pdf.js document is accepted', async () => {
