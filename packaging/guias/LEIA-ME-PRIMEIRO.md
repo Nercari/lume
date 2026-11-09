@@ -1,35 +1,31 @@
 # Lume — leia primeiro
 
-Pacote para o Chrome e para um Projeto ChatGPT chamado Lume. Nada sai do computador além do que você envia no ChatGPT. Não há servidor.
+Pacote do Lume para PJe (TRF1/SJDF) + ChatGPT. O passo a passo curto está em `guias\COMECE-AQUI.txt`.
 
 ## O que vem neste pacote
 
-- **extension/** — extensão Chrome (carregar sem compactação).
-- **extension/manual/** — página de fallback, se o estudo de um clique não servir.
-- **chatgpt/** — `PROJETO-LUME.md` (instruções do Projeto) e `LEIA-ME.md`.
-- **guias/** — este arquivo e o passo a passo.
+- **extension/** — extensão do Chrome (carregar sem compactação).
+- **plugin/lume-jef/** — plugin "Lume JEF", com `instalar\instalar-plugin.cmd` e `instalar-plugin.ps1`.
+- **plugin/lume-jef-0.2.0.zip** — o mesmo plugin compactado.
+- **plugin/lume-jef-projeto/** — fallback de Projeto na web (`COLE-NO-PROJETO.md`).
+- **guias/** — guias para usuários e TI.
 
-## Instalação (uma vez)
+## Instalar e usar
 
-1. Descompacte `lume-install` e, no Windows, execute `windows\instalar.ps1` (ou `instalar.bat`).
-2. Chrome → `chrome://extensions` → Carregar sem compactação → pasta `extension`.
-3. ChatGPT → Projetos → novo projeto **Lume** → cole o texto de `chatgpt\PROJETO-LUME.md` nas Instruções. O painel oficial, no chat normal, lê a aba do PJe.
+Descompacte o zip numa pasta fixa, por exemplo `Documentos\Lume` (botão direito → Extrair tudo). Não apague essa pasta depois.
 
-Nao cole tokens nem chaves de API. O Lume nao oferece fallback pago.
+1. Instale: no Chrome, carregue a pasta extension (chrome://extensions > Modo do desenvolvedor > Carregar sem compactação); depois dê dois cliques em plugin\lume-jef\instalar\instalar-plugin.cmd, reinicie o app ChatGPT e instale "Lume JEF" em Plugins > Lume.
+2. No PJe, abra o processo e clique "Lume: Estudar processo" (ou peça no Work: "prepare este processo com o Lume"). Espere o título da aba "Lume: pronto".
+3. No ChatGPT (painel lateral nessa aba, chat normal), peça o relatório ou a minuta. Caso grande: anexe as partes salvas.
 
-## Cada processo
-
-1. Abra o processo no PJe.
-2. Clique **Estudar processo**.
-3. Leia a aba do caso (`#lume-autos`) no painel do ChatGPT. **Salvar partes** e **Copiar parte k** ficam na página de estudo.
-
-Se o painel disser que não achou a lista, use **Calibrar PJe** uma vez, salve `lume-calibracao.json` e envie esse arquivo ao Grok. Não é o texto do processo.
-
-## Se o um clique não servir
-
-**Gerar pacote do caso** abre a página do PDF. Baixe o processo no PJe (Download dos autos) e abra esse PDF ali. O arquivo `.md` pode ser anexado no mesmo Projeto.
+Plano B: clique você no botão Lume: Estudar processo na página do processo. A aba e os próximos passos são os mesmos.
+Sem o app desktop: use a pasta plugin\lume-jef-projeto num Projeto (instruções em COLE-NO-PROJETO.md).
+Se o painel não achar a lista, use Calibrar PJe, salve lume-calibracao.json e envie o arquivo ao mantenedor.
+Nada além do ChatGPT sai do computador.
 
 ## Desinstalar
 
 - **Windows:** `windows\desinstalar.bat` remove `%LOCALAPPDATA%\Lume`.
-- Remova a extensão em `chrome://extensions`.
+- Remova a extensão em `chrome://extensions` e apague a pasta onde descompactou o zip.
+
+Não cole tokens nem chaves de API. O Lume não oferece fallback pago.
