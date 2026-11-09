@@ -123,3 +123,70 @@ test('decisive assertions without inspectable support get unsupported allegation
   const q = await buildPanel(c, L, { sections: [{ id: 's1', text: 'x', uses: ['ghost#0'] }] });
   assert.equal(q.entries[0].status, 'not_in_case');
 });
+
+test('a section quote from one cited passage is not a mismatch on the other, and an unmatched quote is never verified', async () => {
+  const { c, L } = await caseWith();
+  const flow = bySubject(L, 'pump.flow');
+  const leak = bySubject(L, 'leak', 'fact');
+  const quoted = { sections: [{ id: 's1', text: 'The pump has "rated flow 40 litres per minute".', uses: [flow.id, leak.id] }] };
+  const p = await buildPanel(c, L, quoted);
+  const flowEntry = p.entries.find((e) => e.finding === flow.id);
+  const leakEntry = p.entries.find((e) => e.finding === leak.id);
+  assert.equal(flowEntry.citations[0].quote, 'exact');
+  assert.equal(leakEntry.citations[0].quote, 'none');
+  assert.notEqual(leakEntry.citations[0].status, 'quote_mismatch');
+  assert.equal(flowEntry.status, 'unverified');
+  assert.equal(leakEntry.status, 'unverified');
+
+  const reviews = {};
+  human(reviews, flow, flowEntry.citations[0], 'supports');
+  const one = await buildPanel(c, L, quoted, { reviews });
+  assert.equal(one.entries.find((e) => e.finding === flow.id).status, 'verified');
+  assert.equal(one.entries.find((e) => e.finding === leak.id).citations[0].quote, 'none');
+  assert.equal(one.entries.find((e) => e.finding === leak.id).status, 'unverified');
+
+  human(reviews, leak, leakEntry.citations[0], 'supports');
+  const both = await buildPanel(c, L, quoted, { reviews });
+  assert.equal(both.entries.find((e) => e.finding === leak.id).citations[0].quote, 'none');
+  assert.equal(both.entries.find((e) => e.finding === leak.id).status, 'verified');
+
+  const split = { sections: [{ id: 's1', text: 'Pump "rated flow 40 litres per minute". Later "found no leak".', uses: [flow.id, leak.id] }] };
+  const s = await buildPanel(c, L, split);
+  assert.equal(s.entries.find((e) => e.finding === flow.id).citations[0].quote, 'exact');
+  assert.equal(s.entries.find((e) => e.finding === leak.id).citations[0].quote, 'exact');
+  assert.ok(s.entries.every((e) => e.status !== 'verified'));
+
+  const bogus = { sections: [{ id: 's1', text: 'The pump has "rated flow 45 litres per minute".', uses: [flow.id, leak.id] }] };
+  const bad = await buildPanel(c, L, bogus, { reviews });
+  for (const e of bad.entries) {
+    assert.equal(e.citations[0].quote, 'mismatch');
+    assert.equal(e.status, 'quote_mismatch');
+    assert.notEqual(e.status, 'verified');
+  }
+});
+
+test('a passage with no method does not crash checkCitation and stays OCR-unreliable', async () => {
+  const { c, L } = await caseWith();
+  const flow = bySubject(L, 'pump.flow');
+  const leak = bySubject(L, 'leak', 'fact');
+  const passageId = flow.support[0];
+  const rec = await c.get('extraction', 'D1@1');
+  for (const page of rec.pages) for (const passage of page.passages) if (passage.id === passageId) delete passage.method;
+  await c.put('extraction', 'D1@1', rec);
+
+  const reviews = {};
+  const cit = await checkCitation(c, L, flow, passageId, { reviews });
+  assert.equal(cit.ocr, 'missing_method');
+  assert.equal(cit.status, 'ocr_unreliable');
+  assert.notEqual(cit.status, 'verified');
+  human(reviews, flow, cit, 'supports');
+  const after = await checkCitation(c, L, flow, passageId, { reviews });
+  assert.equal(after.semantic, 'supports');
+  assert.equal(after.status, 'ocr_unreliable');
+  assert.notEqual(after.status, 'verified');
+
+  const p = await buildPanel(c, L, { sections: [{ id: 's1', text: 'Both findings.', uses: [flow.id, leak.id] }] }, { reviews });
+  assert.equal(p.entries.find((e) => e.finding === flow.id).status, 'ocr_unreliable');
+  assert.equal(p.entries.find((e) => e.finding === leak.id).citations[0].status, 'unverified');
+  assert.notEqual(p.entries.find((e) => e.finding === leak.id).status, 'verified');
+});
