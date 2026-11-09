@@ -8,7 +8,8 @@
   "engines": { "node": ">=22" },
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "node --test --test-reporter=spec test/*.test.js"
+    "test": "node --test --test-reporter=spec test/*.test.js",
+    "bench:fixture": "node scripts/bench-fixture.mjs"
   },
   "devDependencies": {
     "playwright-core": "1.56.1"

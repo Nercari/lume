@@ -15,6 +15,7 @@
     table { border-collapse: collapse; width: 100%; margin-top: 8px; }
     th, td { text-align: left; padding: 2px 4px; border-bottom: 1px solid #ddd; }
     button, a.button { margin-right: 6px; }
+    #guide { margin: 8px 0; padding-left: 18px; }
     @media (prefers-color-scheme: dark) {
       body { color: #eee; background: #1e1e1e; }
       dt, .note, #cal-note { color: #aaa; }
@@ -30,8 +31,12 @@
   <p id="status" role="status" aria-live="polite"></p>
   <p id="hint" hidden></p>
   <p id="pdf-hint" hidden>Baixe o processo completo no PJe (Download dos autos) e abra o PDF aqui.</p>
+  <ol id="guide">
+    <li>Abra o processo no PJe.</li>
+    <li>Clique Estudar processo.</li>
+    <li>Leia a aba do caso no painel do ChatGPT.</li>
+  </ol>
   <p><button id="study" type="button">Estudar processo</button></p>
-  <p class="note">O texto integral abre numa aba do PJe, na ordem da linha do tempo, para o painel do ChatGPT. Salvar partes e Copiar parte k ficam na página de estudo.</p>
   <p><button id="package-mode" type="button">Gerar pacote do caso</button></p>
   <dl id="counts"></dl>
   <button id="start" type="button">Ler processo</button><button id="stop" type="button">Parar</button>

@@ -4,7 +4,15 @@ A Chrome MV3 extension. Pedro opens a case in PJe (already signed in) and clicks
 
 The selector profiles in `src/profile.js` are **UNVERIFIED**. Nobody has checked them against a live PJe page. **Calibrar PJe** records only page structure and URL patterns. Load the resulting profile with **Carregar perfil** after it is reviewed. Until then, a miss stops and names the role or the URL rule. Nothing is skipped quietly.
 
+The panel shows three steps: open the case, click **Estudar processo**, read the PJe tab in the ChatGPT side panel. Portuguese OCR uses `dist/manual/ocr/por.traineddata.gz` from the extension package. The worker, the wasm, and that model are loaded with `chrome.runtime.getURL`. They are not fetched from a CDN.
+
 The manual PDF page stays as the fallback: **Gerar pacote do caso**.
+
+A private directory of `.html`, `.pdf`, and `.png` files can be timed without printing their contents:
+
+```
+npm run bench:fixture -- <dir> --latency 150
+```
 
 ## Build and test
 

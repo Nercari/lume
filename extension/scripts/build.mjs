@@ -83,15 +83,25 @@ await esbuild.build({
       setup(build) {
         build.onLoad({ filter: /node_modules\/tesseract\.js\/.*\.js$/ }, (args) => {
           const source = readFileSync(args.path, 'utf8');
-          if (!source.includes('cdn.jsdelivr.net')) return null;
-          return { contents: source.replaceAll('cdn.jsdelivr.net', 'ocr.invalid'), loader: 'js' };
+          if (!source.includes('https://cdn.jsdelivr.net/npm/')) return null;
+          return { contents: source.replaceAll('https://cdn.jsdelivr.net/npm/', './'), loader: 'js' };
         });
       },
     },
   ],
 });
+function dropRemoteOcrUrls(file) {
+  const text = readFileSync(file, 'utf8');
+  const next = text
+    .replaceAll('https://cdn.jsdelivr.net/npm/', './')
+    .replaceAll('https://ocr.invalid/npm/', './');
+  if (next !== text) writeFileSync(file, next);
+}
+for (const rel of ['study.js', 'manual/lume-pdf.js', 'manual/ocr/worker.min.js']) dropRemoteOcrUrls(join(dist, rel));
 const bundledStudy = readFileSync(join(dist, 'study.js'), 'utf8');
-if (bundledStudy.includes('cdn.jsdelivr.net')) throw new Error('study.js still references a CDN');
+if (/https?:\/\/[^'"\s]*?(?:jsdelivr\.net|unpkg\.com|tesseract\.js@|tesseract\.js-core@|traineddata)/i.test(bundledStudy)) {
+  throw new Error('study.js still points a tesseract asset at a remote URL');
+}
 
 const m = JSON.parse(readFileSync(join(dist, 'manifest.json'), 'utf8'));
 const refs = [m.background.service_worker, m.side_panel.default_path, ...m.content_scripts.flatMap((c) => c.js)];

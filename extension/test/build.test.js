@@ -84,6 +84,32 @@ test('build emits a loadable unpacked extension with only the documented permiss
   assert.doesNotMatch(studyJs, /cdn\.jsdelivr\.net/);
   assert.doesNotMatch(studyHtml, /<script(?![^>]*\bsrc=)[^>]*>/i);
   assert.match(studyJs, /segmentAutos/);
+  assert.match(readFileSync(join(root, 'src/panel.html'), 'utf8'), /<ol id="guide">/);
+});
+
+test('Portuguese traineddata is bundled and no tesseract asset URL is remote', () => {
+  const remote = /https?:\/\/[^'"\s)\\]*?(?:jsdelivr\.net|unpkg\.com|tesseract\.js-data|traineddata|tesseract\.js@|tesseract\.js-core@)/i;
+  const por = readFileSync(join(root, 'dist/manual/ocr/por.traineddata.gz'));
+  assert.ok(por.length > 1000);
+  assert.equal(por[0], 0x1f);
+  assert.equal(por[1], 0x8b);
+  const bundled = [
+    'dist/study.js',
+    'dist/manual/lume-pdf.js',
+    'dist/manual/ocr/worker.min.js',
+    'dist/manual/ocr/tesseract-core-simd-lstm.wasm.js',
+    'dist/manual/ocr/tesseract-core-lstm.wasm.js',
+  ];
+  for (const rel of bundled) {
+    const text = readFileSync(join(root, rel));
+    assert.equal(remote.test(text.toString('latin1')), false, rel);
+  }
+  const study = readFileSync(join(root, 'dist/study.js'), 'utf8');
+  assert.match(study, /getURL\(\s*["']manual\/["']\s*\)/);
+  assert.match(study, /ocr\/worker\.min\.js/);
+  assert.match(study, /ocr\/tesseract-core-simd-lstm\.wasm\.js/);
+  assert.match(study, /ocr\/tesseract-core-lstm\.wasm\.js/);
+  assert.match(study, /["']por["']/);
 });
 
 test('panel has the package button and calibration link', () => {
