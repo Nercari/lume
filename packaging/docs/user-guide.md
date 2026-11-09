@@ -6,14 +6,14 @@ Lume helps you read a PJe case in Chrome, build a local **case package**, and wo
 
 - You need permission to work on the case in PJe with your normal login.
 - You need access to ChatGPT with a plan that allows Projects (or plugin install, if your organization offers it).
-- Ask IT for the **`lume-install`** folder from the maintainer, not a random download.
+- Get the `lume-install-windows` zip from the maintainer, not a random download.
 
 ## Install the extension
 
-1. IT copies `lume-install` to your machine (for example `%LOCALAPPDATA%\Lume` on Windows).
+1. Unzip it to a folder you keep (for example `Documentos\Lume`). Do not delete that folder later.
 2. Open Chrome → `chrome://extensions`.
 3. Turn on **Developer mode** if IT allows it (managed installs may use enterprise policy instead).
-4. Click **Load unpacked** and choose the `extension` folder inside `lume-install`.
+4. Click **Load unpacked** (**Carregar sem compactação**) and choose the `extension` folder from the unzipped package.
 5. Pin the Lume side panel if helpful.
 
 ## Set up ChatGPT (once)
@@ -27,13 +27,13 @@ Lume helps you read a PJe case in Chrome, build a local **case package**, and wo
 
 1. Sign in to PJe in Chrome as usual.
 2. Open the Lume side panel on the case.
-3. Click **Gerar pacote do caso** to open the manual page, load the PDF you downloaded from PJe, and save the `.md` package.
-4. Paste the package into your **Lume** ChatGPT project and ask for summaries, timelines, or drafts.
+3. Click **Gerar pacote do caso**, choose the PJe PDF (scanned pages get local OCR) or paste the PJe+R text export, then click **Baixar pacote do caso (.md)**.
+4. In your **Lume** ChatGPT project, start a chat, **attach** `lume-pacote-do-caso.md`, and ask for summaries, timelines, or drafts.
 5. Review every citation `[Id X, fl. Y]` before using text in court systems.
 
 ## Update Lume
 
-1. IT provides a new `lume-install` folder or managed update.
+1. Unzip the new package over the same folder (or IT provides a managed update).
 2. Reload the unpacked extension or let policy refresh the CRX.
 
 ## Remove case data
@@ -44,7 +44,7 @@ Lume helps you read a PJe case in Chrome, build a local **case package**, and wo
 ## Uninstall Lume
 
 1. Remove the extension in `chrome://extensions`.
-2. Run `windows\desinstalar.bat` or delete the install folder IT created (`%LOCALAPPDATA%\Lume` on Windows).
+2. Delete the folder where you unzipped Lume.
 3. Remove any ChatGPT Project you no longer need (your ChatGPT account settings).
 
 ## Troubleshooting
