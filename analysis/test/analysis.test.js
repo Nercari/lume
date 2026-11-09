@@ -142,6 +142,53 @@ test('a low-confidence OCR passage cannot support a decisive fact', async () => 
   assert.equal(forged.rejected[0].reason, 'not_in_call_input');
 });
 
+test('a decisive legal conclusion with no cited source is unsupported and opens a gap', async () => {
+  // PR #21 review probe: { class: 'legal_conclusion', decisive: true } with no citation was
+  // supported and opened no gap. The same holds for any other decisive class. A non-decisive
+  // assertion with no citation stays supported.
+  const items = [item('D1'), item('D3', { contentType: 'image/x-fake' })];
+  const { L } = await setup({
+    items,
+    model: fakeModel({ extra: [
+      { docId: 'D1', assertion: { class: 'legal_conclusion', decisive: true, text: 'The recorded limit is met' } },
+      { docId: 'D1', assertion: { class: 'unknown', decisive: true, text: 'Hours since service are not in the record' } },
+      { docId: 'D1', assertion: { class: 'fact', decisive: false, text: 'Noted in passing' } },
+    ] }),
+  });
+  const row = (f) => [f.class, f.decisive, f.supported, f.support.length];
+  const lc = summary(L).legal_conclusion.find((f) => f.text === 'The recorded limit is met');
+  const unk = summary(L).unknown.find((f) => f.text === 'Hours since service are not in the record');
+  const note = Object.values(L.findings).find((f) => f.text === 'Noted in passing');
+  assert.deepEqual(row(lc), ['legal_conclusion', true, false, 0]);
+  assert.ok(lc.issues.includes('no admissible source for a decisive assertion'));
+  assert.deepEqual(row(unk), ['unknown', true, false, 0]);
+  assert.deepEqual(row(note), ['fact', false, true, 0]);
+  const findingGaps = openGaps(L).filter((g) => g.source === 'finding').map((g) => g.reason).sort();
+  assert.deepEqual(findingGaps, [`unsupported_decisive:${lc.id}`, `unsupported_decisive:${unk.id}`].sort());
+  registerDraft(L, 'draft-probe', [lc.id]);
+  const state = draftState(L, 'draft-probe');
+  assert.equal(state.state, 'provisional');
+  assert.ok(state.editable);
+  assert.ok(state.reasons.some((r) => r.includes(`unsupported_decisive:${lc.id}`)));
+  assert.throws(() => assertConclusive(L, 'draft-probe'), ProvisionalDraftError);
+
+  // The same conclusion citing an admissible passage from the call input is supported.
+  const c2 = await openCase();
+  const L2 = emptyLedger();
+  const inv = inventory(items);
+  ingest(L2, inv, await extract(inv, BASE_FILES));
+  const pid = firstPassage(L2, 'D1');
+  await analyze(c2, L2, fakeModel({ extra: [
+    { docId: 'D1', assertion: { class: 'legal_conclusion', decisive: true, text: 'The recorded limit is met', support: [pid] } },
+  ] }).fn);
+  const cited = summary(L2).legal_conclusion[0];
+  assert.deepEqual(row(cited), ['legal_conclusion', true, true, 1]);
+  assert.deepEqual(cited.support, [pid]);
+  assert.equal(openGaps(L2).filter((g) => g.source === 'finding').length, 0);
+  registerDraft(L2, 'draft-cited', [cited.id]);
+  assert.equal(assertConclusive(L2, 'draft-cited').state, 'conclusive');
+});
+
 test('contradictory evidence from a late scan surfaces with both sides, even when one side is weak', async () => {
   const { c, L, model } = await setup();
   assert.equal(summary(L).contradiction.length, 0);

@@ -31,8 +31,12 @@ Each assertion has one class: `fact`, `allegation`, `contradiction`, `unknown` o
 - A cited passage must be in the input of that call. If not, it is rejected (`not_in_call_input`).
 - For a decisive assertion, each cited passage must pass #2 `canSupportDecisive`. A
   low-confidence OCR passage is rejected (`low_confidence`). It stays visible in `rejected`.
-- A decisive fact, allegation or contradiction without enough admissible support gets
-  `supported: false`. A contradiction needs two sources.
+- Every decisive assertion needs admissible support, whatever its class. A fact, an
+  allegation, an unknown, or a legal conclusion needs one admissible passage. A
+  contradiction needs two. With fewer, `supported` is false and the issue is
+  `no admissible source for a decisive assertion` (or
+  `contradiction needs two admissible sources`). The finding stays visible. A
+  non-decisive assertion is not held to this check.
 - Support is inspectable: a passage id is `<docId>@<version>:p<page>:<start>-<end>`.
 - Two current facts or allegations on the same `subject` with different `value`s make an automatic
   contradiction `contra:<subject>`. All sides are listed. A side with only rejected support
@@ -58,7 +62,10 @@ Stale findings stay listed. The next `analyze()` call analyzes only the pending 
 ## Provisional-draft gate
 
 A gap with impact `unknown` (the default) or `indispensable` blocks. Finding gaps are
-`unsupported_decisive:<id>` and `decisive_unknown:<id>`.
+`unsupported_decisive:<id>` and `decisive_unknown:<id>`. A decisive assertion with no
+admissible cited passage, including a legal conclusion, is `supported: false` and opens
+`unsupported_decisive:<id>`. It does not count as supported. A decisive `unknown` that
+does have admissible support still opens `decisive_unknown:<id>`.
 
 `draftState()` returns `stale`, `provisional` or `conclusive`. `editable` is always `true`:
 analysis and editing continue. `assertConclusive()` throws `ProvisionalDraftError` unless the
