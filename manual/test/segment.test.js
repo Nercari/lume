@@ -101,7 +101,7 @@ test('outline alone cuts the file, and a title without an id still opens a range
   assert.equal(result.documents[0].signals.includes('outline'), true);
   assert.equal(result.documents[1].piece, 'certidão');
   assert.equal(result.documents[1].docId, 'contorno-2');
-  assert.equal(result.passages[1].id, 'contorno-2@1:p1');
+  assert.equal(result.passages[1].id, 'contorno-2@1:pdf2');
 });
 
 test('footer alone groups a following page that has no text layer', async () => {
@@ -128,16 +128,60 @@ test('index alone does not invent page bounds for later prose', async () => {
   const result = await segmentAutos(pdf);
   assert.ok(result.documents.some((doc) => doc.docId === 'indice'));
   assert.equal(result.gaps.some((gap) => gap.reason === 'index_unplaced' && gap.docId === '1001'), true);
-  assert.equal(result.gaps.some((gap) => gap.reason === 'no_document_signal'), true);
+  assert.equal(result.gaps.some((gap) => gap.reason === 'footer_missing_id' && gap.page === 2), true);
 });
 
-test('no signal yields one document and a visible gap', async () => {
+test('no Num./Pág. yields pdfp id and footer_missing_id gap', async () => {
   const pdf = makePdf({ pages: [[at('Folha solta.', 700)]] });
   const result = await segmentAutos(pdf);
-  assert.equal(result.documents[0].docId, 'sem-sinal');
+  assert.equal(result.documents[0].docId, 'pdfp1');
   assert.equal(result.documents[0].piece, 'outros');
   assert.deepEqual(result.documents[0].signals, []);
-  assert.equal(result.gaps.some((gap) => gap.reason === 'no_document_signal'), true);
+  assert.equal(result.gaps.some((gap) => gap.reason === 'footer_missing_id' && gap.page === 1), true);
+});
+
+const LONG30 = '123456789012345678901234567890';
+
+function assertNoLongIdsInCitations(caseResult, pkg) {
+  const citationLines = pkg.caseFile.split('\n').filter((line) => /^\[Id\s/.test(line) || /^id:\s/.test(line));
+  const hay = [
+    ...(caseResult.passages ?? []).map((passage) => passage.id),
+    ...citationLines,
+  ].join('\n');
+  for (const match of hay.matchAll(/\d{13,}/g)) {
+    assert.fail(`long digit run in citation output: ${match[0]}`);
+  }
+}
+
+test('band-only long rodapé number never appears in passage id or paste citation', async () => {
+  const pdf = makePdf({
+    pages: [[
+      at('Corpo.', 700),
+      at(`Numero do documento: ${LONG30}`, 40),
+    ]],
+  });
+  const result = await segmentAutos(pdf);
+  const pkg = (await import('../src/prompt.js')).buildChatGPTPackage(result, { request: 'teste' });
+  assert.equal(result.documents[0].docId, 'pdfp1');
+  assert.match(result.passages[0].id, /^pdfp1@1:pdf1$/);
+  assert.equal(result.pages[0].footer.docNumber, LONG30);
+  assertNoLongIdsInCitations(result, pkg);
+});
+
+test('Num./Pág. above the band wins and keeps long numbers out of ids', async () => {
+  const pdf = makePdf({
+    pages: [[
+      at('Num. 1001 - Pag. 3', 200),
+      at('Corpo.', 700),
+      at(`Numero do documento: ${LONG30}`, 40),
+    ]],
+  });
+  const result = await segmentAutos(pdf);
+  const pkg = (await import('../src/prompt.js')).buildChatGPTPackage(result, { request: 'teste' });
+  assert.equal(result.documents[0].docId, '1001');
+  assert.equal(result.passages[0].id, '1001@1:p3');
+  assert.equal(result.gaps.some((gap) => gap.reason === 'footer_id_conflict'), false);
+  assertNoLongIdsInCitations(result, pkg);
 });
 
 test('a corrupt file is a gap and does not throw', async () => {

@@ -49,6 +49,10 @@ export function gapsSummaryOf(caseResult) {
   if (gaps.some((gap) => gap.reason === 'no_document_signal')) {
     lines.push('Parte do PDF não trouxe rodapé, marcador nem índice. Esses trechos ficam no documento sem-sinal.');
   }
+  const missingFooters = gaps.filter((gap) => gap.reason === 'footer_missing_id');
+  if (missingFooters.length) {
+    lines.push(`${missingFooters.length} página(s) sem Num./Pág. no rodapé (ids neutros pdfp…).`);
+  }
   const conflicts = gaps.filter((gap) => gap.reason === 'footer_id_conflict');
   if (conflicts.length) {
     lines.push(`Em ${conflicts.length} página(s) as regras de rodapé divergiram. Vale o id da regra Num./Pág.`);
@@ -63,7 +67,8 @@ function renderCaseFile(caseResult) {
   const passages = (caseResult?.passages ?? []).filter((passage) => passage.hasText && String(passage.text ?? '').trim());
   if (!passages.length) blocks.push('Nenhuma passagem com texto.');
   for (const passage of passages) {
-    blocks.push(`[Id ${passage.docId}, p. ${passage.pageInDoc}]\nid: ${passage.id}\npágina do PDF: ${passage.pdfPage}\n${String(passage.text).trim()}`);
+    const pageRef = passage.pageInDoc != null ? passage.pageInDoc : `PDF ${passage.pdfPage}`;
+    blocks.push(`[Id ${passage.docId}, p. ${pageRef}]\nid: ${passage.id}\npágina do PDF: ${passage.pdfPage}\n${String(passage.text).trim()}`);
   }
   return blocks.join('\n\n');
 }

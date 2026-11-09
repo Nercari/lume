@@ -28,17 +28,20 @@ test('footer_num_pag reads id and page with or without accents', () => {
   assert.deepEqual({ docId: parsed.docId, pageInDoc: parsed.pageInDoc }, { docId: '1001', pageInDoc: 2 });
 });
 
-test('footer_numero_documento and footer_consulta_url each yield an id', () => {
+test('footer_numero_documento and footer_consulta_url set docNumber, not docId', () => {
   const numbered = matchFooterText('Número do documento: 1001');
-  assert.equal(numbered.docId, '1001');
+  assert.equal(numbered.docId, null);
+  assert.equal(numbered.docNumber, '1001');
   assert.equal(numbered.pageInDoc, null);
   assert.ok(numbered.rules.includes(footerNumeroDocumento.id));
 
   const linked = matchFooterText('https://exemplo.invalid/pje/ConsultaDocumento/listView.seam?x=1001');
-  assert.equal(linked.docId, '1001');
+  assert.equal(linked.docId, null);
+  assert.equal(linked.docNumber, '1001');
   assert.ok(linked.rules.includes(footerConsultaUrl.id));
   const withParam = matchFooterText('ConsultaDocumento/listView.seam?a=1&x=44');
-  assert.equal(withParam.docId, '44');
+  assert.equal(withParam.docId, null);
+  assert.equal(withParam.docNumber, '44');
 });
 
 test('footer_assinado matches the signature phrase and does not invent an id', () => {
@@ -68,6 +71,7 @@ test('disagreeing long ids without Num./Pág. conflict', () => {
   const a = '11111111111111111111111111111111';
   const b = '22222222222222222222222222222222';
   const parsed = matchFooterText(`Numero do documento: ${a}\nConsultaDocumento/listView.seam?x=${b}`);
+  assert.equal(parsed.docId, null);
   assert.equal(parsed.conflict, true);
 });
 

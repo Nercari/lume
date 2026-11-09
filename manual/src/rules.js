@@ -89,47 +89,37 @@ export function applyFooterRules(text) {
   return hits;
 }
 
-// Num./Pág. is authoritative for docId and pageInDoc. Long ids are docNumber only.
-export function footerFromHits(hits, sourceText = '') {
-  const foldedHits = hits.filter((hit) => hit.docId || hit.docNumber);
-  if (!foldedHits.length) return null;
-
-  const numPag = sourceText
-    ? numPagMatches(sourceText)
-    : hits.filter((hit) => hit.id === 'footer_num_pag' && hit.docId).map((hit) => ({
-      docId: hit.docId,
-      pageInDoc: hit.pageInDoc ?? null,
-    }));
-  const docNumbers = hits.filter((hit) => hit.docNumber).map((hit) => hit.docNumber);
-  const numIds = new Set(numPag.map((hit) => hit.docId));
+function buildFooter(zoneHits, fullText) {
+  const numPag = numPagMatches(fullText);
+  const docNumbers = zoneHits.filter((hit) => hit.docNumber).map((hit) => hit.docNumber);
+  const rules = zoneHits.map((hit) => hit.id);
+  if (numPag.length && !rules.includes('footer_num_pag')) rules.push('footer_num_pag');
 
   let docId = null;
   let pageInDoc = null;
   let conflict = false;
-
   if (numPag.length) {
     const preferred = numPag[numPag.length - 1];
     docId = preferred.docId;
     pageInDoc = preferred.pageInDoc ?? null;
-    if (numIds.size > 1) conflict = true;
-  } else if (docNumbers.length) {
-    const unique = new Set(docNumbers);
-    docId = docNumbers[docNumbers.length - 1];
-    if (unique.size > 1) conflict = true;
+    if (new Set(numPag.map((hit) => hit.docId)).size > 1) conflict = true;
+  } else if (docNumbers.length && new Set(docNumbers).size > 1) {
+    conflict = true;
   }
 
-  if (!docId) return null;
+  const docNumber = docNumbers.length ? docNumbers[docNumbers.length - 1] : null;
+  if (!docId && !docNumber && !conflict) return null;
 
-  return {
-    docId,
-    pageInDoc,
-    rules: hits.map((hit) => hit.id),
-    conflict,
-  };
+  return { docId, pageInDoc, docNumber, rules, conflict };
+}
+
+// Num./Pág. is authoritative for docId and pageInDoc. Long ids stay in docNumber only.
+export function footerFromHits(hits, sourceText = '') {
+  return buildFooter(hits, sourceText || '');
 }
 
 export function matchFooterText(text) {
-  return footerFromHits(applyFooterRules(text), text);
+  return buildFooter(applyFooterRules(text), text);
 }
 
 // Header row of the autos index: Id, Data, Documento/Tipo, in any separator style.
@@ -218,8 +208,6 @@ export const outlineTitle = Object.freeze({
   },
 });
 
-const FULL_PAGE_RULES = new Set(['footer_num_pag']);
-
 export function headingLinesFromPage(lines, pageHeight, limit = 5) {
   const hasY = lines.some((line) => typeof line.y === 'number') && pageHeight > 0;
   const body = hasY
@@ -239,9 +227,6 @@ export function matchPageFooter(lines, pageHeight) {
     ? lines.filter((line) => typeof line.y === 'number' && line.y <= pageHeight * FOOTER_ZONE_RATIO).map((line) => line.text)
     : texts.slice(-8);
   const zoneText = zone.join('\n');
-  const zoned = footerFromHits(applyFooterRules(zoneText), zoneText);
-  if (zoned) return zoned;
   const fullText = texts.join('\n');
-  const fallback = applyFooterRules(fullText).filter((hit) => FULL_PAGE_RULES.has(hit.id));
-  return footerFromHits(fallback, fullText);
+  return buildFooter(applyFooterRules(zoneText), fullText);
 }
