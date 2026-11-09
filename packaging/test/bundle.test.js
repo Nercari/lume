@@ -12,7 +12,7 @@ const packaging = join(dirname(fileURLToPath(import.meta.url)), '..');
 const repo = join(packaging, '..');
 const bundleScript = join(packaging, 'scripts/bundle.mjs');
 
-const EXPECTED_TOP = ['chatgpt', 'extension', 'guias', 'it', 'LICENSES', 'windows'];
+const EXPECTED_TOP = ['LICENSES', 'chatgpt', 'extension', 'guias', 'it', 'windows'];
 
 function walkFiles(dir, base = '') {
   const out = [];
@@ -43,7 +43,7 @@ test('bundle.mjs assembles Windows install tree with manifest and without pdf or
 
   const dirs = readdirSync(out).filter((name) => statSync(join(out, name)).isDirectory()).sort();
   assert.deepEqual(dirs, EXPECTED_TOP);
-  assert.ok(top.includes('MANIFEST.txt'));
+  assert.ok(readdirSync(out).includes('MANIFEST.txt'));
   assert.ok(!existsSync(join(out, 'RELEASE-PIN.txt')));
   assert.ok(!existsSync(join(out, 'runtime')));
   assert.ok(!existsSync(join(out, 'manual')));
