@@ -53,6 +53,12 @@ test('bundle.mjs assembles Windows install tree with manifest and without pdf or
   const files = walkFiles(out);
   assert.ok(files.some((f) => f === 'extension/manifest.json'));
   assert.ok(files.some((f) => f === 'extension/manual/lume-pdf.html'));
+  for (const f of [
+    'extension/manual/ocr/worker.min.js',
+    'extension/manual/ocr/tesseract-core-simd-lstm.wasm.js',
+    'extension/manual/ocr/tesseract-core-lstm.wasm.js',
+    'extension/manual/ocr/por.traineddata.gz',
+  ]) assert.ok(files.some((file) => file === f), f);
   assert.ok(files.some((f) => f === 'guias/LEIA-ME-PRIMEIRO.md'));
   assert.ok(files.some((f) => f === 'guias/user-guide.md'));
   assert.ok(files.some((f) => f === 'guias/permissions-and-limits.md'));

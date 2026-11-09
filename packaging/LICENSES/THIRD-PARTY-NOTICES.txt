@@ -1,7 +1,15 @@
 Lume install bundle — third-party notices (Part of #13)
 
 extension/
-  No npm runtime dependencies at package time.
+  The extension package itself has no npm dependencies. dist/manual/ is the
+  manual package build and includes:
+    pdfjs-dist 6.4.299 — Apache-2.0 — Mozilla and contributors — pdf.worker.mjs
+    tesseract.js 7.0.0 — Apache-2.0 — ocr/worker.min.js
+    tesseract.js-core 7.0.0 — Apache-2.0 — ocr/tesseract-core-simd-lstm.wasm.js
+      and ocr/tesseract-core-lstm.wasm.js (LSTM only)
+    @tesseract.js-data/por 1.0.0 — MIT — ocr/por.traineddata.gz
+      (LSTM integer model 4.0.0_best_int)
+  Source notices: manual/THIRD-PARTY.md. The page loads these files locally.
 
 chatgpt/
   Markdown and Agent Plugin metadata only; no bundled runtime.

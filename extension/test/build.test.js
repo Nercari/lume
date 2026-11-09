@@ -48,7 +48,15 @@ test('build emits a loadable unpacked extension with only the documented permiss
   assert.match(content, /function validateStoredProfile/);
 
   const pageDir = join(root, 'dist/manual');
-  for (const f of ['lume-pdf.html', 'lume-pdf.js', 'pdf.worker.mjs']) assert.ok(existsSync(join(pageDir, f)), f);
+  for (const f of [
+    'lume-pdf.html',
+    'lume-pdf.js',
+    'pdf.worker.mjs',
+    'ocr/worker.min.js',
+    'ocr/tesseract-core-simd-lstm.wasm.js',
+    'ocr/tesseract-core-lstm.wasm.js',
+    'ocr/por.traineddata.gz',
+  ]) assert.ok(existsSync(join(pageDir, f)), f);
   const html = readFileSync(join(pageDir, 'lume-pdf.html'), 'utf8');
   assert.doesNotMatch(html, /<script(?![^>]*\bsrc=)[^>]*>/i, 'PDF page has no inline script');
   assert.doesNotMatch(html, /\son[a-z]+\s*=/i, 'PDF page has no inline event handler');
