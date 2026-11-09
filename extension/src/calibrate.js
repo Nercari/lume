@@ -1,5 +1,5 @@
-// Structure-only snapshot of a PJe page. No text, no field values, no query strings.
-import { sanitizeClassToken, sanitizeHref, sanitizeId, sanitizeToken, scrubTree } from './sanitize.js';
+// Structure-only snapshot of a PJe page. No text, no field values, no query values.
+import { sanitizeClassToken, sanitizeHref, sanitizeId, sanitizeToken, scrubTree, sizeBucket, urlPattern } from './sanitize.js';
 
 export const MAX_SNAPSHOT_NODES = 5000;
 const ALLOW_VALUE = new Set(['role', 'type', 'href']);
@@ -163,8 +163,138 @@ export function snapshotDocument(root, opts = {}) {
   });
 }
 
+export const CALIBRATION_DOWNLOAD_NAME = 'lume-calibracao.json';
+
 export function calibrationFilename(date = new Date()) {
   return `lume-calibracao-${date.toISOString().replace(/[:.]/g, '-')}.json`;
+}
+
+const VERSION_RE = /\b\d{1,2}(?:\.\d{1,2}){1,3}\b/;
+
+function queryAll(root, selector) {
+  try { return [...root.querySelectorAll(selector)]; } catch { return []; }
+}
+
+function queryOne(root, selector) {
+  try { return root.querySelector(selector); } catch { return null; }
+}
+
+export function describeClick(el) {
+  if (!el) return null;
+  const href = attr(el, 'href') || attr(el, 'action') || attr(el, 'src');
+  return {
+    tag: tagOf(el),
+    id: sanitizeId(attr(el, 'id')),
+    class: classesOf(el).map(sanitizeClassToken).filter(Boolean).slice(0, 40),
+    attrs: attrNames(el).map((name) => sanitizeToken(name)).filter(Boolean).slice(0, 50).sort(),
+    hrefPattern: urlPattern(href),
+  };
+}
+
+export function frameTree(root) {
+  const walk = (doc) => {
+    const frames = queryAll(doc, 'iframe');
+    return {
+      accessible: true,
+      iframes: frames.map((frame) => {
+        const src = urlPattern(attr(frame, 'src'));
+        const child = frameDocument(frame);
+        if (!child) return { accessible: false, src, iframes: [] };
+        return { ...walk(child), src };
+      }),
+    };
+  };
+  return walk(root);
+}
+
+export function collectUrlPatterns(root) {
+  const found = [];
+  const seen = new Set();
+  const add = (raw) => {
+    const pattern = urlPattern(raw);
+    if (!pattern || seen.has(pattern)) return;
+    seen.add(pattern);
+    found.push(pattern);
+  };
+  for (const doc of sameOriginDocuments(root)) {
+    for (const node of queryAll(doc, 'a[href], iframe[src], form[action]')) {
+      add(attr(node, 'href') || attr(node, 'src') || attr(node, 'action'));
+    }
+  }
+  return found;
+}
+
+export function candidateLists(root, profiles) {
+  const out = [];
+  for (const profile of profiles ?? []) {
+    for (const doc of sameOriginDocuments(root)) {
+      for (const selector of profile.docList ?? []) {
+        const list = queryOne(doc, selector);
+        if (!list) {
+          out.push({ profileId: profile.id, selector, found: false, rows: 0, links: 0 });
+          continue;
+        }
+        const rows = (profile.docRow ?? []).reduce((n, sel) => n + queryAll(list, sel).length, 0);
+        const links = (profile.openLink ?? []).reduce((n, sel) => n + queryAll(list, sel).length, 0);
+        out.push({ profileId: profile.id, selector, found: true, rows, links });
+      }
+    }
+  }
+  return out;
+}
+
+export function versionStrings(root) {
+  const out = [];
+  for (const doc of sameOriginDocuments(root)) {
+    for (const node of queryAll(doc, 'meta[name="version"], meta[name="generator"], [data-pje-version]')) {
+      const raw = attr(node, 'content') || attr(node, 'data-pje-version') || '';
+      const match = String(raw).match(VERSION_RE);
+      if (match && !out.includes(match[0])) out.push(match[0]);
+    }
+  }
+  return out;
+}
+
+export function resourceRecord(entry) {
+  const type = String(entry?.contentType ?? '').split(';')[0].trim().toLowerCase();
+  return {
+    url: urlPattern(entry?.name ?? ''),
+    initiator: sanitizeToken(entry?.initiatorType ?? '') || 'other',
+    sizeBucket: sizeBucket(entry?.transferSize ?? entry?.decodedBodySize ?? 0),
+    contentType: /^[a-z0-9.+-]+\/[a-z0-9.+-]+$/.test(type) ? type : null,
+  };
+}
+
+// Calibration v2: structure, masked URL patterns, candidate counts, bucketed
+// resource sizes, version tokens. Clicks are element shapes already described.
+// Nothing here copies text, names, titles or query values.
+export function buildCalibration(root, extras = {}) {
+  const base = snapshotDocument(root, extras);
+  const clicks = (extras.clicks ?? []).map((click) => {
+    const described = click && typeof click.tag === 'string' && Array.isArray(click.attrs) && typeof click.getAttribute !== 'function'
+      ? click
+      : describeClick(click);
+    if (!described) return null;
+    return {
+      tag: sanitizeToken(described.tag) || String(described.tag || '').toLowerCase().slice(0, 20),
+      id: sanitizeId(described.id),
+      class: (described.class ?? []).map(sanitizeClassToken).filter(Boolean),
+      attrs: (described.attrs ?? []).map((name) => sanitizeToken(name)).filter(Boolean),
+      hrefPattern: described.hrefPattern,
+    };
+  }).filter(Boolean);
+  return scrubTree({
+    ...base,
+    version: 2,
+    note: 'Somente estrutura e padrões de URL. Sem texto, nomes, CPF ou número de processo.',
+    frameTree: frameTree(root),
+    urlPatterns: collectUrlPatterns(root),
+    candidateLists: candidateLists(root, extras.profiles ?? []),
+    resources: (extras.resources ?? []).map(resourceRecord),
+    fetches: (extras.fetches ?? []).map(resourceRecord),
+    clicks,
+    versions: versionStrings(root),
+  });
 }
 
 export function calibrationReport(snap) {

@@ -2,6 +2,7 @@
 // The offline PDF page is the manual package's dist, copied under dist/manual/.
 import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { dirname, join, relative } from 'node:path';
 
 const root = new URL('..', import.meta.url).pathname;
@@ -9,7 +10,7 @@ const src = join(root, 'src');
 const dist = join(root, 'dist');
 const manualDist = join(root, '..', 'manual', 'dist');
 const MANUAL_FILES = ['lume-pdf.html', 'lume-pdf.js', 'pdf.worker.mjs'];
-const INLINE = ['sanitize.js', 'calibrate.js', 'profile.js', 'core.js'];
+const INLINE = ['sanitize.js', 'url-rules.js', 'chunks.js', 'calibrate.js', 'profile.js', 'core.js', 'collect.js'];
 // Run from the extension directory when manual/dist is not already built.
 const MANUAL_BUILD = 'npm --prefix ../manual ci && npm --prefix ../manual run build';
 
@@ -61,9 +62,52 @@ function toClassic(source) {
 
 const bundled = [...INLINE.map((name) => toClassic(readFileSync(join(src, name), 'utf8'))), toClassic(readFileSync(join(src, 'content.js'), 'utf8'))];
 writeFileSync(join(dist, 'content.js'), `(() => {\n'use strict';\n${bundled.join('\n')}\n})();\n`);
+// chatgpt.js is a content script. Chrome loads it as a classic script, same as content.js.
+// The source keeps its exports so node tests can import the selectors and attach helper.
+writeFileSync(join(dist, 'chatgpt.js'), toClassic(readFileSync(join(src, 'chatgpt.js'), 'utf8')));
 
 cpSync(manualDist, join(dist, 'manual'), { recursive: true });
 if (!manualReady(join(dist, 'manual'))) throw new Error('failed to copy manual/dist into dist/manual');
+
+const requireManual = createRequire(join(root, '../manual/package.json'));
+const esbuild = requireManual('esbuild');
+const partsPath = join(root, '../manual/src/parts.js');
+await esbuild.build({
+  entryPoints: [join(src, 'study.js')],
+  bundle: true,
+  format: 'esm',
+  outfile: join(dist, 'study.js'),
+  platform: 'browser',
+  target: ['es2022'],
+  legalComments: 'none',
+  logLevel: 'warning',
+  plugins: [
+    {
+      name: 'optional-parts',
+      setup(build) {
+        build.onResolve({ filter: /manual\/src\/parts\.js$/ }, () => ({ path: partsPath, namespace: 'optional-parts' }));
+        build.onLoad({ filter: /.*/, namespace: 'optional-parts' }, () => {
+          if (!existsSync(partsPath)) return { contents: 'export {}\n', loader: 'js' };
+          const text = readFileSync(partsPath, 'utf8');
+          if (!text.includes('function buildCasePackParts')) return { contents: 'export {}\n', loader: 'js' };
+          return { contents: text, loader: 'js', resolveDir: dirname(partsPath) };
+        });
+      },
+    },
+    {
+      name: 'no-ocr-cdn',
+      setup(build) {
+        build.onLoad({ filter: /node_modules\/tesseract\.js\/.*\.js$/ }, (args) => {
+          const source = readFileSync(args.path, 'utf8');
+          if (!source.includes('cdn.jsdelivr.net')) return null;
+          return { contents: source.replaceAll('cdn.jsdelivr.net', 'ocr.invalid'), loader: 'js' };
+        });
+      },
+    },
+  ],
+});
+const bundledStudy = readFileSync(join(dist, 'study.js'), 'utf8');
+if (bundledStudy.includes('cdn.jsdelivr.net')) throw new Error('study.js still references a CDN');
 
 const m = JSON.parse(readFileSync(join(dist, 'manifest.json'), 'utf8'));
 const refs = [m.background.service_worker, m.side_panel.default_path, ...m.content_scripts.flatMap((c) => c.js)];

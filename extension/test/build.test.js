@@ -22,13 +22,16 @@ test('build emits a loadable unpacked extension with only the documented permiss
   const m = JSON.parse(readFileSync(join(root, 'dist/manifest.json'), 'utf8'));
   assert.equal(m.manifest_version, 3);
   assert.deepEqual(m.permissions, ['sidePanel', 'storage']);
-  assert.equal(m.host_permissions, undefined);
+  assert.deepEqual(m.host_permissions, ['https://chatgpt.com/*']);
   assert.equal(m.optional_permissions, undefined);
   assert.equal(m.optional_host_permissions, undefined);
   assert.equal(m.web_accessible_resources, undefined);
   assert.equal(m.externally_connectable, undefined);
   assert.ok(m.key?.startsWith('MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA'));
-  assert.deepEqual(m.content_scripts.map((c) => c.matches), [['https://pje1g.trf1.jus.br/*', 'https://pje2g.trf1.jus.br/*']]);
+  assert.deepEqual(m.content_scripts.map((c) => c.matches), [
+    ['https://pje1g.trf1.jus.br/*', 'https://pje2g.trf1.jus.br/*'],
+    ['https://chatgpt.com/*'],
+  ]);
   const csp = m.content_security_policy.extension_pages;
   assert.equal(csp, "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'");
   const tokens = csp.match(/'[^']+'/g);
@@ -43,6 +46,9 @@ test('build emits a loadable unpacked extension with only the documented permiss
   assert.ok(existsSync(join(root, 'dist/pages/README.md')));
   const content = readFileSync(join(root, 'dist/content.js'), 'utf8');
   assert.ok(!/^\s*(import|export)\b/m.test(content), 'content script is a classic script');
+  const chatgpt = readFileSync(join(root, 'dist/chatgpt.js'), 'utf8');
+  assert.ok(!/^\s*(import|export)\b/m.test(chatgpt), 'chatgpt script is a classic script');
+  assert.match(chatgpt, /function attachToComposer/);
   assert.match(content, /function createTracker/);
   assert.match(content, /function snapshotDocument/);
   assert.match(content, /function validateStoredProfile/);
@@ -76,6 +82,11 @@ test('build emits a loadable unpacked extension with only the documented permiss
     assert.doesNotMatch(js, /new Function\s*\(/);
   }
   assert.match(readFileSync(join(pageDir, 'lume-pdf.js'), 'utf8'), /pdf\.worker\.mjs/);
+  const studyJs = readFileSync(join(root, 'dist/study.js'), 'utf8');
+  const studyHtml = readFileSync(join(root, 'dist/study.html'), 'utf8');
+  assert.doesNotMatch(studyJs, /cdn\.jsdelivr\.net/);
+  assert.doesNotMatch(studyHtml, /<script(?![^>]*\bsrc=)[^>]*>/i);
+  assert.match(studyJs, /segmentAutos/);
 });
 
 test('panel has the package button and calibration link', () => {
@@ -83,7 +94,8 @@ test('panel has the package button and calibration link', () => {
   const js = readFileSync(join(root, 'src/panel.js'), 'utf8');
   assert.match(html, /id="package-mode"[^>]*>Gerar pacote do caso</);
   assert.match(html, /id="pdf-hint"[^>]*>Baixe o processo completo no PJe \(Download dos autos\) e abra o PDF aqui\./);
-  assert.match(html, /id="calibrate"[^>]*>Modo calibração</);
+  assert.match(html, /id="calibrate"[^>]*>Calibrar PJe</);
+  assert.match(html, /id="study"[^>]*>Estudar processo</);
   assert.match(js, /\$\('pdf-hint'\)\.hidden = v\.statusKey !== 'not_pje'/);
   assert.match(js, /chrome\.tabs\.create\(\{ url: chrome\.runtime\.getURL\('manual\/lume-pdf\.html'\) \}\)/);
   assert.match(js, /\$\('package-mode'\)/);
