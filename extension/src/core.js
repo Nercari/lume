@@ -6,6 +6,8 @@
 // matches every role wins. A miss names the role and stops; the reader does not guess.
 
 import { activeProfiles, documentIsLogin, readCaseNumber, resolvePage, safeQuery, safeQueryAll } from './profile.js';
+import { dateToken, idFromDocumentUrl, idFromOnclick, urlFromTemplate } from './timeline.js';
+import { matchUrlRule } from './url-rules.js';
 
 export const STATES = ['pending', 'processed', 'restricted', 'missing', 'unsupported', 'failed'];
 const SUPPORTED_TYPES = ['application/pdf', 'text/html'];
@@ -31,6 +33,47 @@ function baseUrl(doc, fallback) {
   return fallback;
 }
 
+function rowDate(row, profile) {
+  for (const selector of profile.dateCell ?? []) {
+    const date = dateToken(text(safeQuery(row, selector)));
+    if (date) return date;
+  }
+  return null;
+}
+
+function readRow(row, profile, base, idAttr, versionAttr, pagesAttr, kindAttr, parentAttr) {
+  const link = safeQuery(row, profile.openLink);
+  const rawHref = link?.getAttribute?.('href');
+  let href = null;
+  if (rawHref && rawHref !== '#' && !/^javascript:/i.test(rawHref)) href = abs(rawHref, base);
+  let id = row.getAttribute(idAttr);
+  if (!id && profile.idFromOnclick === true) {
+    id = idFromOnclick(link?.getAttribute?.('onclick') || row.getAttribute?.('onclick'));
+  }
+  if (!id && href && matchUrlRule(href, profile.urlRules ?? null)?.kind === 'document') id = idFromDocumentUrl(href);
+  // A row we cannot identify would vanish from the inventory, so stop instead.
+  if (!id) throw new Stop('incompatible_layout', 'document row without id');
+  if (!href) {
+    for (const template of profile.docUrlTemplates ?? []) {
+      const built = urlFromTemplate(template, id, base);
+      if (built && matchUrlRule(built, profile.urlRules ?? null)?.kind === 'document') {
+        href = built;
+        break;
+      }
+    }
+  }
+  const pages = Number.parseInt(row.getAttribute(pagesAttr) ?? '', 10);
+  return {
+    id,
+    version: row.getAttribute(versionAttr),
+    kind: row.getAttribute(kindAttr) === 'anexo' ? 'attachment' : 'document',
+    parentId: row.getAttribute(parentAttr),
+    expectedPages: Number.isFinite(pages) ? pages : null,
+    date: rowDate(row, profile),
+    href,
+  };
+}
+
 function parseBound(doc, url, profile) {
   const base = baseUrl(doc, url);
   if (!safeQuery(doc, profile.layoutMarker)) throw new Stop('incompatible_layout', { role: 'layoutMarker', profileId: profile.id });
@@ -43,20 +86,7 @@ function parseBound(doc, url, profile) {
   const pagesAttr = profile.pagesAttr || 'data-paginas';
   const kindAttr = profile.kindAttr || 'data-tipo';
   const parentAttr = profile.parentAttr || 'data-pai';
-  const items = safeQueryAll(list, profile.docRow).map((row) => {
-    const id = row.getAttribute(idAttr);
-    // A row we cannot identify would vanish from the inventory, so stop instead.
-    if (!id) throw new Stop('incompatible_layout', 'document row without id');
-    const pages = Number.parseInt(row.getAttribute(pagesAttr) ?? '', 10);
-    return {
-      id,
-      version: row.getAttribute(versionAttr),
-      kind: row.getAttribute(kindAttr) === 'anexo' ? 'attachment' : 'document',
-      parentId: row.getAttribute(parentAttr),
-      expectedPages: Number.isFinite(pages) ? pages : null,
-      href: abs(safeQuery(row, profile.openLink)?.getAttribute('href'), base),
-    };
-  });
+  const items = safeQueryAll(list, profile.docRow).map((row) => readRow(row, profile, base, idAttr, versionAttr, pagesAttr, kindAttr, parentAttr));
   const info = safeQuery(doc, profile.pageInfo);
   const m = text(info).match(/(\d+)\s*(?:de|of|\/)\s*(\d+)/i);
   return {

@@ -33,6 +33,7 @@
   <p id="hint" hidden></p>
   <p id="pdf-hint" hidden>Baixe o processo completo no PJe (Download dos autos) e abra o PDF aqui.</p>
   <p><button id="study" type="button">Estudar processo</button></p>
+  <p class="note">O texto integral abre numa aba do PJe, na ordem da linha do tempo, para o painel do ChatGPT. Copiar tudo fica nessa aba.</p>
   <p><button id="package-mode" type="button">Gerar pacote do caso</button></p>
   <dl id="counts"></dl>
   <button id="start" type="button">Ler processo</button><button id="stop" type="button">Parar</button>
@@ -44,7 +45,7 @@
   </table>
   <section id="calibration" hidden>
     <h2>Calibrar PJe</h2>
-    <p id="cal-note">Este arquivo descreve só a estrutura da página: etiquetas, ids mascarados, classes, nomes de atributos e padrões de URL. Não contém texto do processo, nomes, números ou valores de campos. Clique um documento da lista e, se existir, o botão de baixar os autos. O clique fica na página para a gravação.</p>
+    <p id="cal-note">Este arquivo descreve só a estrutura da página: etiquetas, ids mascarados, classes, nomes de atributos, funções de onclick e padrões de URL. Não contém texto do processo, nomes, números ou valores de campos. Clique um documento da linha do tempo. O clique fica na página para a gravação.</p>
     <p id="cal-summary" role="status"></p>
     <p>
       <a id="cal-download" href="#">Salvar calibração</a>

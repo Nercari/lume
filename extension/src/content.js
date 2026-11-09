@@ -70,12 +70,84 @@ function liveCalibration() {
 document.addEventListener('click', (event) => {
   if (!calibration) return;
   event.preventDefault();
+  const before = new Set();
+  try {
+    for (const entry of performance.getEntriesByType('resource')) before.add(entry.name);
+  } catch { /* performance is optional */ }
   const target = event.target?.closest?.('a, button, input, form') || event.target;
   const described = describeClick(target);
   if (described) calibration.clicks.push(described);
-  const snap = liveCalibration();
-  chrome.runtime.sendMessage({ type: 'lume:calibration', state: snap }).catch(() => {});
+  chrome.runtime.sendMessage({ type: 'lume:calibration', state: liveCalibration() }).catch(() => {});
+  setTimeout(() => {
+    if (!calibration) return;
+    try {
+      for (const entry of performance.getEntriesByType('resource')) {
+        if (before.has(entry.name)) continue;
+        calibration.fetches.push({
+          name: entry.name,
+          initiatorType: entry.initiatorType,
+          transferSize: entry.transferSize,
+          contentType: '',
+        });
+      }
+    } catch { /* the click still keeps the element shape */ }
+    chrome.runtime.sendMessage({ type: 'lume:calibration', state: liveCalibration() }).catch(() => {});
+  }, 800);
 }, true);
+
+function viewPartFromHash() {
+  const match = /^#lume-autos(?:\/(\d+))?$/.exec(location.hash || '');
+  if (!match) return 0;
+  const n = match[1] ? Number(match[1]) : 1;
+  return Number.isInteger(n) && n > 0 ? n : 1;
+}
+
+function paintCaseView(payload) {
+  const text = payload?.text || 'A visão do caso ainda não chegou. Deixe a página de estudo aberta.';
+  const pre = document.createElement('pre');
+  pre.id = 'lume-caso';
+  pre.textContent = text;
+  const bar = document.createElement('p');
+  const part = payload?.part || viewPartFromHash();
+  const total = payload?.total || 1;
+  if (part > 1) {
+    const prev = document.createElement('a');
+    prev.href = `#lume-autos/${part - 1}`;
+    prev.textContent = 'Parte anterior';
+    bar.append(prev, document.createTextNode(' '));
+  }
+  if (part < total) {
+    const next = document.createElement('a');
+    next.href = part === 1 ? '#lume-autos/2' : `#lume-autos/${part + 1}`;
+    next.textContent = 'Parte seguinte';
+    bar.append(next, document.createTextNode(' '));
+  }
+  const copy = document.createElement('button');
+  copy.type = 'button';
+  copy.id = 'lume-copiar';
+  copy.textContent = 'Copiar tudo';
+  copy.addEventListener('click', () => {
+    chrome.runtime.sendMessage({ type: 'lume:take-view', all: true }, (res) => {
+      const value = res?.allText || text;
+      if (navigator.clipboard?.writeText) navigator.clipboard.writeText(value).then(() => { copy.textContent = 'Copiado'; }).catch(() => {});
+    });
+  });
+  bar.append(copy);
+  document.body.replaceChildren(bar, pre);
+}
+
+function requestCaseView(attempt) {
+  const part = viewPartFromHash();
+  if (!part) return;
+  chrome.runtime.sendMessage({ type: 'lume:take-view', part }, (res) => {
+    if (res?.text) {
+      paintCaseView(res);
+      return;
+    }
+    if (attempt < 20) setTimeout(() => requestCaseView(attempt + 1), 300);
+    else paintCaseView(null);
+  });
+}
 
 function publishState(left = 8) {
   chrome.runtime.sendMessage({ type: 'lume:state', state: tracker.status() }).catch(() => {
@@ -84,6 +156,13 @@ function publishState(left = 8) {
 }
 
 let pending = null;
+const viewingCase = viewPartFromHash() > 0;
+if (viewingCase) {
+  requestCaseView(0);
+  addEventListener('hashchange', () => {
+    if (viewPartFromHash()) requestCaseView(0);
+  });
+} else {
 new MutationObserver(() => {
   clearTimeout(pending);
   pending = setTimeout(() => {
@@ -108,6 +187,7 @@ function watchFrames(doc) {
   }
 }
 watchFrames(document);
+}
 
 const STUDY_ID = /^[0-9a-f-]{36}$/i;
 
@@ -173,7 +253,8 @@ async function runStudy(studyId) {
       caseNumber: result.caseNumber,
       status: result.status,
       stopReason: result.stopReason ?? null,
-      items: (result.items ?? []).map((item) => ({ id: item.id, state: item.state, detail: item.detail, rule: item.rule, kind: item.kind })),
+      pageUrl: String(location.href || '').split('#')[0],
+      items: (result.items ?? []).map((item) => ({ id: item.id, state: item.state, detail: item.detail, rule: item.rule, kind: item.kind, date: item.date ?? null })),
       misses: result.misses ?? [],
     });
   } catch { /* the study page closed */ }
@@ -198,4 +279,4 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
   return false;
 });
 
-publishState();
+if (!viewingCase) publishState();
