@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lume — modo PDF manual</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #e4ebe7;
+      --ink: #14211c;
+      --muted: #3e5249;
+      --line: #b7c7bf;
+      --stamp: #0f3d34;
+      --stamp-ink: #f3f7f5;
+      --warn: #6e2e12;
+      --warn-bg: #f6e4d8;
+      --card: #f7faf8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font: 17px/1.55 Georgia, "Iowan Old Style", Palatino, serif;
+    }
+    main { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1.1rem 3rem; }
+    h1 { font-size: 1.8rem; line-height: 1.35; margin: 0 0 0.4rem; }
+    h2 { font-size: 1.15rem; line-height: 1.4; margin: 1.6rem 0 0.6rem; }
+    p { margin: 0.4rem 0; }
+    .banner {
+      background: var(--stamp);
+      color: var(--stamp-ink);
+      padding: 0.85rem 1rem;
+      border-radius: 6px;
+      margin: 1rem 0 1.2rem;
+    }
+    .banner strong { font-family: system-ui, sans-serif; }
+    .banner p { margin: 0.25rem 0; }
+    form, section {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.9rem 1rem 1rem;
+      margin: 0.8rem 0;
+    }
+    label { display: block; font-family: system-ui, sans-serif; font-size: 0.92rem; margin: 0.7rem 0 0.3rem; }
+    input[type="file"], select, textarea, input[type="number"] {
+      width: 100%;
+      font: 1rem/1.4 system-ui, sans-serif;
+      color: var(--ink);
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0.45rem 0.55rem;
+    }
+    textarea { min-height: 8rem; resize: vertical; }
+    .row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.8rem; }
+    button {
+      font: 600 0.95rem/1.4 system-ui, sans-serif;
+      background: var(--stamp);
+      color: var(--stamp-ink);
+      border: 0;
+      border-radius: 6px;
+      min-height: 2.7rem;
+      padding: 0.45rem 0.8rem;
+      cursor: pointer;
+    }
+    button.secondary { background: transparent; color: var(--stamp); border: 1px solid var(--stamp); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    progress { width: 100%; height: 0.7rem; margin-top: 0.6rem; }
+    #status { font-family: system-ui, sans-serif; color: var(--muted); min-height: 1.4rem; }
+    dl { display: grid; grid-template-columns: minmax(10rem, 16rem) 1fr; gap: 0.25rem 0.8rem; margin: 0.4rem 0; }
+    dt { color: var(--muted); }
+    dd { margin: 0; }
+    table { width: 100%; border-collapse: collapse; font-family: system-ui, sans-serif; font-size: 0.92rem; }
+    th, td { text-align: left; border-bottom: 1px solid var(--line); padding: 0.35rem 0.3rem; vertical-align: top; }
+    .warn { background: var(--warn-bg); color: var(--warn); padding: 0.6rem 0.7rem; border-radius: 6px; }
+    ul { margin: 0.3rem 0 0; padding-left: 1.1rem; }
+    .hidden { display: none; }
+    footer { margin-top: 1.5rem; color: var(--muted); font-family: system-ui, sans-serif; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Modo PDF manual</h1>
+    <p>Para o posto sem o painel do PJe e sem o Sign in with ChatGPT. Você baixa os autos no próprio PJe e usa o ChatGPT que já está aberto na sua conta.</p>
+    <div class="banner">
+      <strong>Tudo fica neste computador.</strong>
+      <p>O PDF não sai do navegador. Não há login, token, nem chamada de API. Copiar e baixar só colocam o texto na sua área de transferência ou num arquivo local, para você colar ou anexar no ChatGPT.</p>
+    </div>
+
+    <form id="setup">
+      <label for="pdf">PDF dos autos (download único do processo)</label>
+      <input id="pdf" type="file" accept="application/pdf,.pdf">
+      <label for="doc-type">Tipo de peça a pedir</label>
+      <select id="doc-type"></select>
+      <label for="request">Pedido</label>
+      <textarea id="request" placeholder="Exemplo: minuta de despacho de mero expediente, citando só o que estiver no texto."></textarea>
+      <label for="limit">Limite de caracteres de cada parte para colar</label>
+      <input id="limit" type="number" min="500" step="500" value="24000">
+      <p id="status" role="status" aria-live="polite"></p>
+      <progress id="progress" class="hidden" value="0" max="1"></progress>
+    </form>
+
+    <section id="summary" class="hidden">
+      <h2>Resumo</h2>
+      <dl id="counts"></dl>
+      <div id="ocr-note"></div>
+      <h2>Documentos</h2>
+      <table>
+        <thead>
+          <tr><th>Id</th><th>Peça</th><th>Páginas do PDF</th><th>Sinais</th></tr>
+        </thead>
+        <tbody id="docs"></tbody>
+      </table>
+      <p>O teor não aparece nesta tela. Ele vai no arquivo e nas partes para colar.</p>
+      <div class="row">
+        <button type="button" id="copy-prompt">Copiar prompt</button>
+        <button type="button" id="download" class="secondary">Baixar arquivo do processo (.txt) para anexar no ChatGPT</button>
+      </div>
+      <div id="parts" class="row"></div>
+    </section>
+
+    <section id="check">
+      <h2>Conferir a resposta</h2>
+      <p>Cole a resposta do ChatGPT. A conferência só diz se cada [Id …, p. …] existe no PDF e se alguma frase decisiva ficou sem citação. Ela não diz se o conteúdo está certo.</p>
+      <label for="answer">Resposta do ChatGPT</label>
+      <textarea id="answer"></textarea>
+      <div class="row">
+        <button type="button" id="verify" disabled>Verificar citações</button>
+      </div>
+      <div id="report"></div>
+    </section>
+
+    <footer>Leitura do PDF com PDF.js (Mozilla, Apache-2.0). OCR não vem incluso: página sem texto fica marcada como “precisa OCR”.</footer>
+  </main>
+  <script type="module" src="./lume-pdf.js"></script>
+</body>
+</html>
