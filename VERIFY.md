@@ -4,7 +4,7 @@ This file is the merge evidence for this repo. Update it in the same PR when beh
 
 ## Commands
 
-- Test one package: `npm test --prefix <package>` (packages: intake, companion, extension, case-store, extraction, analysis, chat-editor, source-panel, transfer). Packages that import `extraction` need `npm ci --omit=optional --prefix extraction` first.
+- Test one package: `npm test --prefix <package>` (packages: intake, companion, extension, case-store, extraction, analysis, chat-editor, source-panel, transfer, packaging). Packages that import `extraction` need `npm ci --omit=optional --prefix extraction` first.
 - Hosted CI runs the same package tests in the per-package workflows under `.github/workflows/`.
 
 ## Essential check
