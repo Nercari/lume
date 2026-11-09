@@ -1,0 +1,31 @@
+name: batch
+
+on:
+  pull_request:
+    paths:
+      - 'batch/**'
+      - '.github/workflows/batch.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'batch/**'
+      - '.github/workflows/batch.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      # The transfer gate imports the #8 USER_ACTION symbol, which loads extraction's pdfjs-dist.
+      - run: npm ci --omit=optional
+        working-directory: extraction
+      - run: npm run build
+        working-directory: batch
+      - run: npm test
+        working-directory: batch
