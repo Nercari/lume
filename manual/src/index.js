@@ -29,4 +29,7 @@ export {
   parseIndexRow,
   parseOutlineTitle,
 } from './rules.js';
+export { OCR_MARK, OCR_MIN_LETTERS, ocrHasText } from './ocr-text.js';
+export { buildCasePack, PACK_FILENAME } from './pack.js';
+export { TEXT_BLOCK_CHARS, TEXT_RULES, segmentText } from './segment-text.js';
 export { GAP, cleanVersion, segmentAutos, setWorkerSrc } from './segment.js';

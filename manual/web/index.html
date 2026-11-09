@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lume — modo PDF manual</title>
+  <title>Lume — pacote do caso</title>
   <style>
     :root {
       color-scheme: light;
@@ -26,7 +26,7 @@
     }
     main { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1.1rem 3rem; }
     h1 { font-size: 1.8rem; line-height: 1.35; margin: 0 0 0.4rem; }
-    h2 { font-size: 1.15rem; line-height: 1.4; margin: 1.6rem 0 0.6rem; }
+    h2 { font-size: 1.15rem; line-height: 1.4; margin: 0 0 0.6rem; }
     p { margin: 0.4rem 0; }
     .banner {
       background: var(--stamp);
@@ -45,7 +45,9 @@
       margin: 0.8rem 0;
     }
     label { display: block; font-family: system-ui, sans-serif; font-size: 0.92rem; margin: 0.7rem 0 0.3rem; }
-    input[type="file"], select, textarea, input[type="number"] {
+    label.check { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.9rem; }
+    label.check input { width: auto; }
+    input[type="file"], textarea {
       width: 100%;
       font: 1rem/1.4 system-ui, sans-serif;
       color: var(--ink);
@@ -55,6 +57,7 @@
       padding: 0.45rem 0.55rem;
     }
     textarea { min-height: 8rem; resize: vertical; }
+    #pack { min-height: 12rem; max-height: 24rem; }
     .row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.8rem; }
     button {
       font: 600 0.95rem/1.4 system-ui, sans-serif;
@@ -70,11 +73,6 @@
     button:disabled { opacity: 0.45; cursor: not-allowed; }
     progress { width: 100%; height: 0.7rem; margin-top: 0.6rem; }
     #status { font-family: system-ui, sans-serif; color: var(--muted); min-height: 1.4rem; }
-    dl { display: grid; grid-template-columns: minmax(10rem, 16rem) 1fr; gap: 0.25rem 0.8rem; margin: 0.4rem 0; }
-    dt { color: var(--muted); }
-    dd { margin: 0; }
-    table { width: 100%; border-collapse: collapse; font-family: system-ui, sans-serif; font-size: 0.92rem; }
-    th, td { text-align: left; border-bottom: 1px solid var(--line); padding: 0.35rem 0.3rem; vertical-align: top; }
     .warn { background: var(--warn-bg); color: var(--warn); padding: 0.6rem 0.7rem; border-radius: 6px; }
     ul { margin: 0.3rem 0 0; padding-left: 1.1rem; }
     .hidden { display: none; }
@@ -83,57 +81,52 @@
 </head>
 <body>
   <main>
-    <h1>Modo PDF manual</h1>
-    <p>Para o posto sem o painel do PJe e sem o Sign in with ChatGPT. Você baixa os autos no próprio PJe e usa o ChatGPT que já está aberto na sua conta.</p>
+    <h1>Pacote do caso</h1>
+    <p>Para analisar um processo inteiro no ChatGPT que você já tem aberto. Escolha o PDF único dos autos ou o texto do PJe+R (“extrair autos em texto”).</p>
     <div class="banner">
       <strong>Tudo fica neste computador.</strong>
-      <p>O PDF não sai do navegador. Não há login, token, nem chamada de API. Copiar e baixar só colocam o texto na sua área de transferência ou num arquivo local, para você colar ou anexar no ChatGPT.</p>
+      <p>O arquivo não sai do navegador. Não há login, token, nem chamada de API. Baixar e copiar só gravam o pacote na sua máquina, para você anexar ou colar no ChatGPT.</p>
     </div>
+    <p id="file-note" class="warn hidden"></p>
 
     <form id="setup">
-      <label for="pdf">PDF dos autos (download único do processo)</label>
+      <label for="pdf">PDF dos autos (arquivo único do PJe)</label>
       <input id="pdf" type="file" accept="application/pdf,.pdf">
-      <label for="doc-type">Tipo de peça a pedir</label>
-      <select id="doc-type"></select>
-      <label for="request">Pedido</label>
-      <textarea id="request" placeholder="Exemplo: minuta de despacho de mero expediente, citando só o que estiver no texto."></textarea>
-      <label for="limit">Limite de caracteres de cada parte para colar</label>
-      <input id="limit" type="number" min="500" step="500" value="24000">
+      <label for="text-file">Texto do PJe+R (.txt ou .md)</label>
+      <input id="text-file" type="file" accept=".txt,.md,text/plain,text/markdown">
+      <label for="paste">Ou cole o texto exportado</label>
+      <textarea id="paste" placeholder="Cole aqui o resultado de “extrair autos em texto”."></textarea>
+      <label class="check" for="ocr"><input id="ocr" type="checkbox" checked> OCR local nas páginas do PDF sem texto</label>
       <p id="status" role="status" aria-live="polite"></p>
       <progress id="progress" class="hidden" value="0" max="1"></progress>
+      <div class="row">
+        <button type="button" id="cancel" class="secondary hidden">Cancelar</button>
+      </div>
     </form>
 
     <section id="summary" class="hidden">
-      <h2>Resumo</h2>
-      <dl id="counts"></dl>
-      <div id="ocr-note"></div>
-      <h2>Documentos</h2>
-      <table>
-        <thead>
-          <tr><th>Id</th><th>Peça</th><th>Páginas do PDF</th><th>Sinais</th></tr>
-        </thead>
-        <tbody id="docs"></tbody>
-      </table>
-      <p>O teor não aparece nesta tela. Ele vai no arquivo e nas partes para colar.</p>
+      <h2>Pacote</h2>
+      <p>Um arquivo só. Anexe <strong>lume-pacote-do-caso.md</strong> no ChatGPT, ou copie o texto.</p>
       <div class="row">
-        <button type="button" id="copy-prompt">Copiar prompt</button>
-        <button type="button" id="download" class="secondary">Baixar arquivo do processo (.txt) para anexar no ChatGPT</button>
+        <button type="button" id="download">Baixar pacote do caso (.md)</button>
+        <button type="button" id="copy-pack" class="secondary">Copiar pacote</button>
       </div>
-      <div id="parts" class="row"></div>
+      <label for="pack">Conteúdo do arquivo</label>
+      <textarea id="pack" readonly></textarea>
     </section>
 
     <section id="check">
-      <h2>Conferir a resposta</h2>
-      <p>Cole a resposta do ChatGPT. A conferência só diz se cada [Id …, p. …] existe no PDF e se alguma frase decisiva ficou sem citação. Ela não diz se o conteúdo está certo.</p>
+      <h2>Conferir citações</h2>
+      <p>Cole a resposta do ChatGPT. A conferência diz quais citações [Id …, fl. …] ou [Id …, p. …] existem no pacote e quais apontam para id ou folha ausente. Ela não diz se o conteúdo está certo.</p>
       <label for="answer">Resposta do ChatGPT</label>
       <textarea id="answer"></textarea>
       <div class="row">
-        <button type="button" id="verify" disabled>Verificar citações</button>
+        <button type="button" id="verify" disabled>Conferir citações</button>
       </div>
       <div id="report"></div>
     </section>
 
-    <footer>Leitura do PDF com PDF.js (Mozilla, Apache-2.0). OCR não vem incluso: página sem texto fica marcada como “precisa OCR”.</footer>
+    <footer>Leitura do PDF com PDF.js (Mozilla, Apache-2.0). OCR local com Tesseract.js (Apache-2.0) e dados de português (MIT). Em file:// o worker de OCR pode não iniciar; abra a página pela extensão.</footer>
   </main>
   <script type="module" src="./lume-pdf.js"></script>
 </body>

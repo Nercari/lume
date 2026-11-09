@@ -40,7 +40,7 @@ The content script fetches with `credentials: 'same-origin'` from the page's own
 - For a document, the adapter checks the status and content type. It cancels the body of a non-HTML response (for example a PDF) unread. It reads an HTML response in full, to detect a login page. The size of an HTML response has no limit.
 - The panel ignores a state from an older epoch of the same page load. A new page load has a new load ID, so its states always show. A tab navigation clears the inventory. The panel then asks the new page. Outside PJe it shows `not_pje`, **Gerar pacote do caso**, and the line "Baixe o processo completo no PJe (Download dos autos) e abra o PDF aqui." The inventory controls on a PJe tab are unchanged.
 - **Gerar pacote do caso** opens `manual/lume-pdf.html` in a new tab (`chrome.tabs.create` of `chrome.runtime.getURL`). **Modo calibração** is a secondary link. The toolbar icon opens the side panel on any tab. If the side panel cannot be armed, that click opens the same manual page.
-- The PDF page is the manual package build: one HTML file, `lume-pdf.js`, and `pdf.worker.mjs`. Scripts are external modules from the extension origin. The worker is a module worker. Nothing is loaded from the network.
+- The PDF page is the manual package build: one HTML file, `lume-pdf.js`, `pdf.worker.mjs`, and `ocr/` (tesseract worker, LSTM wasm, Portuguese traineddata). Scripts are external modules from the extension origin. The PDF worker is a module worker. OCR uses a classic worker and local files. Nothing is loaded from the network.
 - DOM changes are debounced (250 ms) before the visible case is checked again. Each read checks the visible case itself before it uses a response.
 
 ## Calibração

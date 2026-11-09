@@ -1,12 +1,13 @@
-// Citation check for a pasted ChatGPT answer. Existence only: the id and the page
-// have to be in the segmented PDF. This does not judge whether the sentence is true.
-// A decisive sentence with no [Id …, p. …] nearby is flagged, same idea as the source
-// panel refusing an unsupported decisive claim. There is no network call here.
+// Citation check for a pasted ChatGPT answer. Existence only: the id and the sheet
+// have to be in the case. This does not judge whether the sentence is true.
+// Accepts the current [Id …, fl. …] and the older [Id …, p. …]. A decisive sentence
+// with neither nearby is flagged. There is no network call here.
+import { sheetMap } from './sheets.js';
 import { fold } from './rules.js';
 
 export const CITATION_RULE = Object.freeze({
   id: 'citation_id_page',
-  re: /\[\s*Id\s+([^,\]]+?)\s*,\s*p\.?\s*(\d{1,6})\s*\]/giu,
+  re: /\[\s*Id\s+([^,\]]+?)\s*,\s*(?:fl|p)\.?\s*(\d{1,6})\s*\]/giu,
 });
 
 const decisive = (id, re) => Object.freeze({ id, re });
@@ -30,29 +31,13 @@ function citationPattern() {
 }
 
 function sentencesOf(text) {
-  // "p. 2" is a citation, not the end of a sentence.
-  return String(text).split(/\n+/).flatMap((line) => line.split(/(?<![Pp]\.)(?<=[.!?])\s+/)).map((part) => part.trim()).filter(Boolean);
-}
-
-function knownPages(caseResult) {
-  const byDoc = new Map();
-  const add = (docId, pageInDoc, hasText) => {
-    if (docId == null || pageInDoc == null) return;
-    const key = String(docId);
-    if (!byDoc.has(key)) byDoc.set(key, new Map());
-    const pages = byDoc.get(key);
-    const n = Number(pageInDoc);
-    const prev = pages.get(n);
-    pages.set(n, Boolean(hasText) || prev === true);
-  };
-  for (const page of caseResult?.pages ?? []) add(page.docId, page.pageInDoc, page.hasText);
-  for (const passage of caseResult?.passages ?? []) add(passage.docId, passage.pageInDoc, passage.hasText);
-  return byDoc;
+  // "fl. 2" and "p. 2" are citations, not the end of a sentence.
+  return String(text).split(/\n+/).flatMap((line) => line.split(/(?<!(?:[Pp]\.|[Ff][Ll]\.))(?<=[.!?])\s+/)).map((part) => part.trim()).filter(Boolean);
 }
 
 export function checkAnswer(answerText, caseResult) {
   const text = String(answerText ?? '');
-  const known = knownPages(caseResult);
+  const known = sheetMap(caseResult);
   const citations = [];
   const re = citationPattern();
   let match;

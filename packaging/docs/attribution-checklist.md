@@ -13,7 +13,7 @@ maintainer; packages today use `UNLICENSED` in development.
 
 | Component | Dependencies | Attribution action |
 |-----------|--------------|-------------------|
-| `extension/` | None at npm level | State “no bundled npm runtime deps” |
+| `extension/` | None at npm level. `dist/manual/` copies pdfjs-dist, tesseract.js, tesseract.js-core, and `@tesseract.js-data/por` from `manual/` | Name those licenses in `THIRD-PARTY-NOTICES` |
 | `chatgpt/` | None | Markdown instructions only |
 | Other packages | See each `package.json` | Copy notices into `THIRD-PARTY-NOTICES` when deps exist |
 
