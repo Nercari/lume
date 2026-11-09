@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Nercari/lume/intake/schema/rubric.schema.json",
+  "title": "Lume evaluation score sheet",
+  "description": "One sheet per case and run. Each dimension is scored separately. See docs/rubric.md.",
+  "type": "object",
+  "required": ["case_id", "run_id", "scores"],
+  "additionalProperties": false,
+  "properties": {
+    "case_id": { "type": "string", "pattern": "^case-[a-z0-9]{6,}$" },
+    "run_id": { "type": "string", "pattern": "^run-[a-z0-9-]{3,}$" },
+    "scores": {
+      "type": "object",
+      "required": ["factual_support", "contradictions", "gaps", "method_fidelity", "ocr_quality", "draft_usefulness"],
+      "additionalProperties": false,
+      "properties": {
+        "factual_support": { "$ref": "#/$defs/factual" },
+        "contradictions": { "$ref": "#/$defs/dimension" },
+        "gaps": { "$ref": "#/$defs/dimension" },
+        "method_fidelity": { "$ref": "#/$defs/dimension" },
+        "ocr_quality": { "$ref": "#/$defs/dimension" },
+        "draft_usefulness": { "$ref": "#/$defs/dimension" }
+      }
+    }
+  },
+  "$defs": {
+    "dimension": {
+      "type": "object",
+      "required": ["status"],
+      "additionalProperties": false,
+      "properties": {
+        "status": { "enum": ["scored", "pending", "not-applicable"] },
+        "score": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "found": { "type": "integer", "minimum": 0 },
+        "expected": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "factual": {
+      "type": "object",
+      "required": ["status", "invented_decisive_facts"],
+      "additionalProperties": false,
+      "properties": {
+        "status": { "enum": ["scored", "pending"] },
+        "score": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "found": { "type": "integer", "minimum": 0 },
+        "expected": { "type": "integer", "minimum": 0 },
+        "invented_decisive_facts": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}
