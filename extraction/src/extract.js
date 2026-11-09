@@ -4,7 +4,7 @@ import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { recognize, DEFAULT_THRESHOLD } from './ocr.js';
 
 export const GAP_REASONS = Object.freeze([
-  'restricted', // the inventory marks the item restricted; Lume does not read it
+  'restricted', // PJe answered HTTP 403; the inventory records restricted and Lume does not read body
   'missing', // the inventory has no readable item (no link, 404, 410)
   'fetch_failed', // the inventory or the download reports a failure
   'not_read', // the inventory item was never read (pending)

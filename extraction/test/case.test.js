@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readCase } from '../../extension/src/core.js';
-import { page1, PAGE1, transport } from '../../extension/test/fixtures.js';
+import { ORIGIN, page1, PAGE1, transport } from '../../extension/test/fixtures.js';
 import { extractCase, reconcile, passagesOf } from '../src/index.js';
 import { makePdf, TEXT } from './fixtures.js';
 
@@ -30,7 +30,9 @@ test('corrupt file isolation: a corrupt attachment becomes a gap and the other d
 });
 
 test('unsupported media, restricted, missing and failed items become explicit gap records', async () => {
-  const { results } = await run();
+  const t = transport({ [`${ORIGIN}/pje/doc?id=D2`]: () => ({ status: 403 }) });
+  const inventory = await readCase({ startDoc: page1(), startUrl: PAGE1, fetchPage: t.fetchPage });
+  const results = await extractCase(inventory, async (item) => files[item.id]);
   const reasons = Object.fromEntries(results.map((r) => [r.docId, r.gaps.map((g) => g.reason).join(',')]));
   assert.equal(reasons.D2, 'restricted');
   assert.equal(reasons.D4, 'unsupported_media');
