@@ -16,9 +16,9 @@ jobs:
       - name: List mergeable packages
         id: packages
         run: |
-          packages="$(./scripts/ci-list-packages.sh)"
+          packages="$(./scripts/ci-list-packages.sh | jq -c .)"
           echo "packages=$packages"
-          echo "matrix={\"package\":$packages}" >> "$GITHUB_OUTPUT"
+          printf 'matrix=%s\n' "$(jq -nc --argjson p "$packages" '{package:$p}')" >> "$GITHUB_OUTPUT"
 
   smoke:
     needs: prepare

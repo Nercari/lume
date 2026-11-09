@@ -27,4 +27,4 @@ if ((${#found[@]} == 0)); then
   exit 0
 fi
 
-printf '%s\n' "${found[@]}" | jq -R . | jq -s .
+printf '%s\n' "${found[@]}" | jq -R . | jq -sc .
