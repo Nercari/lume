@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Lume",
+  "version": "0.0.1",
+  "description": "Reads the document inventory of the open PJe TRF1/SJDF case through the browser session.",
+  "minimum_chrome_version": "116",
+  "permissions": ["sidePanel"],
+  "background": { "service_worker": "worker.js", "type": "module" },
+  "side_panel": { "default_path": "panel.html" },
+  "action": { "default_title": "Lume" },
+  "content_scripts": [
+    {
+      "matches": ["https://pje1g.trf1.jus.br/pje/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
