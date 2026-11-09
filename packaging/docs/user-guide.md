@@ -29,7 +29,7 @@ Lume helps you read a PJe case in Chrome and work in **your own ChatGPT plan**. 
 1. Sign in to PJe in Chrome as usual and open the case.
 2. Click the Lume icon. The side panel opens.
 3. Click **Estudar processo**.
-4. Lume reads every document through the session already open in that tab, runs OCR on this computer, and opens ChatGPT with the part files attached.
+4. Lume fetches each document's own PDF or image through the session already open in that tab, in memory (no download dialog and no file on disk), runs OCR on this computer, and opens ChatGPT with the part files attached. The full-autos PDF is not this path.
 5. The prompt is already filled. Read it and send it yourself. Lume does not send the message.
 6. Review every citation `[Id X, fl. Y]` before using text in court systems.
 

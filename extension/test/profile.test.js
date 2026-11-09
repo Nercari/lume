@@ -131,6 +131,7 @@ test('a stored profile is tried first and rejected when the schema is wrong', ()
     [missingLogin, 'Campo obrigatório: login.'],
     [baseProfile({ id: 'Bad' }), 'id inválido.'],
     [baseProfile({ unverified: 'yes' }), 'unverified precisa ser true ou false.'],
+    [baseProfile({ useDownloadAutos: 'yes' }), 'useDownloadAutos precisa ser true ou false.'],
     [baseProfile({ layoutMarker: ['div'] }), 'Seletor amplo demais em layoutMarker.'],
     [baseProfile({ layoutMarker: ['<img>'] }), 'Seletor inválido em layoutMarker.'],
     [baseProfile({ docRow: [] }), 'Lista de seletores inválida em docRow.'],

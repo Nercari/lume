@@ -179,7 +179,7 @@ function copyUrlRules(input) {
 export function validateStoredProfile(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return { ok: false, error: 'O perfil precisa ser um objeto JSON.' };
   const required = ['id', 'unverified', 'layoutMarker', 'docList', 'docRow', 'openLink', 'caseNumber', 'pagination', 'login'];
-  const optional = ['downloadAutos', 'docIdAttr', 'versionAttr', 'pagesAttr', 'kindAttr', 'parentAttr', 'urlRules'];
+  const optional = ['downloadAutos', 'useDownloadAutos', 'docIdAttr', 'versionAttr', 'pagesAttr', 'kindAttr', 'parentAttr', 'urlRules'];
   for (const key of Object.keys(input)) {
     if (!required.includes(key) && !optional.includes(key)) return { ok: false, error: `Campo desconhecido: ${key}.` };
   }
@@ -196,6 +196,11 @@ export function validateStoredProfile(input) {
   if (caseNumber.error) return { ok: false, error: caseNumber.error };
   const pagination = copyPagination(input.pagination);
   if (pagination.error) return { ok: false, error: pagination.error };
+  let useDownloadAutos = false;
+  if (Object.prototype.hasOwnProperty.call(input, 'useDownloadAutos')) {
+    if (typeof input.useDownloadAutos !== 'boolean') return { ok: false, error: 'useDownloadAutos precisa ser true ou false.' };
+    useDownloadAutos = input.useDownloadAutos;
+  }
   let downloadAutos;
   if (Object.prototype.hasOwnProperty.call(input, 'downloadAutos')) {
     const err = checkSelectorList(input.downloadAutos, 'downloadAutos');
@@ -223,6 +228,7 @@ export function validateStoredProfile(input) {
       pagination: pagination.list,
       login: input.login.slice(),
       ...(downloadAutos ? { downloadAutos } : {}),
+      ...(useDownloadAutos ? { useDownloadAutos: true } : {}),
       ...attrs,
       ...(urlRules.list ? { urlRules: urlRules.list } : {}),
     },
@@ -289,6 +295,7 @@ export function resolveBinding(doc, profiles) {
         kindAttr: profile.kindAttr || 'data-tipo',
         parentAttr: profile.parentAttr || 'data-pai',
         downloadAutos: (profile.downloadAutos ?? []).slice(),
+        useDownloadAutos: profile.useDownloadAutos === true,
         urlRules: profile.urlRules ? profile.urlRules.slice() : null,
       },
     };

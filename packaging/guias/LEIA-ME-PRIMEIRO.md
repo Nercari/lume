@@ -24,7 +24,7 @@ Nao cole tokens nem chaves de API. O Lume nao oferece fallback pago.
 1. Entre no PJe no Chrome, como de costume, e abra o processo.
 2. Clique no ícone da Lume. O painel abre ao lado.
 3. Clique **Estudar processo**.
-4. A Lume lê os documentos na sessão já aberta, faz o OCR neste computador e abre o ChatGPT com as partes anexadas.
+4. A Lume busca o PDF ou a imagem de cada documento na sessão já aberta, na memória (sem diálogo de download e sem arquivo no disco), faz o OCR neste computador e abre o ChatGPT com as partes anexadas.
 5. Leia o pedido que já está no campo e envie você mesmo. A Lume não envia a mensagem.
 
 Se o anexo falhar, a página de estudo mostra **Anexar no ChatGPT** e **Salvar partes**.
