@@ -1,7 +1,9 @@
 // Tolerant reader for a PJe+R "extrair autos em texto" export.
 // The public format is not documented. Each rule below is named and optional:
-// a file may use any subset. When none of them fire, the text is one document
-// "sem-id" cut into blocks of about 3000 characters.
+// a file may use any subset. When a Documento: header is present it wins, and
+// every header becomes a document. Otherwise the older rules apply. When none
+// of them fire, the text is one document "sem-id" cut into blocks of about
+// 3000 characters.
 import { classifyPiece } from './classify.js';
 import { fold, numPagMatches } from './rules.js';
 import { cleanVersion, passageIdFor } from './segment.js';
@@ -16,6 +18,23 @@ export const TEXT_RULES = Object.freeze({
   titleThenType: Object.freeze({ id: 'title_then_type' }),
   fallbackSemId: Object.freeze({ id: 'fallback_sem_id', docId: 'sem-id', chars: TEXT_BLOCK_CHARS }),
   placeholder: Object.freeze({ id: 'imagem_sem_texto', detail: 'imagem/sem texto' }),
+  documentoHeader: Object.freeze({ id: 'documento_header' }),
+  processoHeader: Object.freeze({ id: 'processo_header' }),
+  juntadaLine: Object.freeze({ id: 'juntada_line' }),
+  separatorDashes: Object.freeze({ id: 'separator_dashes' }),
+  paginaMarker: Object.freeze({ id: 'pagina_marker' }),
+  nulStrip: Object.freeze({ id: 'nul_strip' }),
+  utf16le: Object.freeze({ id: 'utf16le' }),
+  crlf: Object.freeze({ id: 'crlf' }),
+  // detail is the lacuna label. The pack lists unreadable_page, so the gap uses that reason.
+  binaryUnreadable: Object.freeze({ id: 'binary_unreadable', detail: 'binário/ilegível', reason: 'unreadable_page' }),
+});
+
+// A page of prose stays under both lines. PDF streams trip one of them.
+export const BINARY_THRESHOLDS = Object.freeze({
+  minChars: 48,
+  controlRatio: 0.02,
+  nonLetterRatio: 0.85,
 });
 
 const PLACEHOLDER_LINE = [
@@ -436,13 +455,400 @@ function fallbackResult(text, version) {
   return materialize([doc], version);
 }
 
+const PROCESSO_LINE = /^Processo:\s*(\d{1,7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4})\s*$/u;
+const PAGINA_LINE = /^\s*[Pp][áa]gina\s+(\d{1,6})\s+de\s+(\d{1,6})\b\s*(.*)$/u;
+const DASH_LINE = /^-{20,}\s*$/u;
+
+function isLetterCode(code) {
+  if (code >= 65 && code <= 90) return true;
+  if (code >= 97 && code <= 122) return true;
+  return code >= 192 && code <= 687;
+}
+
+export function binaryScores(text) {
+  const raw = String(text ?? '');
+  let control = 0;
+  let letters = 0;
+  let nonSpace = 0;
+  for (const ch of raw) {
+    const code = ch.codePointAt(0);
+    if (code === 9 || code === 10 || code === 13 || code === 32) continue;
+    nonSpace += 1;
+    if (code < 32 || code === 127) control += 1;
+    else if (isLetterCode(code)) letters += 1;
+  }
+  return {
+    length: raw.length,
+    control,
+    letters,
+    nonSpace,
+    controlRatio: raw.length ? control / raw.length : 0,
+    nonLetterRatio: nonSpace ? 1 - (letters / nonSpace) : 0,
+  };
+}
+
+export function isBinaryBody(text) {
+  const scores = binaryScores(text);
+  if (scores.length < BINARY_THRESHOLDS.minChars) return false;
+  if (scores.controlRatio >= BINARY_THRESHOLDS.controlRatio) return true;
+  return scores.nonSpace >= BINARY_THRESHOLDS.minChars
+    && scores.nonLetterRatio >= BINARY_THRESHOLDS.nonLetterRatio;
+}
+
+function isBytes(input) {
+  return Buffer.isBuffer(input) || input instanceof Uint8Array;
+}
+
+function utf16LePairs(length, readPair) {
+  if (length < 8) return false;
+  const pairs = Math.floor(length / 2);
+  let highNul = 0;
+  let lowNul = 0;
+  for (let index = 0; index < pairs; index += 1) {
+    const pair = readPair(index);
+    if (!pair) return false;
+    if (pair.low === 0) lowNul += 1;
+    if (pair.high === 0) highNul += 1;
+    const remaining = pairs - (index + 1);
+    if (highNul + remaining < pairs * 0.8) return false;
+  }
+  return highNul / pairs >= 0.8 && lowNul / pairs <= 0.2;
+}
+
+function isUtf16LeBytes(bytes) {
+  return utf16LePairs(bytes.length, (index) => ({
+    low: bytes[index * 2],
+    high: bytes[index * 2 + 1],
+  }));
+}
+
+function isUtf16LeBinaryString(value) {
+  return utf16LePairs(value.length, (index) => {
+    const low = value.charCodeAt(index * 2);
+    const high = value.charCodeAt(index * 2 + 1);
+    if (low > 255 || high > 255) return null;
+    return { low, high };
+  });
+}
+
+function binaryStringToUtf16Le(value) {
+  const bytes = Buffer.allocUnsafe(value.length);
+  for (let index = 0; index < value.length; index += 1) bytes[index] = value.charCodeAt(index) & 0xff;
+  return bytes.toString('utf16le');
+}
+
+export function decodeExport(input) {
+  const rules = new Set();
+  let text;
+  if (isBytes(input)) {
+    const bytes = Buffer.from(input);
+    if (bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xfe) {
+      rules.add(TEXT_RULES.utf16le.id);
+      text = bytes.subarray(2).toString('utf16le');
+    } else if (isUtf16LeBytes(bytes)) {
+      rules.add(TEXT_RULES.utf16le.id);
+      text = bytes.toString('utf16le');
+    } else {
+      text = bytes.toString('utf8');
+    }
+  } else {
+    const raw = String(input ?? '');
+    if (raw.length >= 2 && raw.charCodeAt(0) === 0xff && raw.charCodeAt(1) === 0xfe) {
+      rules.add(TEXT_RULES.utf16le.id);
+      text = binaryStringToUtf16Le(raw.slice(2));
+    } else if (isUtf16LeBinaryString(raw)) {
+      rules.add(TEXT_RULES.utf16le.id);
+      text = binaryStringToUtf16Le(raw);
+    } else {
+      text = raw;
+    }
+  }
+  if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
+  if (text.includes('\u0000')) {
+    rules.add(TEXT_RULES.nulStrip.id);
+    text = text.replaceAll('\u0000', '');
+  }
+  if (text.includes('\r')) {
+    rules.add(TEXT_RULES.crlf.id);
+    text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  }
+  return { text, rules };
+}
+
+export function matchDocumentoHeader(line) {
+  const match = /^Documento:\s*(\d{9})\s*-\s*(.*)$/u.exec(String(line ?? '').trim());
+  if (!match) return null;
+  return { docId: match[1], rest: match[2].trim() };
+}
+
+export function countDocumentoHeaders(text) {
+  let count = 0;
+  for (const line of String(text ?? '').split('\n')) {
+    if (matchDocumentoHeader(line)) count += 1;
+  }
+  return count;
+}
+
+function recognizedPiece(field) {
+  const byWord = typeWordOf(field);
+  if (byWord) return byWord;
+  const byClass = classifyPiece(field);
+  return byClass !== 'outros' ? byClass : null;
+}
+
+export function classifyDocumentoFields(fields) {
+  const list = (fields ?? []).map((field) => String(field ?? '').trim()).filter(Boolean);
+  let typeField = null;
+  let piece = 'outros';
+  for (const field of list) {
+    if (/^\d+$/u.test(field)) continue;
+    const recognized = recognizedPiece(field);
+    if (recognized) {
+      typeField = field;
+      piece = recognized;
+      break;
+    }
+  }
+  if (!typeField) typeField = list.find((field) => !/^\d+$/u.test(field)) ?? null;
+  const party = list.length ? list[list.length - 1] : null;
+  return { typeField, piece, party };
+}
+
+function isJuntadaLine(line) {
+  if (line.length < 80) return false;
+  const folded = fold(line);
+  const hasId = /id\s+do\s+documento\s*:/u.test(folded);
+  const hasJoin = /juntado\s+aos\s+autos/u.test(folded);
+  const hasUrl = folded.includes('consultadocumento');
+  const hasSign = /documento\s+assinado\s+por/u.test(folded);
+  return (hasJoin && (hasId || hasUrl || hasSign)) || (hasId && hasUrl);
+}
+
+function juntadaMeta(line, headerId) {
+  const idMatch = /id\s+do\s+documento\s*:\s*(\d{9})/iu.exec(line);
+  const dateMatch = /\bem\s+(\d{2}\/\d{2}\/\d{4}(?:\s+\d{2}:\d{2}:\d{2})?)/iu.exec(line);
+  const signed = /documento\s+assinado\s+por\s*:\s*-?\s*(.+?)(?=\s+consulte\b|\s+id\s+do\s+documento\b|$)/iu.exec(line);
+  const bodyId = idMatch ? idMatch[1] : null;
+  return {
+    juntadaAt: dateMatch ? dateMatch[1] : null,
+    signedBy: signed ? signed[1].replace(/\s+/g, ' ').trim() : null,
+    mismatch: Boolean(bodyId && bodyId !== headerId),
+  };
+}
+
+function classifyBody(text) {
+  const trimmed = String(text ?? '').trim();
+  if (!trimmed) return { kind: 'image', text: '' };
+  if (isBinaryBody(trimmed)) return { kind: 'binary', text: '' };
+  if (isPlaceholderBody(trimmed)) return { kind: 'image', text: '' };
+  return { kind: 'text', text: trimmed };
+}
+
+function sheetsOf(piece, fileRules) {
+  const marked = [];
+  let current = null;
+  const loose = [];
+  let sawMarker = false;
+  for (const line of piece.bodyLines) {
+    const marker = PAGINA_LINE.exec(line);
+    if (marker) {
+      sawMarker = true;
+      piece.rules.add(TEXT_RULES.paginaMarker.id);
+      fileRules.add(TEXT_RULES.paginaMarker.id);
+      if (current) marked.push(current);
+      const rest = marker[3].trim();
+      current = { pageInDoc: Number(marker[1]), lines: rest ? [rest] : [] };
+      continue;
+    }
+    if (current) current.lines.push(line);
+    else loose.push(line);
+  }
+  if (current) marked.push(current);
+  if (!sawMarker) return [{ pageInDoc: 1, text: loose.join('\n').trim() }];
+  if (marked.length && loose.some((line) => line.trim())) {
+    marked[0].lines = [...loose, ...marked[0].lines];
+  }
+  return marked.map((page) => ({
+    pageInDoc: page.pageInDoc,
+    text: page.lines.join('\n').trim(),
+  }));
+}
+
+function materializePje(pieces, version, processNumber, fileRules) {
+  const pages = [];
+  const passages = [];
+  const gaps = [];
+  const documents = [];
+  let ordinal = 0;
+  for (const piece of pieces) {
+    const sheets = sheetsOf(piece, fileRules);
+    const numbers = [];
+    for (const sheet of sheets) {
+      ordinal += 1;
+      numbers.push(ordinal);
+      const body = classifyBody(sheet.text);
+      if (body.kind === 'binary') {
+        piece.rules.add(TEXT_RULES.binaryUnreadable.id);
+        fileRules.add(TEXT_RULES.binaryUnreadable.id);
+      }
+      const hasText = body.kind === 'text';
+      const text = hasText ? body.text : '';
+      const passageId = passageIdFor(piece.docId, version, sheet.pageInDoc, ordinal);
+      const page = {
+        n: ordinal,
+        hasText,
+        chars: text.replace(/\s/g, '').length,
+        footer: null,
+        docId: piece.docId,
+        pageInDoc: sheet.pageInDoc,
+        passageId,
+        method: hasText ? 'text' : null,
+        text,
+      };
+      pages.push(page);
+      passages.push({
+        id: passageId,
+        docId: piece.docId,
+        version,
+        pageInDoc: sheet.pageInDoc,
+        pdfPage: ordinal,
+        text,
+        method: page.method,
+        hasText,
+      });
+      if (body.kind === 'image') {
+        gaps.push({
+          reason: 'image_no_text',
+          page: ordinal,
+          docId: piece.docId,
+          pageInDoc: sheet.pageInDoc,
+          passageId,
+          detail: TEXT_RULES.placeholder.detail,
+        });
+      } else if (body.kind === 'binary') {
+        gaps.push({
+          reason: TEXT_RULES.binaryUnreadable.reason,
+          page: ordinal,
+          docId: piece.docId,
+          pageInDoc: sheet.pageInDoc,
+          passageId,
+          detail: TEXT_RULES.binaryUnreadable.detail,
+        });
+      }
+    }
+    if (piece.mismatch) {
+      gaps.push({
+        reason: 'id_mismatch',
+        page: numbers[0] ?? null,
+        docId: piece.docId,
+        pageInDoc: sheets[0]?.pageInDoc ?? null,
+        detail: 'ID do documento diverge do cabeçalho',
+      });
+    }
+    documents.push({
+      docId: piece.docId,
+      title: piece.typeField,
+      type: piece.typeField,
+      piece: piece.piece || 'outros',
+      party: piece.party,
+      juntadaAt: piece.juntadaAt,
+      signedBy: piece.signedBy,
+      typeSource: piece.typeField ? 'heading' : 'none',
+      headingWeak: false,
+      startPage: numbers[0] ?? null,
+      endPage: numbers.at(-1) ?? null,
+      pages: numbers,
+      signals: ['heading'],
+      rules: [...piece.rules],
+      version,
+    });
+  }
+  return {
+    version,
+    origin: 'text',
+    processNumber,
+    pageCount: pages.length,
+    pages,
+    documents,
+    passages,
+    gaps,
+    rules: [...fileRules],
+  };
+}
+
+function segmentPjeExport(source, version, decodeRules) {
+  const lines = source.split('\n');
+  const fileRules = new Set(decodeRules);
+  fileRules.add(TEXT_RULES.documentoHeader.id);
+  let processNumber = null;
+  let start = 0;
+  while (start < lines.length && !lines[start].trim()) start += 1;
+  if (start < lines.length) {
+    const processo = PROCESSO_LINE.exec(lines[start].trim());
+    if (processo) {
+      processNumber = processo[1];
+      fileRules.add(TEXT_RULES.processoHeader.id);
+      start += 1;
+    }
+  }
+
+  const pieces = [];
+  let current = null;
+  for (let index = start; index < lines.length; index += 1) {
+    const header = matchDocumentoHeader(lines[index]);
+    if (header) {
+      if (current) pieces.push(current);
+      const fields = header.rest.split(/\s+-\s+/).map((part) => part.trim()).filter(Boolean);
+      const classified = classifyDocumentoFields(fields);
+      current = {
+        docId: header.docId,
+        typeField: classified.typeField,
+        piece: classified.piece,
+        party: classified.party,
+        rules: new Set([TEXT_RULES.documentoHeader.id]),
+        bodyLines: [],
+        juntadaAt: null,
+        signedBy: null,
+        mismatch: false,
+      };
+      continue;
+    }
+    if (!current) continue;
+    const line = lines[index];
+    if (DASH_LINE.test(line.trim())) {
+      current.rules.add(TEXT_RULES.separatorDashes.id);
+      fileRules.add(TEXT_RULES.separatorDashes.id);
+      continue;
+    }
+    if (isJuntadaLine(line)) {
+      const meta = juntadaMeta(line, current.docId);
+      current.rules.add(TEXT_RULES.juntadaLine.id);
+      fileRules.add(TEXT_RULES.juntadaLine.id);
+      if (!current.juntadaAt && meta.juntadaAt) current.juntadaAt = meta.juntadaAt;
+      if (!current.signedBy && meta.signedBy) current.signedBy = meta.signedBy;
+      if (meta.mismatch) current.mismatch = true;
+      continue;
+    }
+    current.bodyLines.push(line);
+  }
+  if (current) pieces.push(current);
+  return materializePje(pieces, version, processNumber, fileRules);
+}
+
+function withDecodeRules(result, rules) {
+  if (!rules || rules.size === 0) return result;
+  return { ...result, rules: [...new Set([...rules, ...result.rules])] };
+}
+
 export function segmentText(text, options = {}) {
   const version = cleanVersion(options.version);
-  const source = String(text ?? '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  if (!source.trim()) return fallbackResult('', version);
+  const decoded = decodeExport(text);
+  const source = decoded.text;
+  if (!source.trim()) return withDecodeRules(fallbackResult('', version), decoded.rules);
+  if (countDocumentoHeaders(source) > 0) return segmentPjeExport(source, version, decoded.rules);
   const leaves = leavesFrom(source);
-  if (!structural(leaves)) return fallbackResult(source, version);
+  if (!structural(leaves)) return withDecodeRules(fallbackResult(source, version), decoded.rules);
   const docs = groupLeaves(leaves);
   assignMissingIds(docs);
-  return materialize(docs, version);
+  return withDecodeRules(materialize(docs, version), decoded.rules);
 }

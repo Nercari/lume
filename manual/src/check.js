@@ -1,13 +1,13 @@
 // Citation check for a pasted ChatGPT answer. Existence only: the id and the sheet
 // have to be in the case. This does not judge whether the sentence is true.
-// Accepts the current [Id …, fl. …] and the older [Id …, p. …]. A decisive sentence
-// with neither nearby is flagged. There is no network call here.
+// Accepts [Id X], [Id X, fl. Y] and the older [Id X, p. Y]. A decisive sentence
+// with none of those nearby is flagged. There is no network call here.
 import { sheetMap } from './sheets.js';
 import { fold } from './rules.js';
 
 export const CITATION_RULE = Object.freeze({
   id: 'citation_id_page',
-  re: /\[\s*Id\s+([^,\]]+?)\s*,\s*(?:fl|p)\.?\s*(\d{1,6})\s*\]/giu,
+  re: /\[\s*Id\s+([^,\]]+?)(?:\s*,\s*(?:fl|p)\.?\s*(\d{1,6}))?\s*\]/giu,
 });
 
 const decisive = (id, re) => Object.freeze({ id, re });
@@ -35,18 +35,37 @@ function sentencesOf(text) {
   return String(text).split(/\n+/).flatMap((line) => line.split(/(?<!(?:[Pp]\.|[Ff][Ll]\.))(?<=[.!?])\s+/)).map((part) => part.trim()).filter(Boolean);
 }
 
+function gapIdsOf(caseResult) {
+  const ids = new Set();
+  for (const gap of caseResult?.gaps ?? []) {
+    if (gap?.docId == null) continue;
+    ids.add(String(gap.docId));
+  }
+  return ids;
+}
+
+function citationStatus(docId, pageInDoc, known, gapIds) {
+  const pages = known.get(docId);
+  if (pageInDoc == null) {
+    if (pages) return [...pages.values()].some(Boolean) ? 'exists' : 'unreadable';
+    return gapIds.has(docId) ? 'unreadable' : 'missing_document';
+  }
+  if (!pages) return gapIds.has(docId) ? 'missing_page' : 'missing_document';
+  if (!pages.has(pageInDoc)) return 'missing_page';
+  return pages.get(pageInDoc) ? 'exists' : 'unreadable';
+}
+
 export function checkAnswer(answerText, caseResult) {
   const text = String(answerText ?? '');
   const known = sheetMap(caseResult);
+  const gapIds = gapIdsOf(caseResult);
   const citations = [];
   const re = citationPattern();
   let match;
   while ((match = re.exec(text))) {
     const docId = match[1].trim();
-    const pageInDoc = Number(match[2]);
-    const pages = known.get(docId);
-    let status = 'missing_document';
-    if (pages) status = pages.has(pageInDoc) ? (pages.get(pageInDoc) ? 'exists' : 'unreadable') : 'missing_page';
+    const pageInDoc = match[2] == null ? null : Number(match[2]);
+    const status = citationStatus(docId, pageInDoc, known, gapIds);
     citations.push({ raw: match[0], docId, pageInDoc, status });
   }
 
