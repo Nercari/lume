@@ -18,7 +18,7 @@ Lume helps you read a PJe case in Chrome, build a local **case package**, and wo
 
 ## Set up ChatGPT (once)
 
-1. Open `lume-install/chatgpt/LEIA-ME.md` and follow **Opção 1**:
+1. Open `chatgpt/LEIA-ME.md` (in the unzipped package) and follow **Opção 1**:
    - ChatGPT → **Projects** → **New project** named **Lume**.
    - Paste the contents of `PROJETO-LUME.md` into **Instructions** and save.
 2. Optional: install the plugin from `chatgpt/plugin/` if your plan supports Agent Plugins.
