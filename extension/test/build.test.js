@@ -21,8 +21,14 @@ test('build emits a loadable unpacked extension with only the documented permiss
   execFileSync(process.execPath, [join(root, 'scripts/build.mjs')], { stdio: 'inherit' });
   const m = JSON.parse(readFileSync(join(root, 'dist/manifest.json'), 'utf8'));
   assert.equal(m.manifest_version, 3);
-  assert.deepEqual(m.permissions, ['sidePanel', 'storage']);
-  assert.equal(m.host_permissions, undefined);
+  assert.deepEqual(m.permissions, ['sidePanel', 'storage', 'webNavigation']);
+  assert.deepEqual(m.host_permissions, [
+    'https://pje1g.trf1.jus.br/*',
+    'https://pje2g.trf1.jus.br/*',
+    'https://auth.openai.com/*',
+    'https://api.openai.com/*',
+    'http://127.0.0.1:*/*',
+  ]);
   assert.equal(m.optional_permissions, undefined);
   assert.equal(m.optional_host_permissions, undefined);
   assert.equal(m.web_accessible_resources, undefined);
@@ -127,7 +133,7 @@ test('panel has the package button and calibration link', () => {
 test('toolbar click with no panel opens the PDF page and adds no permission', () => {
   const js = readFileSync(join(root, 'src/worker.js'), 'utf8');
   const m = JSON.parse(readFileSync(join(root, 'manifest.json'), 'utf8'));
-  assert.deepEqual(m.permissions, ['sidePanel', 'storage']);
+  assert.deepEqual(m.permissions, ['sidePanel', 'storage', 'webNavigation']);
   assert.match(js, /chrome\.action\.onClicked\.addListener/);
   assert.match(js, /if \(!panelClickOpensPanel\) openPdfMode\(\)/);
   assert.match(js, /chrome\.tabs\.create\(\{ url: chrome\.runtime\.getURL\(PDF_PAGE\) \}\)/);

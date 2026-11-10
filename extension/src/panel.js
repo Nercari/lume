@@ -189,5 +189,48 @@ async function loadPause() {
 $('pausa').addEventListener('change', () => {
   chrome.storage.local.set({ lumePauseMs: $('pausa').checked ? DOCUMENT_PAUSE_MS : 0 }).catch(() => {});
 });
+function renderSiwc(status) {
+  const signed = Boolean(status?.signedIn);
+  const plan = Boolean(status?.planEnabled);
+  $('siwc-login').hidden = signed && plan;
+  $('siwc-logout').hidden = !signed;
+  $('siwc-usage').hidden = !signed;
+  $('siwc-account').hidden = !status?.email;
+  $('siwc-account').textContent = status?.email ? `Conta: ${status.email}` : '';
+  $('siwc-plan').hidden = !plan;
+  const message = status?.message || '';
+  $('siwc-error').hidden = !message;
+  $('siwc-error').textContent = message;
+}
+
+async function refreshSiwc() {
+  try {
+    renderSiwc(await chrome.runtime.sendMessage({ type: 'lume:siwc-status' }));
+  } catch {
+    renderSiwc({ ok: false, message: 'Não foi possível ler a conta do ChatGPT.' });
+  }
+}
+
+$('siwc-login').addEventListener('click', async () => {
+  $('siwc-login').disabled = true;
+  $('siwc-error').hidden = false;
+  $('siwc-error').textContent = 'Aguardando a autorização do ChatGPT.';
+  try {
+    renderSiwc(await chrome.runtime.sendMessage({ type: 'lume:siwc-login' }));
+  } catch {
+    renderSiwc({ ok: false, message: 'Não foi possível abrir a entrada com ChatGPT.' });
+  }
+  $('siwc-login').disabled = false;
+});
+$('siwc-logout').addEventListener('click', async () => {
+  $('siwc-logout').disabled = true;
+  try {
+    renderSiwc(await chrome.runtime.sendMessage({ type: 'lume:siwc-logout' }));
+  } catch {
+    renderSiwc({ ok: false, message: 'Não foi possível sair.' });
+  }
+  $('siwc-logout').disabled = false;
+});
 loadPause();
+refreshSiwc();
 bind();
