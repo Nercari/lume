@@ -1,0 +1,32 @@
+name: siwc-run
+
+on:
+  pull_request:
+    paths:
+      - 'extension/**'
+      - 'packaging/guias/**'
+      - 'packaging/test/guides.test.js'
+      - 'plugins/lume-jef/**'
+      - 'plugins/scripts/build-zip.mjs'
+      - '.github/workflows/siwc-run.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install
+        working-directory: extension
+      - run: npm run build
+        working-directory: extension
+      - run: npx playwright-core install --with-deps chromium
+        working-directory: extension
+      - run: npm test
+        working-directory: extension
+      - run: node --test --test-reporter=spec packaging/test/guides.test.js

@@ -14,11 +14,11 @@ Pacote do Lume para PJe (TRF1/SJDF) + ChatGPT. O passo a passo curto está em `g
 
 Descompacte o zip numa pasta fixa, por exemplo `Documentos\Lume` (botão direito → Extrair tudo). Não apague essa pasta depois.
 
-1. Instale: no Chrome, carregue a pasta extension (chrome://extensions > Modo do desenvolvedor > Carregar sem compactação); depois dê dois cliques em plugin\lume-jef\instalar\instalar-plugin.cmd, reinicie o app ChatGPT e instale "Lume JEF" em Plugins > Lume.
-2. No PJe, abra o processo e clique "Lume: Estudar processo" (ou peça no Work: "prepare este processo com o Lume"). Espere o título da aba "Lume: pronto".
-3. No ChatGPT (painel lateral nessa aba, chat normal), peça o relatório ou a minuta. Caso grande: anexe as partes salvas.
+1. Instale a extensão: no Chrome, carregue a pasta extension (chrome://extensions > Modo do desenvolvedor > Carregar sem compactação). O plugin é opcional: dois cliques em plugin\lume-jef\instalar\instalar-plugin.cmd, reinicie o app ChatGPT e instale "Lume JEF" em Plugins > Lume.
+2. No painel do Lume, clique "Entrar com ChatGPT" uma vez e aprove.
+3. No processo do PJe, clique "Lume: Estudar processo" e depois "Gerar relatório e minuta".
 
-Plano B: clique você no botão Lume: Estudar processo na página do processo. A aba e os próximos passos são os mesmos.
+Plano B: sem entrar ou sem cota, use a aba do caso no painel lateral do ChatGPT com o plugin Lume JEF.
 Sem o app desktop: use a pasta plugin\lume-jef-projeto num Projeto (instruções em COLE-NO-PROJETO.md).
 Se o painel não achar a lista, use Calibrar PJe, salve lume-calibracao.json e envie o arquivo ao mantenedor.
 Nada além do ChatGPT sai do computador.

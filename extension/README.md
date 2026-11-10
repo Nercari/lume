@@ -8,6 +8,18 @@ The panel shows three steps: open the case, click **Estudar processo**, read the
 
 The manual PDF page stays as the fallback: **Gerar pacote do caso**.
 
+## Relatório e minuta no plano ChatGPT
+
+On the study page, after the case is in memory, the user picks a model and clicks **Gerar relatório e minuta** once. Lume asks the worker for access (`lume:siwc-access`), lists models with `GET https://api.openai.com/v1/models`, and streams `POST https://api.openai.com/v1/responses` with `store: false` and `stream: true`. The model slug is whatever the account catalog returns. Nothing in this extension names a model. Success is only a `response.completed` event. A 401 asks the worker for access one more time and then stops. Quota pauses the run and keeps the checkpoint. A cut stream, `response.incomplete`, `response.failed`, or a coverage miss shows **INCOMPLETO** and never **pronto**.
+
+The run is one request per `lume-caso/1` part (notes, tags, and an `IDS-LIDOS:` line), then one relatório request (the notes plus part 1 Índice and Lacunas), then one minuta request. The method text is the flattened plugin (`jef-director`, `jef-pacote`, `jef-relatorio`, `jef-voto`, `jef-revisao`) copied to `dist/metodo/` at build time. The extension source does not contain that text. Checkpoints sit in `chrome.storage.session`, keyed by the case, and **Retomar** continues after a quota pause, a token refresh, or **Cancelar**. The chosen model slug is remembered in `chrome.storage.local`. Tokens are not.
+
+If the worker says the user is signed out, the page shows **Entre com ChatGPT no painel do Lume**. A `data-sigilo` row is still read. The study page shows one warning line and does not disable **Gerar**.
+
+Plano B, when there is no sign-in or no quota: use the case tab in the ChatGPT side panel with the Lume JEF plugin.
+
+Live inference stays blocked until Pedro signs in on his own ChatGPT plan. These tests use synthetic fixtures only.
+
 A private directory of `.html`, `.pdf`, and `.png` files can be timed without printing their contents:
 
 ```
@@ -23,7 +35,7 @@ npm run build    # writes dist/, a loadable unpacked extension
 npm test         # node:test, then one Playwright run against local fixtures
 ```
 
-`npm test` needs the Chromium build that `npx playwright-core install chromium` downloads. The Playwright test does not open a real court site: it answers the PJe host with local HTML.
+`npm test` needs the Chromium build that `npx playwright-core install chromium` downloads. The Playwright test does not open a real court site: it answers the PJe host with local HTML. The build also copies the flattened JEF method into `dist/metodo/`.
 
 Load `extension/dist/` in `chrome://extensions` with "Load unpacked". The build copies `manual/dist/` to `dist/manual/` (pdf.js worker and the OCR files). If that directory is missing, the build runs the manual package build first.
 

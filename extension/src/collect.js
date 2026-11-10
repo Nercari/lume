@@ -78,7 +78,10 @@ export async function collectCase({
   const items = [];
   const documents = [];
   const state = { caseNumber: null, mode: 'documents', status: 'reading', items, misses, documents };
-  const emit = () => onProgress({ ...state, items: items.map((item) => ({ ...item })), misses: misses.slice() });
+  const emit = () => {
+    state.sigilo = items.some((item) => item.sigilo === true);
+    onProgress({ ...state, items: items.map((item) => ({ ...item })), misses: misses.slice() });
+  };
   const guard = () => {
     if (signal?.aborted) throw new Stop(signal.reason === 'user' ? 'stopped_by_user' : 'invalidated');
     if (!isCurrent()) throw new Stop('invalidated');

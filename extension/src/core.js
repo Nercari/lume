@@ -71,6 +71,8 @@ function readRow(row, profile, base, idAttr, versionAttr, pagesAttr, kindAttr, p
     expectedPages: Number.isFinite(pages) ? pages : null,
     date: rowDate(row, profile),
     href,
+    // Presence of the marker is a flag. It does not skip or block the fetch.
+    sigilo: row.getAttribute('data-sigilo') != null,
   };
 }
 
