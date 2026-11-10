@@ -2,12 +2,14 @@
 // the offline PDF page. The toolbar click opens the panel. If that panel cannot be armed, the
 // same click opens the PDF page. The worker relays study slices and keeps each rendered case
 // view in memory, keyed by the page it came from. It does not write the case to disk.
+import { installSiwc } from './siwc-session.js';
 import { createViewStore } from './page-trigger.js';
 const PDF_PAGE = 'manual/lume-pdf.html';
 let panelClickOpensPanel = false;
 let pjeTabId = null;
 const relays = new Map();
 const views = createViewStore();
+installSiwc();
 
 function openPdfMode() {
   chrome.tabs.create({ url: chrome.runtime.getURL(PDF_PAGE) });
