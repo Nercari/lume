@@ -4,6 +4,7 @@ import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync,
 import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { dirname, join, relative } from 'node:path';
+import { stageMethod } from './stage-method.mjs';
 
 const root = new URL('..', import.meta.url).pathname;
 const src = join(root, 'src');
@@ -64,6 +65,7 @@ const bundled = [...INLINE.map((name) => toClassic(readFileSync(join(src, name),
 writeFileSync(join(dist, 'content.js'), `(() => {\n'use strict';\n${bundled.join('\n')}\n})();\n`);
 
 cpSync(manualDist, join(dist, 'manual'), { recursive: true });
+await stageMethod(join(dist, 'metodo'));
 if (!manualReady(join(dist, 'manual'))) throw new Error('failed to copy manual/dist into dist/manual');
 
 const requireManual = createRequire(join(root, '../manual/package.json'));

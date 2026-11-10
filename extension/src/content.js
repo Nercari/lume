@@ -375,7 +375,8 @@ async function runStudy(studyId) {
       status: result.status,
       stopReason: result.stopReason ?? null,
       pageUrl: String(location.href || '').split('#')[0],
-      items: (result.items ?? []).map((item) => ({ id: item.id, state: item.state, detail: item.detail, rule: item.rule, kind: item.kind, date: item.date ?? null })),
+      items: (result.items ?? []).map((item) => ({ id: item.id, state: item.state, detail: item.detail, rule: item.rule, kind: item.kind, date: item.date ?? null, sigilo: item.sigilo === true })),
+      sigilo: (result.items ?? []).some((item) => item.sigilo === true),
       misses: result.misses ?? [],
     });
   } catch { /* the study page closed */ }

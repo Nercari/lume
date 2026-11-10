@@ -10,6 +10,9 @@
     #misses { color: #a40000; }
     #parts { padding-left: 18px; }
     .note { color: #444; }
+    label { display: block; margin-top: 16px; }
+    select { margin-top: 4px; max-width: 100%; }
+    #output { white-space: pre-wrap; }
     @media (prefers-color-scheme: dark) {
       body { color: #eee; background: #1e1e1e; }
       .note { color: #aaa; }
@@ -19,7 +22,7 @@
 </head>
 <body>
   <h1>Estudo do processo</h1>
-  <p class="note">A leitura acontece neste computador. O caso abre numa aba do PJe para o painel do ChatGPT. Salvar partes e Copiar parte k ficam aqui.</p>
+  <p class="note">A leitura acontece neste computador. O caso abre numa aba do PJe. Salvar partes e Copiar parte k ficam aqui. O relatório e a minuta saem desta página, no plano ChatGPT, depois do clique em Gerar.</p>
   <p id="progress" role="status" aria-live="polite">Aguardando os documentos…</p>
   <p id="ocr" role="status" aria-live="polite"></p>
   <p id="result" role="status"></p>
@@ -32,6 +35,20 @@
   <pre id="preview"></pre>
   <pre id="measure" hidden></pre>
   <pre id="sidecar" hidden></pre>
+  <h2>Relatório e minuta</h2>
+  <p id="signin" class="note" hidden>Entre com ChatGPT no painel do Lume</p>
+  <p id="sigilo" class="note" hidden></p>
+  <label for="model">Modelo</label>
+  <select id="model"></select>
+  <p>
+    <button id="gerar" type="button">Gerar relatório e minuta</button>
+    <button id="retomar" type="button">Retomar</button>
+    <button id="cancel-run" type="button">Cancelar</button>
+    <button id="copiar" type="button">Copiar</button>
+  </p>
+  <p id="run-progress" role="status" aria-live="polite"></p>
+  <p id="run-status" role="status"></p>
+  <pre id="output"></pre>
   <script type="module" src="study.js"></script>
 </body>
 </html>
