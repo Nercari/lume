@@ -182,6 +182,25 @@ Em agravo, embargos, retratação, cumprimento ou execução, adapte os rótulos
 
 Em recursos múltiplos, atribua dispositivo e honorários diretamente a cada parte ou recurso, em parágrafos próprios. Não use o rótulo genérico `recorrente vencedor`; identifique quem teve o recurso provido, desprovido ou parcialmente provido e a consequência correspondente.
 
+## Posição antes da minuta
+
+Depois do relatório ou da análise preliminar, e antes de redigir o Voto-Ementa, encerre com a seção "Posição a ser adotada". Informe, em uma ou duas linhas, o estado da análise: se a leitura documental está concluída e se há laudo pericial pertinente à controvérsia. Em seguida, escreva exatamente:
+
+Antes da elaboração do Voto-Ementa, é necessário definir a orientação decisória.
+
+Qual posição deseja adotar no julgamento?
+
+Ofereça quatro opções numeradas, com a consequência concreta deste caso:
+
+1. A opção favorável (provimento do recurso, procedência do pedido ou acolhimento dos embargos).
+2. A opção de manutenção ou de rejeição (desprovimento, improcedência ou rejeição dos embargos).
+3. A opção parcial, indicando os capítulos a reformar, deferir ou acolher.
+4. Adotar posição específica, com fundamentação própria a ser incorporada ao voto.
+
+Adapte os enunciados ao ato sob julgamento: recurso inominado, apelação ou agravo; sentença ou decisão de primeiro grau; embargos de declaração; e demais espécies. Não recomende qual opção escolher. Encerre com esta frase: "Após a definição, será elaborada a minuta completa, com fundamentação individualizada, dispositivo, tese de julgamento, legislação e jurisprudência fornecida nos autos e acórdão."
+
+Pare nesse turno. Não redija voto, ementa ou dispositivo até o usuário indicar um número ou escrever a posição. Se o pedido atual já fixar a orientação, dispense a pergunta e siga à minuta. Pedido direto de minuta com resultado definido continua a dispensar o relatório preliminar visível, nos termos de C6.
+
 ### Fluxo completo
 
 Use esta sequência quando houver autos extensos ou pedido de análise seguido de minuta:
@@ -193,7 +212,7 @@ Use esta sequência quando houver autos extensos ou pedido de análise seguido d
    Para toda autoridade determinante, exija revalidação ao vivo na fonte primária, mesmo que a janela interna ainda esteja aberta. Se a fonte estiver indisponível ou o cartão não contiver hash e localizador de evidência, marque `AUTHORITIES = BLOCKED`.
    Para dispositivo legal material e temporalmente controvertido, exija cartão normativo separado com redação, intervalo de vigência, publicação original e texto consolidado oficial.
    Em caso explicitamente fictício ou de teste com fatos sintéticos autossuficientes, sem pedido de pesquisa e sem questão jurídica atual ou materialmente incerta, não pesquise apenas para ornamentar a fundamentação. Nesse caso, não inclua legislação, jurisprudência, tema, súmula nem qualquer URL — zero URLs, salvo pedido expresso; no relatório complementar, registre apenas que nenhuma autoridade externa foi necessária.
-5. Se o usuário já definiu o resultado, registre-o como hipótese com origem `USER_DIRECTION` e não o reconfirme. Se pediu minuta sem defini-lo, formule apenas a pergunta prevista em `relatoria-sjdf-votos`.
+5. Se o usuário já definiu o resultado, registre-o como hipótese com origem `USER_DIRECTION` e não o reconfirme. Se o relatório ou a análise preliminar foi entregue, ou se o pedido inclui minuta, e a orientação ainda não foi fixada, encerre com a seção "Posição a ser adotada" e pare, sem redigir a minuta. Se pediu minuta sem defini-la e ainda não houve relatório, use essa mesma seção, adaptada ao ato.
 6. Encaminhe ao único redator final a versão atual do estado, a hipótese decisória e o contrato de formato. Rejeite componente pertencente a versão superada.
 7. Submeta a minuta uma única vez a `revisor-redacao-juridica`, que executará revisão adversarial antes do controle factual e estrutural. Se houver objeção material, retorne ao gate de origem ou à julgadora.
 8. Confronte a versão revisada com os dados protegidos. Atualize a matriz antes de aceitar qualquer correção objetiva autorizada.

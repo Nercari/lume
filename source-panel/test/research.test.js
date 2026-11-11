@@ -13,17 +13,19 @@ const RESULTS = [
   { title: 'Old commentary', url: 'https://blog.example.test/x', official: false, text: 'Opinion.', status: 'in_force', asOf: '2025-01-01' },
 ];
 // Synthetic identifiers only: shaped like real ones, belonging to nobody.
+const CASE_ID = 'fixture-alpha';
 const CASE_NO = '0001234-56.2026.4.01.3400';
+const NON_CNJ = 'SYNTH-0007';
 const PARTY = 'Zeta Fictícia Ltda';
 const DOC_ID = '98765432';
 const QUESTION = `Prazo de prescrição do art. 5 da Lei 8.112/1990 no processo ${CASE_NO} de ${PARTY} (zeta ficticia ltda), doc ${DOC_ID}, CPF 123.456.789-09, ref D1@1:p1:0-44, contato a@b.example.test`;
 
 test('query sanitizer strips case ids, party names and identifiers; the legal formulation stays', async () => {
   const L = { passages: { 'D1@1:p1:0-44': { docId: 'D1' }, x: { docId: DOC_ID } } };
-  const caseTerms = caseTermsOf(L, [CASE_NO, PARTY]);
+  const caseTerms = caseTermsOf(L, { caseId: CASE_ID, caseNumber: CASE_NO, extra: [PARTY] });
   const client = stubClient(RESULTS);
   const log = [];
-  await research(client, { question: QUESTION, issue: 'limitation period', caseTerms }, { now: NOW, log });
+  await research(client, { question: QUESTION, issue: 'limitation period', caseTerms, caseId: CASE_ID, caseNumber: CASE_NO }, { now: NOW, log });
   assert.equal(client.queries.length, 1);
   const q = client.queries[0];
   for (const bad of [CASE_NO, '0001234', 'zeta', 'ficticia', 'fictícia', DOC_ID, '123.456.789-09', 'd1@', '@b.example']) assert.ok(!q.toLowerCase().includes(bad), `query leaks ${bad}: ${q}`);
@@ -35,16 +37,55 @@ test('query sanitizer strips case ids, party names and identifiers; the legal fo
   assert.deepEqual(new Set(log[0].removed), new Set(['case_number', 'cpf', 'email', 'passage_ref', 'long_number', 'case_term']));
 });
 
+test('a non-CNJ case number and the case id are stripped inside punctuation, and neither reaches the query or the log', async () => {
+  const L = { passages: {} };
+  const caseTerms = caseTermsOf(L, { caseId: CASE_ID, caseNumber: NON_CNJ });
+  const question = `Tema do processo (${CASE_ID}), nº ${NON_CNJ.toUpperCase()}.`;
+  const client = stubClient(RESULTS);
+  const log = [];
+  await research(client, { question, issue: 'theme', caseTerms, caseId: CASE_ID, caseNumber: NON_CNJ }, { now: NOW, log });
+  assert.equal(client.queries.length, 1);
+  const q = client.queries[0];
+  assert.ok(!q.includes(CASE_ID.toLowerCase()), `query leaks the case id: ${q}`);
+  assert.ok(!q.includes(NON_CNJ.toLowerCase()), `query leaks the case number: ${q}`);
+  assert.match(q, /tema do processo/);
+  assert.ok(log[0].removed.includes('case_term'));
+  assert.deepEqual(log[0].query, q);
+  const diagnostics = JSON.stringify(log);
+  assert.ok(!diagnostics.toLowerCase().includes(CASE_ID.toLowerCase()), 'diagnostics leak the case id');
+  assert.ok(!diagnostics.toLowerCase().includes(NON_CNJ.toLowerCase()), 'diagnostics leak the case number');
+});
+
+test('research refuses when the case id or the open case number is absent', async () => {
+  const client = stubClient(RESULTS);
+  for (const [missing, args] of [
+    ['case id', { caseNumber: NON_CNJ }],
+    ['case number', { caseId: CASE_ID }],
+    ['case number', { caseId: CASE_ID, caseNumber: '   ' }],
+  ]) {
+    await assert.rejects(
+      research(client, { question: 'prazo da lei 8.112/1990', caseTerms: [], ...args }, { now: NOW }),
+      (err) => {
+        assert.ok(err instanceof QueryLeakError);
+        assert.match(err.message, new RegExp(missing));
+        return true;
+      },
+    );
+  }
+  await assert.rejects(research(client, { question: 'prazo da lei 8.112/1990', caseTerms: [] }, { now: NOW }), QueryLeakError);
+  assert.equal(client.queries.length, 0, 'nothing was sent');
+});
+
 test('research refuses without case terms, and refuses a query that minimization empties', async () => {
   const client = stubClient(RESULTS);
   await assert.rejects(research(client, { question: 'x' }), TypeError);
-  await assert.rejects(research(client, { question: PARTY, caseTerms: [PARTY] }), QueryLeakError);
+  await assert.rejects(research(client, { question: PARTY, caseTerms: [PARTY], caseId: CASE_ID, caseNumber: CASE_NO }), QueryLeakError);
   assert.equal(client.queries.length, 0, 'nothing was sent');
   assert.deepEqual(minimizeQuery(`Sr. ${PARTY}`, [PARTY]).query, 'sr.');
 });
 
 test('research records source, checked text, currency and relevance; verified only after a human relevance check on an official current source', async () => {
-  const [official, blog] = await research(stubClient(RESULTS), { question: 'prazo prescricional lei 8.112/1990 art. 5', issue: 'limitation period', caseTerms: [] }, { now: NOW });
+  const [official, blog] = await research(stubClient(RESULTS), { question: 'prazo prescricional lei 8.112/1990 art. 5', issue: 'limitation period', caseTerms: [], caseId: CASE_ID, caseNumber: CASE_NO }, { now: NOW });
   for (const r of [official, blog]) {
     assert.ok(r.source.url && 'official' in r.source && r.checkedText && r.currency.status && r.currency.checkedAt && r.relevance.issue);
     assert.equal(r.verification, 'unverified');
@@ -56,9 +97,9 @@ test('research records source, checked text, currency and relevance; verified on
   assert.equal(assessRelevance(official, { relevant: true, by: 'reviewer-1' }).verification, 'verified');
   assert.equal(assessRelevance(official, { relevant: false, by: 'reviewer-1' }).verification, 'not_relevant');
   assert.equal(assessRelevance(blog, { relevant: true, by: 'reviewer-1' }).verification, 'unofficial_source');
-  const [stale] = await research(stubClient([{ ...RESULTS[0], asOf: '2026-01-01' }]), { question: 'lei 8.112/1990', caseTerms: [] }, { now: NOW });
+  const [stale] = await research(stubClient([{ ...RESULTS[0], asOf: '2026-01-01' }]), { question: 'lei 8.112/1990', caseTerms: [], caseId: CASE_ID, caseNumber: CASE_NO }, { now: NOW });
   assert.equal(assessRelevance(stale, { relevant: true, by: 'r' }).verification, 'currency_stale');
-  const [unknown] = await research(stubClient([{ ...RESULTS[0], status: undefined }]), { question: 'lei 8.112/1990', caseTerms: [] }, { now: NOW });
+  const [unknown] = await research(stubClient([{ ...RESULTS[0], status: undefined }]), { question: 'lei 8.112/1990', caseTerms: [], caseId: CASE_ID, caseNumber: CASE_NO }, { now: NOW });
   assert.equal(unknown.currency.status, 'unknown');
 });
 
@@ -68,8 +109,8 @@ test('unparseable or future asOf is not current, and the record stays unverified
   assert.notEqual(currencyOf({ status: 'in_force', asOf: 'not-a-date' }, NOW, 30), 'current');
   assert.notEqual(currencyOf({ status: 'in_force', asOf: '2099-01-01' }, NOW, 30), 'current');
   const base = { title: 'Synthetic Statute', url: 'https://law.example.test/s', official: true, text: 'Article 5. Synthetic rule text.', status: 'in_force' };
-  const [bad] = await research(stubClient([{ ...base, asOf: 'not-a-date' }]), { question: 'lei 8.112/1990', caseTerms: [] }, { now: NOW });
-  const [future] = await research(stubClient([{ ...base, asOf: '2099-01-01' }]), { question: 'lei 8.112/1990', caseTerms: [] }, { now: NOW });
+  const [bad] = await research(stubClient([{ ...base, asOf: 'not-a-date' }]), { question: 'lei 8.112/1990', caseTerms: [], caseId: CASE_ID, caseNumber: CASE_NO }, { now: NOW });
+  const [future] = await research(stubClient([{ ...base, asOf: '2099-01-01' }]), { question: 'lei 8.112/1990', caseTerms: [], caseId: CASE_ID, caseNumber: CASE_NO }, { now: NOW });
   assert.equal(bad.currency.status, 'invalid');
   assert.equal(future.currency.status, 'future');
   assert.equal(assessRelevance(bad, { relevant: true, by: 'r' }).verification, 'currency_invalid');
@@ -90,7 +131,7 @@ test('research refuses when a case id or CPF-like token remains after minimizati
   assert.ok(leaks(minimized.query, []).includes('cpf'));
   const client = stubClient(RESULTS);
   await assert.rejects(
-    research(client, { question, caseTerms: [] }, { now: NOW }),
+    research(client, { question, caseTerms: [], caseId: CASE_ID, caseNumber: CASE_NO }, { now: NOW }),
     (err) => {
       assert.ok(err instanceof QueryLeakError);
       assert.match(err.message, /case_number/);

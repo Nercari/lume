@@ -7,6 +7,8 @@ description: >-
 
 # Voto
 
+Se o relatório ou a análise preliminar desta conversa ainda não tiver posição adotada e o pedido atual não fixar a orientação, não redija a minuta: entregue ou retome a seção "Posição a ser adotada" e pare.
+
 Antes de redigir, leia `references/c6.md` (C6 a C6.6) e `references/jef-v1.md` (JEF-V1) por completo.
 
 ID e página só entram na minuta conforme IDP-001 e IDP-002 em `skills/jef-director/references/contrato.md`. Não invente fato, CID, valor, data ou autoridade. Resultado fixado pelo usuário não cria prova.

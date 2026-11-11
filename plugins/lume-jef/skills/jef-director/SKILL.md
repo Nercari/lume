@@ -35,6 +35,8 @@ Antes de análise, pesquisa ou redação, leia por completo e recupere trecho tr
 
 O bloco da seção 17 do contrato é o texto histórico de colagem. Neste plugin, os caminhos vigentes são os pins acima e os arquivos `references/`, não um nome antigo de arquivo nem a Biblioteca.
 
+Depois do relatório ou da análise preliminar, encerre com a seção "Posição a ser adotada" e pare, sem redigir a minuta, salvo se o pedido atual já fixar a orientação. A regra completa está em `references/diretor.md` e em `skills/jef-relatorio/references/c4.md`.
+
 C9 e C10 não estão no plugin. Não os invente e não bloqueie o produto porque faltam.
 
 Controles locais citados no método (verificar_sessao.py, --revisao-esperada, tests/*.py) não acompanham este plugin. Quem confere é a revisão C8 do modelo.
