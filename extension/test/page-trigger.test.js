@@ -55,5 +55,6 @@ test('the content script injects the fixed button and study does not attach', ()
   assert.match(worker, /lume:study-here/);
   assert.match(worker, /study\.html\?id=\$\{studyId\}&attach=0/);
   const ci = readFileSync(new URL('../../scripts/ci-test-package.sh', import.meta.url), 'utf8');
-  assert.match(ci, /npx playwright-core install --with-deps chromium/);
+  assert.match(ci, /npx playwright-core install chromium/);
+  assert.equal(/npx playwright-core install[^\n]*--with-deps/.test(ci), false);
 });

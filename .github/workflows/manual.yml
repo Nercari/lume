@@ -31,6 +31,7 @@ jobs:
       - run: npm ci
       # Real-case PDFs stay off CI. scripts/eval-private.mjs is for the maintainer's machine.
       # Chromium runs the synthetic image-page OCR check. The test uses /usr/bin/chromium when present.
-      - run: npx playwright install --with-deps chromium
+      # No --with-deps: apt-get on this runner times out on azure.archive.ubuntu.com, and the image already has the Chromium libraries.
+      - run: npx playwright install chromium
       - run: npm run build
       - run: npm test
