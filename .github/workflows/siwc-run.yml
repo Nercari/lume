@@ -25,7 +25,8 @@ jobs:
         working-directory: extension
       - run: npm run build
         working-directory: extension
-      - run: npx playwright-core install --with-deps chromium
+      # No --with-deps: apt-get on this runner times out on azure.archive.ubuntu.com, and the image already has the Chromium libraries.
+      - run: npx playwright-core install chromium
         working-directory: extension
       - run: npm test
         working-directory: extension
