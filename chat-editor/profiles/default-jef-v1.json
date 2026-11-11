@@ -1,0 +1,32 @@
+{
+  "id": "default-jef-v1",
+  "label": "Padrão (JEF-V1): ementa em caixa-alta, parágrafos numerados",
+  "instructions": [
+    "Ementa em uma linha, toda em caixa-alta, temas separados por ponto, do geral ao específico, terminando com o resultado (ex.: SENTENÇA MANTIDA. RECURSO DESPROVIDO.).",
+    "Corpo em parágrafos numerados manualmente (1., 2., 3., ...), sem subtítulos, sem listas automáticas e sem negrito no corpo.",
+    "§1: 'Trata-se de recurso inominado interposto por ... contra sentença que ...' e o fundamento central da sentença.",
+    "§2: o que o recorrente sustenta, em discurso indireto ('Sustenta, em síntese, que ...').",
+    "Depois, os fatos de prova com datas, CIDs, valores e trechos entre aspas, cada fato decisivo com a citação do documento; em seguida a análise, requisito por requisito.",
+    "Conclusão: 'Recurso conhecido e desprovido. Sentença mantida por seus próprios fundamentos.' / 'Recurso conhecido e provido.' / 'Recurso conhecido e parcialmente provido.'",
+    "Honorários em parágrafo próprio: recorrente vencido, 'Condeno a parte recorrente ao pagamento de honorários advocatícios de 10% sobre o valor corrigido da causa, suspensa a exigibilidade em razão da gratuidade da justiça.'; recurso provido ou parcialmente provido, 'Sem condenação em honorários advocatícios (art. 55 da Lei 9.099/1995).'"
+  ],
+  "examples": [],
+  "form": {
+    "ementa": "caps-line",
+    "ementaEndsWithResult": true,
+    "body": "numbered",
+    "opening": "^Trata-se de recurso inominado",
+    "args": "\\b(sustenta|alega|defende|aduz|argumenta|afirma|requer)",
+    "closing": {
+      "desprovido": "Recurso (\\S+ ){0,4}conhecido e desprovido",
+      "provido": "Recurso (\\S+ ){0,4}conhecido e provido",
+      "parcial": "(conhecido e )?parcialmente provido"
+    },
+    "fees": {
+      "desprovido": "Condeno .{0,80}honorários",
+      "provido": "Sem (condenação (em|ao pagamento de) )?honorários",
+      "parcial": "Sem (condenação (em|ao pagamento de) )?honorários"
+    },
+    "forbid": ["Ante o exposto", "Pelo exposto", "Diante do exposto", "VOTO-EMENTA", "^\\s*[IVX]+\\s*[-–.]\\s"]
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "id": "synthetic-prosa",
+  "label": "Sintético A: sem ementa, prosa corrida, fórmula 'voto por negar/dar provimento', sem honorários",
+  "instructions": [
+    "Não escreva ementa. Comece direto pelo texto do voto.",
+    "Escreva em parágrafos de prosa corrida, sem numeração, sem subtítulos e sem listas.",
+    "Primeiro parágrafo: 'Cuida-se de recurso inominado ...' com o que a sentença decidiu.",
+    "Segundo parágrafo: 'O recorrente alega ...' com as razões do recurso.",
+    "Depois, a prova e a análise, citando os documentos do processo.",
+    "Último parágrafo: 'Ante o exposto, voto por negar provimento ao recurso.' / 'Ante o exposto, voto por dar provimento ao recurso.' / 'Ante o exposto, voto por dar parcial provimento ao recurso.'",
+    "Não mencione honorários advocatícios. Não use as expressões 'Trata-se', 'Recurso conhecido' nem 'Condeno'."
+  ],
+  "examples": [
+    { "text": "Cuida-se de recurso inominado interposto pela parte autora contra sentença que julgou improcedente o pedido de auxílio por incapacidade temporária, por entender que a perícia não constatou incapacidade.\n\nO recorrente alega que exerce atividade braçal e que os atestados de seu médico assistente demonstram limitação para o trabalho, e pede nova perícia.\n\nA perícia judicial, realizada em 03/02/2025, diagnosticou lombalgia crônica (CID M54.5) e concluiu pela capacidade para a atividade habitual de servente, registrando exame físico sem déficit motor (Id 1111, fl. 2). Os atestados particulares, de 2024, apenas reproduzem o diagnóstico e não descrevem limitação funcional.\n\nO laudo é coerente com o exame clínico e responde aos quesitos, e o recorrente não apontou contradição concreta que justifique nova perícia. Sem incapacidade, não há direito ao benefício.\n\nAnte o exposto, voto por negar provimento ao recurso." },
+    { "text": "Cuida-se de recurso inominado interposto pelo INSS contra sentença que concedeu benefício assistencial à pessoa idosa.\n\nO recorrente alega que a renda do filho que reside com a autora supera o limite legal e que não há vulnerabilidade.\n\nO estudo social, de 10/06/2025, registrou que o filho mantém família própria em outro endereço e que a autora vive sozinha com renda de R$ 300,00 de auxílio eventual (Id 2222, fl. 4). Os dados do cadastro único confirmam o endereço do filho.\n\nComo o filho não integra o grupo familiar e a renda da autora é inferior ao critério legal, a vulnerabilidade está demonstrada e a sentença não merece reforma.\n\nAnte o exposto, voto por negar provimento ao recurso." }
+  ],
+  "form": {
+    "ementa": "none",
+    "body": "prose",
+    "opening": "^Cuida-se de recurso inominado",
+    "args": "\\b(alega|sustenta|argumenta|defende)",
+    "closing": {
+      "desprovido": "voto por negar provimento ao recurso",
+      "provido": "voto por dar provimento ao recurso",
+      "parcial": "voto por dar parcial provimento ao recurso"
+    },
+    "fees": { "desprovido": "!honorári", "provido": "!honorári", "parcial": "!honorári" },
+    "forbid": ["Trata-se", "Recurso (\\S+ ){0,4}conhecido", "Condeno", "por seus próprios fundamentos"]
+  }
+}
