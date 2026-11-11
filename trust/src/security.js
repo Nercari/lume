@@ -238,7 +238,7 @@ export async function runSecurityMatrix() {
   const sent = [];
   await research(
     { search: async (q) => { sent.push(q); return [{ title: 'Note', url: 'https://example.test/note', official: false, text: 'A general rule.', status: 'unknown' }]; } },
-    { question: `what rule applies ${INJECTION} SYNTH-CASE`, issue: 'rule', caseTerms: ['SYNTH-CASE'] },
+    { question: `what rule applies ${INJECTION} SYNTH-CASE`, issue: 'rule', caseTerms: ['SYNTH-CASE'], caseId: 'fixture-alpha', caseNumber: 'SYNTH-CASE' },
   );
   attack(attempts, {
     id: 'research-minimizes-case-term', boundary: 'destination', vector: 'research',
