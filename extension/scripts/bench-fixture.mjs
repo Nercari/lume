@@ -1,13 +1,11 @@
 // Private timing run. Prints counts and milliseconds only.
 // npm run bench:fixture -- <dir> [--latency 150]
 
-import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadFixture, reportFromMeasure, startFixtureServer } from './bench-lib.mjs';
+import { ensureBuilt, loadFixture, reportFromMeasure, startFixtureServer } from './bench-lib.mjs';
 
 const CASE_PATH = '/pje/Processo/ConsultaProcesso/Detalhe/listAutosDigitais.seam?idProcesso=1&ca=token';
 const CASE_URL = `https://pje1g.trf1.jus.br${CASE_PATH}`;
@@ -22,15 +20,6 @@ function argsOf(argv) {
     else positional.push(arg);
   }
   return { dir: positional[0], latencyMs };
-}
-
-function ensureBuilt(root) {
-  const trained = join(root, 'dist/manual/ocr/por.traineddata.gz');
-  if (existsSync(trained)) return;
-  const built = spawnSync(process.execPath, [join(root, 'scripts/build.mjs')], { stdio: 'inherit' });
-  if (built.status !== 0 || !existsSync(trained)) {
-    throw new Error('the extension build did not produce the bundled Portuguese traineddata');
-  }
 }
 
 async function main() {

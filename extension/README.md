@@ -26,6 +26,15 @@ A private directory of `.html`, `.pdf`, and `.png` files can be timed without pr
 npm run bench:fixture -- <dir> --latency 150
 ```
 
+A generated synthetic eval scores what that timing run cannot: capture, state and OCR accuracy against known text.
+
+```
+npm run eval:synthetic                       # 3 runs, 150 ms latency
+npm run eval:synthetic -- --runs 5 --latency 0
+```
+
+It writes three invented cases to a temp dir, nine documents each: html, a text PDF, a scanned PNG, a two-page scanned PDF, a sigilo row, a 403 row and a corrupt file. It then runs the built extension headless, clicks **Estudar processo**, and prints one JSON line: `fixtureVersion`, `cases`, `documentsExpected`, `documentsCaptured`, `captureRate`, `stateMatches`, `stateExpected`, `stateMismatches` (synthetic ids only), `sigiloWarningShown`, `ocr: { pages, cer, wer }`, `totalSec` (median) and `latencyMs`. Capture, state and OCR come from the first run; a mismatch seen in any run is listed; the time is the median over all case runs. Capture and state come from the case pack sidecar, and OCR text comes from the pack passages, the same artifact that goes to ChatGPT. The report carries no document text and no case content. It needs the Playwright Chromium that `npm test` uses, and it makes no network request beyond localhost. No target is a CI gate yet.
+
 ## Build and test
 
 ```

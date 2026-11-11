@@ -8,8 +8,9 @@
   "engines": { "node": ">=22" },
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "node --test --test-reporter=spec test/*.test.js",
-    "bench:fixture": "node scripts/bench-fixture.mjs"
+    "test": "node --test --test-concurrency=1 --test-reporter=spec test/*.test.js",
+    "bench:fixture": "node scripts/bench-fixture.mjs",
+    "eval:synthetic": "node scripts/eval-synthetic.mjs"
   },
   "devDependencies": {
     "playwright-core": "1.56.1"

@@ -1,6 +1,8 @@
 // Fixture server for a private timing run. Ids are D01, D02, … so a file name
 // never has to appear in the timeline or in the JSON report.
 
+import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { readdir, readFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
@@ -26,9 +28,20 @@ export async function loadFixture(dir) {
   return docs;
 }
 
-export function timelineHtml(docs) {
-  const rows = docs.map((doc) => `<div class="media"><a href="/pje/documento/download/${doc.id}">ver</a><span class="data">01/01/2020</span></div>`).join('');
-  return `<!doctype html><html><body><span class="numero-processo">TEST-CASE-A</span><div id="divTimeLine">${rows}</div></body></html>`;
+export function timelineHtml(docs, caseNumber = 'TEST-CASE-A') {
+  const rows = docs
+    .map((doc) => `<div class="media"${doc.sigilo ? ' data-sigilo' : ''}><a href="/pje/documento/download/${doc.id}">ver</a><span class="data">01/01/2020</span></div>`)
+    .join('');
+  return `<!doctype html><html><body><span class="numero-processo">${caseNumber}</span><div id="divTimeLine">${rows}</div></body></html>`;
+}
+
+export function ensureBuilt(root) {
+  const trained = join(root, 'dist/manual/ocr/por.traineddata.gz');
+  if (existsSync(trained)) return;
+  const built = spawnSync(process.execPath, [join(root, 'scripts/build.mjs')], { stdio: 'inherit' });
+  if (built.status !== 0 || !existsSync(trained)) {
+    throw new Error('the extension build did not produce the bundled Portuguese traineddata');
+  }
 }
 
 export function reportFromMeasure(measure, { totalMs, latencyMs }) {
@@ -46,14 +59,14 @@ export function reportFromMeasure(measure, { totalMs, latencyMs }) {
   };
 }
 
-export function startFixtureServer(docs, latencyMs) {
+export function startFixtureServer(docs, latencyMs, { caseNumber = 'TEST-CASE-A' } = {}) {
   const byId = new Map(docs.map((doc) => [doc.id, doc]));
   const server = createServer(async (req, res) => {
     try {
       const url = new URL(req.url ?? '/', 'http://127.0.0.1');
       if (url.pathname.includes('listAutosDigitais')) {
         res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-        res.end(timelineHtml(docs));
+        res.end(timelineHtml(docs, caseNumber));
         return;
       }
       const id = decodeURIComponent(url.pathname.split('/').pop() || '');
@@ -64,6 +77,11 @@ export function startFixtureServer(docs, latencyMs) {
         return;
       }
       await new Promise((resolve) => setTimeout(resolve, latencyMs));
+      if (doc.status && doc.status !== 200) {
+        res.writeHead(doc.status, { 'content-type': 'text/plain; charset=utf-8' });
+        res.end('');
+        return;
+      }
       res.writeHead(200, { 'content-type': doc.type });
       res.end(doc.bytes);
     } catch {

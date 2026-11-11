@@ -18,3 +18,13 @@ npm test --prefix chatgpt
 npm run build --prefix case-store
 npm run build --prefix extension
 ```
+
+## Synthetic one-click eval
+
+The one-click eval scores capture, state and OCR accuracy on three generated cases. It needs the Playwright Chromium that `npm test` uses, stays on localhost, and is not a CI gate.
+
+```
+cd extension && npm ci && npm run build && npm run eval:synthetic
+```
+
+`npm run eval:synthetic -- --runs N --latency MS` changes the run count (default 3) and the simulated PJe latency (default 150 ms). The command prints one JSON line: `documentsCaptured` over `documentsExpected`, `captureRate`, `stateMatches` over `stateExpected`, `stateMismatches` by synthetic id, `sigiloWarningShown`, `ocr.cer` and `ocr.wer` over `ocr.pages`, the median `totalSec` and `latencyMs`. Capture and OCR come from the first run; a mismatch seen in any run is listed; the time is the median over the case runs. It carries no document text. Paste the line in the PR.
