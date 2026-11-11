@@ -28,3 +28,18 @@ cd extension && npm ci && npm run build && npm run eval:synthetic
 ```
 
 `npm run eval:synthetic -- --runs N --latency MS` changes the run count (default 3) and the simulated PJe latency (default 150 ms). The command prints one JSON line: `documentsCaptured` over `documentsExpected`, `captureRate`, `stateMatches` over `stateExpected`, `stateMismatches` by synthetic id, `sigiloWarningShown`, `ocr.cer` and `ocr.wer` over `ocr.pages`, the median `totalSec` and `latencyMs`. Capture and OCR come from the first run; a mismatch seen in any run is listed; the time is the median over the case runs. It carries no document text. Paste the line in the PR.
+
+## Document fetch waves (ready time)
+
+`collectCase` fetches a case in waves of at most `DOCUMENT_FETCH_LIMIT` (4) documents. The pause from the panel (`DOCUMENT_PAUSE_MS`, "pausa entre documentos") now runs between waves, not between every document; `lumePauseMs: 0` still removes it. A wave resolves before its documents are classified and delivered, in list order, so the pack order, the per-document states and the sigilo, restricted and corrupt handling are unchanged.
+
+Measured on 2026-11-11 with the synthetic eval above (3 cases, 27 documents, 3 runs, median):
+
+```
+before, 150 ms: {"latencyMs":150,"totalSec":4.38,"captureRate":1,"stateMatches":27,"ocr":{"pages":9,"cer":0,"wer":0}}
+after,  150 ms: {"latencyMs":150,"totalSec":1.88,"captureRate":1,"stateMatches":27,"ocr":{"pages":9,"cer":0,"wer":0}}
+before, 0 ms:   {"latencyMs":0,"totalSec":3.39,"captureRate":1,"stateMatches":27,"ocr":{"pages":9,"cer":0,"wer":0}}
+after,  0 ms:   {"latencyMs":0,"totalSec":1.38,"captureRate":1,"stateMatches":27,"ocr":{"pages":9,"cer":0,"wer":0}}
+```
+
+`npm test --prefix extension` covers the wave cap, the order, the abort and one failed fetch kept to its own document.

@@ -18,6 +18,10 @@ function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Small fixed load on the real PJe: a wave fetches at most this many documents
+// at once, and the pause runs between waves, not between every document.
+export const DOCUMENT_FETCH_LIMIT = 4;
+
 const SUPPORTED = new Set([
   'application/pdf',
   'text/html',
@@ -165,97 +169,110 @@ export async function collectCase({
     }
 
     let index = 0;
-    let documentFetches = 0;
-    for (const item of items) {
-      guard();
-      index += 1;
-      if (!item.href) {
-        item.state = 'missing';
-        item.detail = 'sem link na lista';
-        misses.push({ id: item.id, reason: 'missing', detail: item.detail, hrefPattern: null });
+    // Waves of up to DOCUMENT_FETCH_LIMIT documents. A wave resolves before its
+    // documents are classified and delivered, in list order, so the pack order and
+    // the per-document states stay the same as a one-at-a-time read.
+    for (let from = 0; from < items.length; from += DOCUMENT_FETCH_LIMIT) {
+      if (from > 0) await wait(pauseMs);
+      const wave = items.slice(from, from + DOCUMENT_FETCH_LIMIT);
+      const fetched = await Promise.all(wave.map(async (item) => {
+        if (!item.href) return null;
+        const rule = matchUrlRule(item.href, bound.urlRules ?? null);
+        if (!rule || rule.kind !== 'document') return null;
+        try {
+          return { res: await get(item.href) };
+        } catch (error) {
+          return { error };
+        }
+      }));
+      for (const [n, item] of wave.entries()) {
+        guard();
+        index += 1;
+        if (!item.href) {
+          item.state = 'missing';
+          item.detail = 'sem link na lista';
+          misses.push({ id: item.id, reason: 'missing', detail: item.detail, hrefPattern: null });
+          emit();
+          continue;
+        }
+        const rule = matchUrlRule(item.href, bound.urlRules ?? null);
+        if (!rule || rule.kind !== 'document') {
+          item.state = 'failed';
+          item.rule = rule?.id ?? null;
+          item.detail = rule
+            ? `regra ${rule.id} não é documento`
+            : `nenhuma regra de URL (${URL_RULE_IDS.join(', ')})`;
+          misses.push({ id: item.id, reason: 'no_url_rule', detail: item.detail, hrefPattern: urlPattern(item.href), rule: rule?.id ?? null });
+          emit();
+          continue;
+        }
+        item.rule = rule.id;
+        const got = fetched[n];
+        if (got?.error) {
+          if (got.error instanceof Stop) throw got.error;
+          item.state = 'failed';
+          item.detail = 'erro de rede';
+          misses.push({ id: item.id, reason: 'network', detail: item.detail, hrefPattern: urlPattern(item.href), rule: rule.id });
+          emit();
+          continue;
+        }
+        const res = got.res;
+        if (res.status === 401) throw new Stop('session_expired');
+        if (res.status === 403) {
+          item.state = 'restricted';
+          item.detail = 'http 403';
+          misses.push({ id: item.id, reason: 'restricted', detail: item.detail, hrefPattern: urlPattern(item.href), rule: rule.id });
+          emit();
+          continue;
+        }
+        if (res.status === 404 || res.status === 410) {
+          item.state = 'missing';
+          item.detail = `http ${res.status}`;
+          misses.push({ id: item.id, reason: 'missing', detail: item.detail, hrefPattern: urlPattern(item.href), rule: rule.id });
+          emit();
+          continue;
+        }
+        if (res.status < 200 || res.status > 299) {
+          item.state = 'failed';
+          item.detail = `http ${res.status}`;
+          misses.push({ id: item.id, reason: 'http', detail: item.detail, hrefPattern: urlPattern(item.href), rule: rule.id });
+          emit();
+          continue;
+        }
+        const type = typeOf(res.contentType);
+        const bytes = res.bytes instanceof Uint8Array ? res.bytes : new Uint8Array(res.bytes ?? []);
+        if (!SUPPORTED.has(type)) {
+          item.state = 'unsupported';
+          item.detail = type || 'tipo desconhecido';
+          misses.push({ id: item.id, reason: 'unsupported', detail: item.detail, hrefPattern: urlPattern(item.href), rule: rule.id });
+          emit();
+          continue;
+        }
+        if (bytes.byteLength === 0) {
+          item.state = 'failed';
+          item.detail = 'corpo vazio';
+          misses.push({ id: item.id, reason: 'empty', detail: item.detail, hrefPattern: urlPattern(item.href), rule: rule.id });
+          emit();
+          continue;
+        }
+        item.state = 'processed';
+        item.detail = null;
+        const doc = {
+          id: item.id,
+          version: item.version || '1',
+          contentType: type,
+          bytes,
+          source: 'document',
+          rule: rule.id,
+          index,
+          total: items.length,
+          date: item.date ?? null,
+          fetchMs: res.fetchMs ?? null,
+        };
+        documents.push({ id: doc.id, contentType: type, bytes: bytes.byteLength, rule: rule.id });
         emit();
-        continue;
+        await onDocument(doc);
       }
-      const rule = matchUrlRule(item.href, bound.urlRules ?? null);
-      if (!rule || rule.kind !== 'document') {
-        item.state = 'failed';
-        item.rule = rule?.id ?? null;
-        item.detail = rule
-          ? `regra ${rule.id} não é documento`
-          : `nenhuma regra de URL (${URL_RULE_IDS.join(', ')})`;
-        misses.push({ id: item.id, reason: 'no_url_rule', detail: item.detail, hrefPattern: urlPattern(item.href), rule: rule?.id ?? null });
-        emit();
-        continue;
-      }
-      item.rule = rule.id;
-      let res;
-      try {
-        if (documentFetches > 0) await wait(pauseMs);
-        documentFetches += 1;
-        res = await get(item.href);
-      } catch (error) {
-        if (error instanceof Stop) throw error;
-        item.state = 'failed';
-        item.detail = 'erro de rede';
-        misses.push({ id: item.id, reason: 'network', detail: item.detail, hrefPattern: urlPattern(item.href), rule: rule.id });
-        emit();
-        continue;
-      }
-      if (res.status === 401) throw new Stop('session_expired');
-      if (res.status === 403) {
-        item.state = 'restricted';
-        item.detail = 'http 403';
-        misses.push({ id: item.id, reason: 'restricted', detail: item.detail, hrefPattern: urlPattern(item.href), rule: rule.id });
-        emit();
-        continue;
-      }
-      if (res.status === 404 || res.status === 410) {
-        item.state = 'missing';
-        item.detail = `http ${res.status}`;
-        misses.push({ id: item.id, reason: 'missing', detail: item.detail, hrefPattern: urlPattern(item.href), rule: rule.id });
-        emit();
-        continue;
-      }
-      if (res.status < 200 || res.status > 299) {
-        item.state = 'failed';
-        item.detail = `http ${res.status}`;
-        misses.push({ id: item.id, reason: 'http', detail: item.detail, hrefPattern: urlPattern(item.href), rule: rule.id });
-        emit();
-        continue;
-      }
-      const type = typeOf(res.contentType);
-      const bytes = res.bytes instanceof Uint8Array ? res.bytes : new Uint8Array(res.bytes ?? []);
-      if (!SUPPORTED.has(type)) {
-        item.state = 'unsupported';
-        item.detail = type || 'tipo desconhecido';
-        misses.push({ id: item.id, reason: 'unsupported', detail: item.detail, hrefPattern: urlPattern(item.href), rule: rule.id });
-        emit();
-        continue;
-      }
-      if (bytes.byteLength === 0) {
-        item.state = 'failed';
-        item.detail = 'corpo vazio';
-        misses.push({ id: item.id, reason: 'empty', detail: item.detail, hrefPattern: urlPattern(item.href), rule: rule.id });
-        emit();
-        continue;
-      }
-      item.state = 'processed';
-      item.detail = null;
-      const doc = {
-        id: item.id,
-        version: item.version || '1',
-        contentType: type,
-        bytes,
-        source: 'document',
-        rule: rule.id,
-        index,
-        total: items.length,
-        date: item.date ?? null,
-        fetchMs: res.fetchMs ?? null,
-      };
-      documents.push({ id: doc.id, contentType: type, bytes: bytes.byteLength, rule: rule.id });
-      emit();
-      await onDocument(doc);
     }
     state.status = misses.some((miss) => miss.reason === 'list') ? 'incomplete' : 'complete';
   } catch (error) {
