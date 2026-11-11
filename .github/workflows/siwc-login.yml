@@ -27,5 +27,6 @@ jobs:
           node-version: '24'
       - run: npm install
       - run: npm run build
-      - run: npx playwright-core install --with-deps chromium
+      # No --with-deps: apt-get on this runner times out on azure.archive.ubuntu.com, and the image already has the Chromium libraries.
+      - run: npx playwright-core install chromium
       - run: node --test --test-reporter=spec test/siwc-auth.test.js test/siwc-session.test.js test/siwc-no-paid-fallback.test.js test/e2e-siwc.test.js
