@@ -12,7 +12,7 @@ export const publicZipPath = path.resolve(scriptsDir, "../dist/lume-jef-publico-
 // package installs from the directory, so it never ships publicly.
 export const dropped = ["instalar"];
 
-const PROFILE = "o `perfil-estilo.md` do usuário, quando houver";
+const PROFILE = "`perfil-estilo.md` do usuário, quando houver,";
 
 // The public build keeps the method and drops the private relatoria's style.
 // Every rule must match, so a source edit that moves a passage fails the build
@@ -31,17 +31,17 @@ export const redactions = [
   {
     file: "skills/jef-director/references/diretor.md",
     find: "trate o conteúdo mantido em `relatoria-sjdf-votos` como fonte do padrão pessoal, sem exigir sua ativação no runtime",
-    replace: `trate o formato JEF-V1 e ${PROFILE} como fonte do padrão de forma`,
+    replace: `trate o formato JEF-V1 e o ${PROFILE} como fonte do padrão de forma`,
   },
   {
     file: "skills/jef-director/references/diretor.md",
     find: "Incorpore diretamente a governança da Relatoria:",
-    replace: `Aplique o formato padrão JEF-V1, salvo forma diversa em ${PROFILE}:`,
+    replace: "Aplique o formato padrão JEF-V1, salvo forma diversa no `perfil-estilo.md` do usuário:",
   },
   {
     file: "skills/jef-director/references/diretor.md",
     find: "incorpore diretamente a estrutura e o estilo mantidos em `relatoria-sjdf-votos`, sem exigir sua ativação",
-    replace: `aplique a estrutura JEF-V1 e ${PROFILE}`,
+    replace: "aplique a estrutura JEF-V1 e, quando houver, o `perfil-estilo.md` do usuário",
   },
   {
     file: "skills/jef-director/references/diretor.md",
@@ -81,14 +81,14 @@ export const redactions = [
   {
     file: "skills/jef-voto/references/c6.md",
     find: "Por autorização expressa de manutenção em 26/10/2026, esta é uma preferência\ndurável de redação deste projeto, nos termos de MEM-001. Aplica-se",
-    replace: `Padrão neutro, substituível por ${PROFILE}. Aplica-se`,
+    replace: `Padrão neutro, substituível pelo ${PROFILE} e aplicável`,
   },
   {
     re: /Na valoração autônoma, usar o texto aprovado[\s\S]*?Preservar a formulação, sem substituí-la por comentário a relatório particular\./,
     file: "skills/jef-voto/references/c6.md",
     replace: `Na valoração autônoma, explicar com palavras próprias, a partir das premissas
 sustentadas pelos autos, por que o laudo judicial prevalece ou não. Se houver
-fórmula própria em ${PROFILE}, usá-la nas mesmas condições.`,
+fórmula própria no ${PROFILE} usá-la nas mesmas condições.`,
   },
   {
     file: "skills/jef-voto/references/c6.md",
@@ -114,6 +114,44 @@ fórmula própria em ${PROFILE}, usá-la nas mesmas condições.`,
     file: "skills/jef-director/references/contrato.md",
     find: "Aplicar a fórmula aprovada em C6.6.",
     replace: "Aplicar a valoração de C6.6.",
+  },
+  {
+    re: /7\. se o Google Drive estiver disponível[^\n]*\n/,
+    file: "skills/jef-director/references/diretor.md",
+    replace: `7. carregue como preferências aprovadas apenas o ${PROFILE} e as regras que o usuário aprovou na conversa atual; não consulte nem grave memória externa\n`,
+  },
+  {
+    re: /\| Memória externa \|[^\n]*\n/,
+    file: "skills/jef-director/references/diretor.md",
+    replace: "",
+  },
+  {
+    re: /- Quando o Google Drive estiver disponível, use a aba `CORRECOES`[^\n]*\n- Se o painel não estiver acessível[^\n]*\n\nO painel de correções não substitui[^\n]*\n/,
+    file: "skills/jef-director/references/diretor.md",
+    replace: "- Não grave correções em serviço externo. A observação fica só na conversa atual.\n",
+  },
+  {
+    re: /### Persistência aprovada no Custom GPT[\s\S]*?nem fabrique ID ou versão\.\n/,
+    file: "skills/jef-director/references/diretor.md",
+    replace: `### Persistência de preferências
+
+Este plugin não grava memória externa. Para tornar uma preferência durável, mostre o texto exato e peça ao usuário que o acrescente ao seu \`perfil-estilo.md\`. Nunca simule salvamento nem prometa carregamento na sessão seguinte.
+`,
+  },
+  {
+    file: "skills/jef-voto/references/c6.md",
+    find: "Aplicar integralmente JEF-V1 do contrato:",
+    replace: "Aplicar JEF-V1 do contrato, salvo forma diversa no `perfil-estilo.md` do usuário:",
+  },
+  {
+    file: "skills/jef-voto/references/jef-v1.md",
+    find: "`JEF-V1` is frozen to the migration matrix and its pinned baseline.",
+    replace: "In this public build, the user's `perfil-estilo.md` counts as an express format exception to FMT-001 to FMT-005, FMT-007 and FMT-009 for every product until the user says otherwise. It never changes facts, result or coverage.\n\n`JEF-V1` is frozen to the migration matrix and its pinned baseline.",
+  },
+  {
+    file: "skills/jef-director/references/contrato.md",
+    find: "`JEF-V1` is frozen to the migration matrix and its pinned baseline.",
+    replace: "In this public build, the user's `perfil-estilo.md` counts as an express format exception to FMT-001 to FMT-005, FMT-007 and FMT-009 for every product until the user says otherwise. It never changes facts, result or coverage.\n\n`JEF-V1` is frozen to the migration matrix and its pinned baseline.",
   },
 ];
 
@@ -143,6 +181,10 @@ export const forbidden = [
   "26/10/2026",
   "09/10/2026",
   "instalar-plugin",
+  "Google Drive",
+  "MEMORIA_APROVADA",
+  "CONTROLE_AGENTES",
+  "CORRECOES",
 ];
 
 async function walk(dir, root, acc = []) {
