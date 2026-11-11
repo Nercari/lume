@@ -43,3 +43,16 @@ after,  0 ms:   {"latencyMs":0,"totalSec":1.38,"captureRate":1,"stateMatches":27
 ```
 
 `npm test --prefix extension` covers the wave cap, the order, the abort and one failed fetch kept to its own document.
+
+## Research query identity (case id and case number)
+
+`research()` requires the case id and the open case number, CNJ or not. It refuses with `QueryLeakError` when either is absent, so no caller can send a query without them. `caseTermsOf(L, { caseId, caseNumber, extra })` includes both, so a non-CNJ number is removed like a CNJ one, also inside punctuation and in any case.
+
+Synthetic repro from #25 (no network, no real case material; `transfer/test/fixtures.js` `setup()`):
+
+```
+before: {"query":"tema do processo fixture-alpha e synth-0001","removed":[]}
+after:  {"query":"tema do processo e","removed":["case_term"],"caseIdPresent":false,"caseNumberPresent":false,"queriesSent":0}
+```
+
+`npm test --prefix source-panel` covers the sent query and the diagnostic log with neither value, the refusal when either is missing, and the non-CNJ number.
