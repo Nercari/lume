@@ -2,7 +2,6 @@ import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { pluginRoot, zipStored } from "./build-zip.mjs";
-import { writeLogo } from "./render-logo.mjs";
 
 const scriptsDir = path.dirname(fileURLToPath(import.meta.url));
 export const overlayRoot = path.resolve(scriptsDir, "../lume-jef-publico");
@@ -167,7 +166,6 @@ function apply(rule, text) {
 }
 
 export async function buildPublic() {
-  await writeLogo();
   await rm(publicRoot, { recursive: true, force: true });
   await cp(pluginRoot, publicRoot, { recursive: true });
   for (const rel of dropped) await rm(path.join(publicRoot, rel), { recursive: true, force: true });
