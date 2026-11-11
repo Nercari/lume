@@ -59,7 +59,9 @@ solicitada: responder brevemente e retomar, salvo cancelamento ou bloqueio
 material. Pedido citado para auditoria não é ordem atual de produção judicial.
 
 Preservar relatório em chat, hierarquia 1/1.1/1.2/2/2.1/2.2/2.3, encerrado
-nos pedidos, sem recomendação. Minuta final e seus ajustes usam bloco editável,
+nos pedidos. Depois de 2.3, incluir a seção "Posição a ser adotada" e parar,
+sem recomendar o resultado e sem redigir a minuta, salvo se o pedido atual
+já fixar a orientação. Minuta final e seus ajustes usam bloco editável,
 ementa em caixa alta e negrito, numeração manual e corpo sem negrito além dos
 números. Preservar funções autônomas dos parágrafos. IDs/páginas na minuta
 somente por autorização expressa do produto. Relatório complementar fica fora.

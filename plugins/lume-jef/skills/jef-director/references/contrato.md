@@ -206,7 +206,7 @@ A missing item that could change result, scope, or validity is
 | `FMT-004` | final judicial draft | Number body paragraphs manually and sequentially, with bold only on the number. | Express current-product format exception. | Parser and rendered-output check. | critical |
 | `FMT-005` | final judicial draft | Do not bold body text. | Express current-product format exception. | Rendered-output check. | critical |
 | `FMT-006` | judicial reasoning | Be concise and nonredundant without collapsing autonomous argumentative functions. | None. | Paragraph-function semantic rubric. | high |
-| `FMT-007` | preliminary report | Use the established `1`, `1.1`, `1.2`, `2`, `2.1`, `2.2`, `2.3` hierarchy and stop at requests. | A genuinely different current product. | Ordered-heading and terminal-section check. | critical |
+| `FMT-007` | preliminary report | Use the established `1`, `1.1`, `1.2`, `2`, `2.1`, `2.2`, `2.3` hierarchy and stop at requests. After 2.3, add the "Posição a ser adotada" section and stop, unless the current request already fixes the orientation. | A genuinely different current product. | Ordered-heading and terminal-section check. | critical |
 | `FMT-008` | final judicial draft | Place disposition and attorney fees in separate paragraphs when each is independently material. | Fees genuinely not applicable. | Paragraph-role and result-coherence check. | high |
 | `FMT-009` | final judicial draft | Do not use automatic lists, internal headings, semicolons, or prohibited body bolding. | Express current-product format exception. | Syntax and rendered-output check. | high |
 
@@ -369,7 +369,9 @@ solicitada: responder brevemente e retomar, salvo cancelamento ou bloqueio
 material. Pedido citado para auditoria não é ordem atual de produção judicial.
 
 Preservar relatório em chat, hierarquia 1/1.1/1.2/2/2.1/2.2/2.3, encerrado
-nos pedidos, sem recomendação. Minuta final e seus ajustes usam bloco editável,
+nos pedidos. Depois de 2.3, incluir a seção "Posição a ser adotada" e parar,
+sem recomendar o resultado e sem redigir a minuta, salvo se o pedido atual
+já fixar a orientação. Minuta final e seus ajustes usam bloco editável,
 ementa em caixa alta e negrito, numeração manual e corpo sem negrito além dos
 números. Preservar funções autônomas dos parágrafos. IDs/páginas na minuta
 somente por autorização expressa do produto. Relatório complementar fica fora.

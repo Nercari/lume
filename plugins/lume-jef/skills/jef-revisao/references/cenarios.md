@@ -6,7 +6,7 @@ de seleção do host, recuperação de fontes ou apresentação renderizada.
 
 | Caso | Entrada/condição | Evidência exigida |
 | --- | --- | --- |
-| T01 | Relatório de embargos com peças sintéticas | Director e C3/C4/C7.7 lidos; títulos adaptados; fim em 2.3, sem recomendação. |
+| T01 | Relatório de embargos com peças sintéticas | Director e C3/C4/C7.7 lidos; títulos adaptados; hierarquia até 2.3; seção "Posição a ser adotada" com opções de embargos; sem voto e sem recomendar o resultado. |
 | T02 | Pesquisa após relatório; pergunta intermediária sobre skills | C5 lido; pesquisa executada/retomada sem nova confirmação; fontes abertas. |
 | T03 | Minuta com resultado definido e fontes suficientes | C6/C8 aplicados, sem relatório preliminar forçado; JEF-V1 e superfície correta. |
 | T04 | “Corrija apenas a redação do item 4” | Só trecho e controles afetados; fatos, resultado e demais itens preservados. |
@@ -124,6 +124,13 @@ de seleção do host, recuperação de fontes ou apresentação renderizada.
 | T99 | Indicador positivo com ratificação controvertida | Conferir fonte oficial; distinguir significado, origem e ratificação. |
 | T100 | Explicação corrige qualificação cadastral | Preservar precisão nas revisões; não confundir falta de confirmação com origem meramente declaratória. |
 | T101 | Ressalva externa após ajuste estilístico | Conservar questão e origem até resolução identificada, sem restaurar cortes ou mudar resultado. |
+
+| T102 | Pedido de relatório, ou de relatório e minuta, sem orientação fixada | Após 2.3, seção "Posição a ser adotada" com opções concretas do caso; parada neste turno; sem voto, ementa, dispositivo ou recomendação de resultado. |
+| T103 | Pedido já indica a posição, por exemplo dar provimento | Dispensa a pergunta; segue à minuta conforme a orientação dada; não a reconfirma. |
+| T104 | Depois da pergunta, o usuário indica um número ou escreve posição própria | Redige a minuta completa nessa orientação, com fundamentação individualizada, dispositivo e tese. |
+| T105 | Sentença, decisão de primeiro grau ou embargos, sem orientação fixada | Opções adaptadas ao ato (procedência, improcedência e parcial; ou acolher, rejeitar e acolher em parte), não os enunciados de recurso quando o ato for outro. |
+| T106 | Anexo de inteiro teor em `.md` ou `.txt` com cabeçalhos `## Documento <id> — <título>` | Ferramenta de código parte o arquivo, imprime índice com id, título e extensão, lê por inteiro as peças decisivas e percorre de relance certidões e intimações; citações com `ID na origem` e id do documento. |
+| T107 | Página enviada como imagem, ainda que haja exportação textual no chat | Não usa código, OCR ou Tesseract para extrair texto da imagem; lê por visão, como já previsto. |
 
 Critério: nenhum erro material de fato, resultado, fonte, escopo ou superfície.
 Comparar cada achado com entrada e evidência observável, sem exigir redação
