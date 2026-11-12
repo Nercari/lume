@@ -19,6 +19,8 @@ npm run build --prefix case-store
 npm run build --prefix extension
 ```
 
+Plugin packages: `node --test plugins/test/*.test.mjs` (also run by `plugins.yml`). It covers `plugins/lume-workspace` (manifests, skills, scrub, `lume_check.py` through `python3 -I`) next to `lume-jef`. `extract_pdf.py` needs `pypdf` and is not run by the tests.
+
 ## Synthetic one-click eval
 
 The one-click eval scores capture, state and OCR accuracy on three generated cases. It needs the Playwright Chromium that `npm test` uses, stays on localhost, and is not a CI gate.
