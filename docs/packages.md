@@ -10,10 +10,6 @@ Defines the **permitted real-case route** without putting case content on GitHub
 
 Ships **ChatGPT Project instructions** (`PROJETO-LUME.md`), a short setup guide (`LEIA-ME.md`), and an optional **Agent Plugin** (`plugin/` with `skills/lume/`). The user pastes the local **pacote do caso** from the extension; citations use `[Id X, fl. Y]`. No Lume API, no paid fallback, no native host. See [`chatgpt/LEIA-ME.md`](../chatgpt/LEIA-ME.md).
 
-## plugins/lume-workspace
-
-The **workspace chat plugin** (name `lume`, manifest version 1.2.0, JEF contract rev 2026-11-12.1): twelve skills, no server, no MCP, with two stdlib/pypdf helper scripts (`lume_check.py`, `extract_pdf.py`). It is a private-install package for the maintainer's ChatGPT workspace, not a public-directory package. It sits **next to** `plugins/lume-jef` and the PJe components (Work-button flow, public build, packaging bundle) and does not replace or imitate them. `LEIA-ME.md` in it still says 1.1.5; the manifests (1.2.0) are the version source until the maintainer decides. Checked by `plugins/test/workspace.test.mjs`.
-
 ## extension (#4)
 
 The **MV3 browser surface**: a TRF1 first-instance PJe content script and side panel that walks the document list through the page’s same-origin session, assigns every row an explicit state, stops safely on session or layout failure, and never exports credentials. Build, permissions, and read semantics are in [`extension/README.md`](../extension/README.md).
