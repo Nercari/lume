@@ -20,6 +20,14 @@ node harness.mjs --mode live --model claude-haiku-5-5 [--out DIR]
 
 Exit 0 usable, 1 not usable, 2 blocked.
 
+## Gates (live runs)
+
+`gates.json` lists four gates: independent evaluator, Law vetoes, held-out isolation, case readiness. All are **UNMET**. A live run stops with exit 2 before preflight and before any model call until each gate is `VERIFIED` with a link to a Nercari GitHub issue or PR comment. The owner of a gate (Themis for the three Law gates, the independent evaluator for the first) verifies it. The execution owner never sets a gate. The harness cannot prove who wrote the link; the owner's comment is the proof.
+
+## What the report separates
+
+`timingKind` is `SYNTHETIC_PROXY`: the case is invented and the clock is local plus model. It is not real workflow time. `uploadSec` and `humanReviewSec` are `UNMEASURED`: a real upload and a human review need a real workflow. A model revision after a failed check (up to 2) is timed (`t_revisao_N`), counted in `revisions`, and summed into `totalSec`. `editBurden` stays `UNMEASURED` until matched drafts and finals exist. Rubric or reference distances would be proxies and labeled so. The user-reported time of about five minutes is not a measurement.
+
 ## Subscription proof (stop rules)
 
 A live run makes a model call only if all hold, else it stops with exit 2:

@@ -1,0 +1,9 @@
+{
+  "note": "Live (model) runs stay blocked until every gate is VERIFIED with an evidence link. Only the named owner can verify a gate, by a GitHub comment. The execution owner never sets a gate itself. No private data belongs here.",
+  "gates": [
+    { "id": "independent-evaluator", "owner": "independent evaluator (routed by Ops; not the execution owner)", "status": "UNMET", "evidence": "" },
+    { "id": "law-vetoes", "owner": "Themis (Law owner)", "status": "UNMET", "evidence": "" },
+    { "id": "heldout-isolation", "owner": "Themis (Law owner)", "status": "UNMET", "evidence": "" },
+    { "id": "case-readiness", "owner": "Themis (Law owner)", "status": "UNMET", "evidence": "" }
+  ]
+}

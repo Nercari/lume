@@ -90,3 +90,5 @@ node --test audits/hillclimb/voto-timing/harness.test.mjs -> tests 14, pass 14, 
 ```
 
 Second repair: a precedent's denial that is quoted or attributed in the reasoning is not this voto's dispositive. The check drops quoted spans and attribution sentences, then classifies each paragraph. Earlier missing-dispositive and contradictory-partial cases stay rejected; legitimate decisions stay accepted. Keyword limit: an own decision phrased with an attributed verb is a false reject, never a false accept. All usable-voto timing stays **UNCONFIRMED**; an independent evaluator approval is required before any climb.
+
+Measurement gates (`audits/hillclimb/voto-timing/gates.json`): independent evaluator, Law vetoes, held-out isolation and case readiness are all **UNMET**. A live run stops before any model call until each is VERIFIED by its owner with a GitHub link. The harness now also times model revisions into the total and labels timing `SYNTHETIC_PROXY`; upload and human review stay UNMEASURED. `node --test audits/hillclimb/voto-timing/harness.test.mjs` -> tests 17, pass 17, fail 0.

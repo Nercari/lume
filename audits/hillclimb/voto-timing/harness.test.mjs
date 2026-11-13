@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { ALLOWED_MODELS, loadDocs, preflight, run, verify } from "./harness.mjs";
+import { ALLOWED_MODELS, gatesBlocker, loadDocs, loadGates, preflight, run, verify } from "./harness.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const canned = (k) => readFileSync(path.join(here, "fixture/canned", `${k}.md`), "utf8");
@@ -32,6 +32,7 @@ process.stdin.resume(); process.stdin.on("data", () => {}); process.stdin.on("en
 const AUTH = { loggedIn: true, authMethod: "claude.ai", apiProvider: "firstParty", subscriptionType: "max", email: "x@example.invalid" };
 const ok = (text, models = [MODEL]) => ({ is_error: false, subtype: "success", result: text, apiKeySource: null, duration_ms: 5, usage: { input_tokens: 1, output_tokens: 1 }, modelUsage: Object.fromEntries(models.map((m) => [m, {}])) });
 const env = { PATH: process.env.PATH };
+const OPEN = loadGates().map((g) => ({ ...g, status: "VERIFIED", evidence: "https://github.com/Nercari/lume/pull/62#issuecomment-1" })); // test-only: the real gates.json stays UNMET
 
 test("canned run is usable and reports edit burden as UNMEASURED", () => {
   const r = run({ mode: "canned" });
@@ -82,7 +83,7 @@ test("preflight blocks without a model, with opus, with an API key, and without 
 
 test("live run with matching receipts is usable and makes exactly two calls", () => {
   const f = fake({ auth: AUTH, calls: [ok(canned("relatorio")), ok(canned("voto"))] });
-  const r = run({ mode: "live", model: MODEL, env, bin: f.bin });
+  const r = run({ mode: "live", model: MODEL, env, bin: f.bin, gates: OPEN });
   assert.equal(r.usable, true);
   assert.equal(f.count(), 2);
   assert.equal(r.receipts.length, 2);
@@ -91,7 +92,7 @@ test("live run with matching receipts is usable and makes exactly two calls", ()
 
 test("a receipt with an unexpected executed model stops the run after the first call", () => {
   const f = fake({ auth: AUTH, calls: [ok(canned("relatorio"), [MODEL, "claude-opus-5-5"]), ok(canned("voto"))] });
-  const r = run({ mode: "live", model: MODEL, env, bin: f.bin });
+  const r = run({ mode: "live", model: MODEL, env, bin: f.bin, gates: OPEN });
   assert.match(r.blocked, /do not match pinned/);
   assert.equal(f.count(), 1);
   assert.equal(r.usable, false);
@@ -100,20 +101,20 @@ test("a receipt with an unexpected executed model stops the run after the first 
 
 test("an apiKeySource other than none stops the run", () => {
   const f = fake({ auth: AUTH, calls: [{ ...ok(canned("relatorio")), apiKeySource: "ANTHROPIC_API_KEY" }] });
-  assert.match(run({ mode: "live", model: MODEL, env, bin: f.bin }).blocked, /apiKeySource/);
+  assert.match(run({ mode: "live", model: MODEL, env, bin: f.bin, gates: OPEN }).blocked, /apiKeySource/);
   assert.equal(f.count(), 1);
 });
 
 test("a blocked preflight makes no model call", () => {
   const f = fake({ auth: { ...AUTH, loggedIn: false }, calls: [] });
-  const r = run({ mode: "live", model: MODEL, env, bin: f.bin });
+  const r = run({ mode: "live", model: MODEL, env, bin: f.bin, gates: OPEN });
   assert.ok(r.blocked);
   assert.equal(f.count(), 0);
 });
 
 test("an unusable voto reports no time-to-usable", () => {
   const f = fake({ auth: AUTH, calls: [ok(canned("relatorio")), ok(canned("voto").replace("Nego provimento", "Dou provimento"))] });
-  const r = run({ mode: "live", model: MODEL, env, bin: f.bin });
+  const r = run({ mode: "live", model: MODEL, env, bin: f.bin, gates: OPEN, maxRevisions: 0 });
   assert.equal(r.usable, false);
   assert.equal(r.totalSec, null);
   assert.ok(r.elapsedSec > 0);
@@ -160,7 +161,7 @@ test("verify accepts legitimate dispositive wordings", () => {
 test("a voto with a missing or contradictory dispositive is not usable and reports no time-to-usable", () => {
   for (const bad of [canned("voto").replace("\n\n" + P4, ""), withP4("**4.** Dou parcial provimento ao recurso e reformo a sentença.")]) {
     const f = fake({ auth: AUTH, calls: [ok(canned("relatorio")), ok(bad)] });
-    const r = run({ mode: "live", model: MODEL, env, bin: f.bin });
+    const r = run({ mode: "live", model: MODEL, env, bin: f.bin, gates: OPEN });
     assert.equal(r.usable, false);
     assert.equal(r.totalSec, null);
   }
@@ -191,4 +192,42 @@ test("a precedent in the reasoning does not reject a voto that has its own opera
     "own decision with quoted precedent in the same paragraph": withP4("**4.** Conforme “desprovimento” em precedente, nego provimento ao recurso."),
   };
   for (const [key, text] of Object.entries(ok)) assert.deepEqual(verify("voto", text, docs, expected), [], `${key} wrongly rejected`);
+});
+
+test("the shipped gates are all UNMET, so a live run stops before preflight and makes no model call", () => {
+  const gates = loadGates();
+  assert.equal(gates.length, 4);
+  assert.ok(gates.every((g) => g.status === "UNMET" && g.evidence === ""));
+  const f = fake({ auth: AUTH, calls: [] });
+  const r = run({ mode: "live", model: MODEL, env, bin: f.bin });
+  assert.match(r.blocked, /gates not verified: independent-evaluator.*law-vetoes.*heldout-isolation.*case-readiness/);
+  assert.match(r.blocked, /Themis/);
+  assert.equal(r.modelCalls, 0);
+  assert.equal(f.count(), 0);
+  assert.equal(r.totalSec, null);
+});
+
+test("a gate needs status VERIFIED and a Nercari GitHub issue or PR link", () => {
+  assert.equal(gatesBlocker(OPEN), null);
+  for (const bad of [{ status: "UNMET" }, { evidence: "" }, { evidence: "done" }, { evidence: "https://example.com/Nercari/lume/pull/1" }, { evidence: "https://github.com/other/lume/pull/1" }])
+    assert.ok(gatesBlocker([{ ...OPEN[0], ...bad }]), JSON.stringify(bad));
+});
+
+test("a revision is timed, counted and summed into the time to a usable voto; the revision cap holds", () => {
+  const bad = canned("voto").replace("Nego provimento", "Dou provimento");
+  const f = fake({ auth: AUTH, calls: [ok(canned("relatorio")), ok(bad), ok(canned("voto"))] });
+  const r = run({ mode: "live", model: MODEL, env, bin: f.bin, gates: OPEN });
+  assert.equal(r.usable, true);
+  assert.equal(r.revisions, 1);
+  assert.equal(r.modelCalls, 3);
+  assert.ok(r.segmentsSec.t_revisao_1 > 0);
+  assert.equal(r.receipts.at(-1).kind, "revisao-1");
+  assert.equal(r.timingKind, "SYNTHETIC_PROXY");
+  assert.match(r.humanReviewSec, /UNMEASURED/);
+  const g = fake({ auth: AUTH, calls: [ok(canned("relatorio")), ok(bad), ok(bad), ok(bad), ok(bad)] });
+  const c = run({ mode: "live", model: MODEL, env, bin: g.bin, gates: OPEN });
+  assert.equal(c.usable, false);
+  assert.equal(c.revisions, 2);
+  assert.equal(c.modelCalls, 4);
+  assert.equal(c.totalSec, null);
 });

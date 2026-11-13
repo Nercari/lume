@@ -21,6 +21,13 @@ export const BLOCKED_ENV = [
 ];
 export const LABEL = "SYNTHETIC PROXY. Not a real baseline. Not an improvement claim.";
 
+// A model call needs every gate VERIFIED with a GitHub evidence link. The harness cannot prove who wrote the link; the owner's comment is the proof.
+export const loadGates = () => JSON.parse(read(here, "gates.json")).gates;
+export const gatesBlocker = (gates) => {
+  const open = gates.filter((g) => g.status !== "VERIFIED" || !/^https:\/\/github\.com\/Nercari\/[^/]+\/(issues|pull)\/\d+/.test(g.evidence ?? ""));
+  return open.length ? `gates not verified: ${open.map((g) => `${g.id} (owner: ${g.owner})`).join("; ")}` : null;
+};
+
 const sha = (t) => createHash("sha256").update(t).digest("hex").slice(0, 16);
 const read = (...p) => readFileSync(path.join(...p), "utf8");
 const cleanEnv = (env) => Object.fromEntries(Object.entries(env).filter(([k]) => !BLOCKED_ENV.includes(k)));
@@ -133,13 +140,15 @@ export function verify(kind, text, docs, expected) {
   return fail;
 }
 
-export function run({ mode, model, env = process.env, bin = "claude", outDir }) {
+export function run({ mode, model, env = process.env, bin = "claude", outDir, gates = mode === "live" ? loadGates() : [], maxRevisions = 2 }) {
   const docs = loadDocs();
   const expected = JSON.parse(read(fixture, "expected.json"));
-  const report = { label: LABEL, mode, model: mode === "live" ? model : null, fixtureDocs: docs.length, segmentsSec: {}, receipts: [], modelCalls: 0 };
+  const report = { label: LABEL, timingKind: "SYNTHETIC_PROXY", uploadSec: "UNMEASURED (t_pack is a local proxy, not a real upload)", humanReviewSec: "UNMEASURED", revisions: 0, mode, model: mode === "live" ? model : null, fixtureDocs: docs.length, segmentsSec: {}, receipts: [], modelCalls: 0 };
   const seg = (name, fn) => { const t = performance.now(); const v = fn(); report.segmentsSec[name] = +((performance.now() - t) / 1000).toFixed(3); return v; };
   const stop = (blocker) => ({ ...report, blocked: blocker, usable: false, totalSec: null, editBurden: "UNMEASURED" });
   if (mode === "live") {
+    const g = gatesBlocker(gates);
+    if (g) return stop(g); // before preflight and before any model call
     const p = preflight({ model, env, bin });
     if (!p.ok) return stop(p.blocker);
     report.auth = p.auth;
@@ -158,12 +167,26 @@ export function run({ mode, model, env = process.env, bin = "claude", outDir }) 
     outs[kind] = r.text;
   }
   if (outDir) for (const k of Object.keys(outs)) writeFileSync(path.join(outDir, `${k}.md`), outs[k]); // synthetic text only
-  const failures = seg("t_verify", () => ({ relatorio: verify("relatorio", outs.relatorio, docs, expected), voto: verify("voto", outs.voto, docs, expected) }));
+  const check = () => seg(`t_verify`, () => ({ relatorio: verify("relatorio", outs.relatorio, docs, expected), voto: verify("voto", outs.voto, docs, expected) }));
+  let failures = check();
+  // Revision is part of the time to a usable voto: each model revision and its re-check are timed and summed.
+  while (mode === "live" && failures.voto.length && report.revisions < maxRevisions) {
+    report.revisions += 1;
+    const base = buildPrompt("voto", docs, outs.relatorio, expected).prompt;
+    const r = callClaude({ prompt: `${base}\n<minuta_anterior>\n${outs.voto}\n</minuta_anterior>\nRevise a minuta e corrija estes defeitos, sem outro comentário: ${failures.voto.join("; ")}.`, model, env, bin });
+    report.modelCalls += 1;
+    if (r.receipt) report.receipts.push({ kind: `revisao-${report.revisions}`, ...r.receipt });
+    if (r.blocker) return stop(`revisao-${report.revisions}: ${r.blocker}`);
+    report.segmentsSec[`t_revisao_${report.revisions}`] = +r.wallSec.toFixed(3);
+    outs.voto = r.text;
+    if (outDir) writeFileSync(path.join(outDir, "voto.md"), outs.voto);
+    const tv = report.segmentsSec.t_verify; failures = check(); report.segmentsSec.t_verify = +(tv + report.segmentsSec.t_verify).toFixed(3);
+  }
   report.failures = failures;
   report.usable = !failures.relatorio.length && !failures.voto.length;
   const total = Object.values(report.segmentsSec).reduce((a, b) => a + b, 0);
   report.elapsedSec = +total.toFixed(3);
-  report.totalSec = report.usable ? report.elapsedSec : null; // time to a verified usable voto; null when never reached
+  report.totalSec = report.usable ? report.elapsedSec : null; // time to a verified usable voto incl. model revisions; null when never reached
   report.editBurden = "UNMEASURED";
   report.vetoes = "structural proxy checks only; Law vetoes and holdout are NOT DEFINED";
   return report;
