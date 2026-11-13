@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { ALLOWED_MODELS, gatesBlocker, loadDocs, loadGates, preflight, run, verify } from "./harness.mjs";
+import { ALLOWED_MODELS, gatesBlocker, loadDocs, loadGates, operative, preflight, run, verify } from "./harness.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const canned = (k) => readFileSync(path.join(here, "fixture/canned", `${k}.md`), "utf8");
@@ -189,6 +189,9 @@ test("a precedent in the reasoning does not reject a voto that has its own opera
     "precedent grants partially, own decision denies": withP3(P3 + " A Turma Recursal deu parcial provimento a caso diverso."),
     "precedent denies, own decision denies": withP3(P3 + " A Turma Recursal negou provimento a recurso idêntico."),
     "own decision cites the precedent": withP4("**4.** Nego provimento ao recurso, nos termos do precedente da Turma, e mantenho a sentença."),
+    "own denial after a precedent locative": withP4("**4.** No julgado paradigma, nego provimento ao recurso."),
+    "own denial after an attributed opening": withP4("**4.** Como já decidiu a Turma, nego provimento ao recurso."),
+    "own denial before an attributed tail": withP4("**4.** Nego provimento ao recurso, como já decidiu a Turma Recursal."),
     "own decision with quoted precedent in the same paragraph": withP4("**4.** Conforme “desprovimento” em precedente, nego provimento ao recurso."),
   };
   for (const [key, text] of Object.entries(ok)) assert.deepEqual(verify("voto", text, docs, expected), [], `${key} wrongly rejected`);
@@ -202,7 +205,6 @@ test("an infinitive, a negated denial or a normative sentence is not this voto's
     "infinitive only": withP4("**4.** É caso de negar provimento ao recurso."),
     "deve-se negar, own voice": withP4("**4.** Deve-se negar provimento ao recurso."),
     "precedent locative, participle": withP4("**4.** No precedente da Turma, negado provimento ao recurso."),
-    "precedent locative, first person": withP4("**4.** No julgado paradigma, nego provimento ao recurso."),
     "double negative, grant": withP4("**4.** Não deixo de negar provimento ao recurso."),
     "not desprovido": withP4("**4.** O recurso não está desprovido."),
     "negation with a stretch of words": withP4("**4.** Não é o caso de se negar provimento ao recurso."),
@@ -233,6 +235,21 @@ test("legitimate operative denials in other grammatical forms are still accepted
     const f = verify("voto", text, docs, expected);
     if (key.startsWith("reasoning with")) assert.ok(f.length > 0, "documented false reject changed"); else assert.deepEqual(f, [], `${key} wrongly rejected`);
   }
+});
+
+// Cipher, Codex discussion_r4569573493 at 5c12864: attribution is clause scope. An attributed clause is dropped, an own clause in the same sentence stays. All inputs are invented.
+const P5 = (x) => withP4(`**4.** Nego provimento ao recurso e mantenho a sentença.\n\n**5.** ${x}`);
+test("an attributed clause does not erase an own contradicting clause in the same sentence", () => {
+  const cases = {
+    "cipher pair, attributed partial grant": P5("Diante do que decidiu a Turma no paradigma, dou parcial provimento ao recurso."),
+    "cipher pair, same grant without attribution": P5("Dou parcial provimento ao recurso."),
+    "attributed opening, own full grant": P5("Conforme decidiu a Turma, dou provimento ao recurso."),
+    "attributed opening after a semicolon": P5("Como já decidiu a Turma; dou parcial provimento ao recurso."),
+    "attributed clause joined by e": P5("A Turma negou provimento a recurso idêntico e, quanto a este, dou provimento."),
+    "locative, own non-conhecimento": P5("No julgado paradigma, não conheço do recurso."),
+  };
+  for (const [key, text] of Object.entries(cases)) assert.ok(verify("voto", text, docs, expected).length > 0, `${key} not rejected`);
+  assert.deepEqual(operative("**5.** Diante do que decidiu a Turma no paradigma, dou parcial provimento ao recurso."), ["PARCIAL"]);
 });
 
 test("the shipped gates are all UNMET, so a live run stops before preflight and makes no model call", () => {
