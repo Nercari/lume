@@ -96,7 +96,7 @@ What this does not prove:
 | Item | State |
 | --- | --- |
 | Law vetoes, holdout, edit classes | **Blocked on Law.** Needed before a `climb.py init`. |
-| Synthetic voto fixture and a Claude-path timing harness | Not built. Next engineering step. It needs no private data. Built only from invented text, labeled proxy. |
+| Synthetic voto fixture and a Claude-path timing harness | **Built** in `voto-timing/` (invented case, structural proxy checks, subscription preflight and receipt stops, 9 local tests). Two haiku smoke runs: receipts clean, output not usable under the proxy checks, so no timing counts as T. Proxy only. See `voto-timing/README.md`. |
 | Paired human-edited outputs | Not available. E stays UNMEASURED. |
 | Plugin and council evidence work (PR #62) | Continues independently. Not suspended by this card. |
 
