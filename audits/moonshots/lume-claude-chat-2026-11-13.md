@@ -1,6 +1,8 @@
 # Moonshot audit: lume-claude, the Lume plugin for Claude Chat
 
-Audit record only. It changes no code. Implementation changes are in commit b2b3f74 on PR #62 and are listed as evidence, not as part of this record.
+Audit record only. It changes no code. Implementation changes are in commit b2b3f74 (and the test labels in b77bba1) on PR #62 and are listed as evidence, not as part of this record.
+
+**This record gates nothing.** Pedro already authorized the plugin and its improvements. Section 7 lists the defaults chosen and the items that stay open. No answer is awaited and no work is suspended.
 
 ## 1. Scope
 
@@ -28,7 +30,7 @@ Brief: Hermes/Ops/Vex message of 2026-11-13, "Continue Pedro's Lume Claude plugi
 - Outputs are verbatim, with the receipt for each. No score was invented.
 - A premise that changed after the spawn (the target) was sent as a new round with a new packet. Round-1 figures are not used for Chat conclusions.
 
-**Classes.** FIXED (applied, with a test); DEFERRED (kept for a live Chat result or a Pedro decision); REJECTED (reason given); UNVERIFIED (no command can settle it without live Chat).
+**Classes.** FIXED (applied, with a test); DEFERRED (a default is chosen and in force; a named revisit trigger is recorded); REJECTED (reason given); UNVERIFIED (no command can settle it without live Chat).
 
 ### Council receipts
 
@@ -61,13 +63,14 @@ Hashes (sha256):
 
 | # | Command | Result |
 |---|---|---|
-| E1 | `cd plugins && node --test test/*.test.mjs` | tests 34, pass 34, fail 0, skipped 0 (re-run in this session) |
+| E1 | `cd plugins && node --test test/*.test.mjs` | tests 35, pass 35, fail 0, skipped 0 (re-run in this session, after the PORT / IMPROVEMENT labels and the version test) |
 | E2 | `claude plugin validate plugins/lume-claude --strict` (RD/05-install-newtree.log) | passed; install into an isolated project: 12 skills, version 1.2.0 |
 | E3 | `sha256sum RD/chat/lume-claude-chat.zip` | 4b47bb5a7c028ab46a5b7479f92d1ec9e0170ffe334cb2db3b8ca65ee96a2f74; 161 entries |
 | E4 | path audit (RD/chat/path-audit.txt) | 110 non-empty lines; "NO count: 0" |
-| E5 | `gh pr view 62 --json statusCheckRollup` | 12 checks, 12 SUCCESS at head b2b3f74 |
+| E5 | `gh pr view 62 --json statusCheckRollup` | 12 checks, 12 SUCCESS at b2b3f74 and at 1adbc20; the result for the newest head is in the PR comment |
 | E6 | `grep -rn 'CLAUDE_' plugins/lume-claude` | 1 hit: `LEIA-ME.md:3`, prose that says the skills use no such variable; none in skill folders |
 | E7 | `grep -rln '1\.1\.5' plugins/lume-claude` | no hits; the shipped manifest and `LEIA-ME.md` both say 1.2.0 |
+| E10 | RD/port-vs-improvement.txt | 161 files: 25 port-identical, 11 edited, 123 shared-module copies, 2 Chat wrapper files (see "Port vs improvement") |
 | E8 | RD/06-chat-sandbox-sim.log | SIMULATION of a skill-folder-only sandbox: label closure "ok". A simulation is not Chat. |
 | E9 | RD/workflows/07-smoke-newtree.json | Haiku smoke run in **Code**: success, 4 turns, skill loaded |
 
@@ -84,8 +87,8 @@ Links are to files and commits in this repo. All were read, not assumed.
 | F5 | FIXED | No gate stopped Code-only tokens. A test now fails on any `${CLAUDE_*}` or cross-skill `skills/jef-` path, and checks `name` equals folder, description length, SKILL.md line count, and that every `references/` or `scripts/` path resolves in the same folder. (m2 §3.1, m3 narrow-audit note) | `plugins/test/claude.test.mjs` | E1 |
 | F6 | FIXED (packet gap) | m3 said no Claude manifest was shown. The packet omitted it; the real manifest exists, has one `plugin.json`, and passes strict validation. | `plugins/lume-claude/.claude-plugin/plugin.json` | E2, E1 (upload-limits test) |
 | F7 | FIXED (packet gap) | "One residual `CLAUDE_` and one `skills/jef-` path" (m1, m2, m3). The remaining `CLAUDE_` is prose in `LEIA-ME.md`, not a variable. | `plugins/lume-claude/LEIA-ME.md:3` | E6 |
-| F8 | DEFERRED [J] | Make `jef-director` self-complete by inlining the `pacote`, `lote` and `estilo` instructions, so no skill needs another by name. (m1 §3.1) | - | no Chat result |
-| F9 | DEFERRED [J] | Replace the 12 skills with one skill, or fold `jef-inicio` and `jef-work` into `jef-director`. (m3 §1, §3.5; m2 §1, §3.5) | - | no Chat result |
+| F8 | DEFERRED [J] | Make `jef-director` self-complete by inlining the `pacote`, `lote` and `estilo` instructions, so no skill needs another by name. (m1 §3.1) | - | default: not done; trigger: named loading fails in a live Chat step |
+| F9 | DEFERRED [J] | Replace the 12 skills with one skill, or fold `jef-inicio` and `jef-work` into `jef-director`. (m3 §1, §3.5; m2 §1, §3.5) | - | default: not done; trigger: as F8 |
 | F10 | REJECTED | Add hooks, commands or sub-agents (round-1 ideas). They do not run in Chat. | `RD/format/official-docs-evidence.md` | docs |
 | F11 | REJECTED | Rewrite `lume_check.py` and `extract_pdf.py` (stale lock, UTF-8 decode). It would break byte fidelity to Pedro's source. Listed as follow-ups. | `plugins/test/claude.test.mjs` (scripts identical to source) | E1 |
 | F12 | REJECTED | Add a `host.md` adapter, or delete the stub skills. Not needed once paths are skill-relative. | - | E1 |
@@ -95,10 +98,29 @@ Links are to files and commits in this repo. All were read, not assumed.
 
 ### Judgment calls
 
-- **[J] F8.** Alternative reading: inline the instructions now, because the cost is small (161 files against a 5,000-file limit). Not done, because it changes Pedro's skill text and no evidence yet shows named loading fails in Chat. Revisit after the live test.
-- **[J] F9.** Alternative reading: one skill is safer in Chat, because it removes the cross-skill question. Not done, because it breaks 12-skill fidelity to the source and the three members share one packet. Revisit after the live test.
+- **[J] F8.** Alternative reading: inline the instructions now, because the cost is small (161 files against a 5,000-file limit). Default chosen: not done, because it changes Pedro's skill text and no evidence shows named loading fails in Chat. Trade-off: this keeps source fidelity but depends on named loading, which Chat does not document. Revisit trigger: named loading fails in a live Chat step. A failed step is a test result, not a question to Pedro.
+- **[J] F9.** Alternative reading: one skill is safer in Chat, because it removes the cross-skill question. Default chosen: not done, because it breaks 12-skill fidelity to the source and the three members share one packet. Revisit trigger: as F8.
 
 Two [J] marks.
+
+### Port vs improvement
+
+Two different claims, kept apart. **PORT:** the unchanged source is preserved. `plugins/lume-workspace` has no diff against the branch before this work (`git diff --quiet` result: unchanged), and the PORT tests compare the Claude tree with it. **IMPROVEMENT (Chat):** the declared edits and copies that make the plugin fit Chat. Each has its own test, named with the prefix `IMPROVEMENT (Chat):`. A byte-identical port is not the same predicate as a functional improvement, and no test or claim here merges them.
+
+Counts for the 161 shipped files (E10, RD/port-vs-improvement.txt):
+
+| Label | Files | Definition |
+|---|---|---|
+| port-identical | 25 | The path exists in the source with the same bytes. |
+| improvement-edited | 11 | The path exists in the source and the build edits it. `LEIA-ME.md`; `SKILL.md` of `jef-director`, `jef-estilo`, `jef-lote`, `jef-materias`, `jef-pacote`, `jef-triagem`, `jef-work`; `jef-director/references/profiles.md` and `tools.md`; `jef-voto/references/jef-v1.md`. |
+| improvement-copy-of-shared-module | 123 | A module from one source skill, copied byte for byte into another skill folder that cites it, so each folder is self-contained. The path does not exist in the source. |
+| new-chat-wrapper | 2 | `.claude-plugin/plugin.json` and `.claude-plugin/icon.png`. |
+
+"port-identical" counts only paths that exist at the same path in the source.
+
+**Version default (resolved by evidence and test).** `lume-workspace/plugin.json` and `.codex-plugin/plugin.json` both say 1.2.0, and so does the Claude manifest. The source `LEIA-ME.md` title says 1.1.5 and stays verbatim in `lume-workspace`. The generated Claude `LEIA-ME.md` says 1.2.0. The test "PORT: one version everywhere it is machine-read" pins this. Chosen: 1.2.0. No question to Pedro.
+
+**What a retrospective test can and cannot show.** The 35 tests and the folder-only simulation show that the tree is self-consistent and matches the source where it claims to. They do not show that Chat works. Only a live Chat step can show that. It stays an open acceptance item.
 
 ### Evidence by surface
 
@@ -106,9 +128,9 @@ Each surface is reported alone. A result on one surface does not stand in for an
 
 | Surface | What was done | Status |
 |---|---|---|
-| **Chat** (claude.ai web, Desktop Chat tab) | Source-based design from the official page. Self-contained skill folders. Council round 2. Folder-only sandbox SIMULATION (E8). | Live upload, activation and 3 workflows: **NOT RUN**. Blocker: no authorized live Chat session; the agent does not sign in as Pedro or touch his account. User-side steps: `RD/chat/CHAT-TEST-STEPS.md`. |
+| **Chat** (claude.ai web, Desktop Chat tab) | Source-based design from the official page. Self-contained skill folders. Council round 2. Folder-only sandbox SIMULATION (E8). | Live upload, activation and 3 workflows: **NOT RUN**. Blocker: no authorized live Chat session; the agent does not sign in to a user account. This is an unverified acceptance item. It does not block the independent tests or the artifact. User-side steps: `RD/chat/CHAT-TEST-STEPS.md`. |
 | **Cowork** | Official page read only. | **NOT RUN**. Documentation only. |
-| **Code** | Strict validate, isolated install, 34 tests, Haiku smoke (E1, E2, E9). | Executed. Cannot satisfy Chat acceptance. |
+| **Code** | Strict validate, isolated install, 35 tests, Haiku smoke (E1, E2, E9). | Executed. Cannot satisfy Chat acceptance. |
 
 ## 4. Part B: the moonshot
 
@@ -116,21 +138,21 @@ Each surface is reported alone. A result on one surface does not stand in for an
 
 **Cut.**
 - Code-only path variables and cross-skill paths. Done (F1, F5). Owner type: T3 thread. Smallest test: the self-contained test in `claude.test.mjs`; judge: CI; pass = 0 hits.
-- (Proposed) The stub text that points other skills at `../SKILL.md`. Not cut; the council did not agree on it and it is harmless. Owner: Pedro, after the live test.
+- (Proposed) The stub text that points other skills at `../SKILL.md`. Not cut; the council did not agree on it and it is harmless. Default: kept, no owner needed. Trigger to revisit: a failed live Chat step.
 
 **Keep.**
 - The 12-skill shape, Pedro's skill text, and both scripts byte for byte (E1 test). Reason: source fidelity is a stated requirement and nothing shows the shape fails.
 - `plugins/lume-jef` and `plugins/lume-workspace`: untouched.
 
 **Add.**
-- The live Chat test (`CHAT-TEST-STEPS.md`). Metric: per-step pass or fail with exact error text. Baseline: none (NOT RUN). Target: steps 2 to 6 pass. Owner type: Pedro or a session he authorizes. Smallest test: step 2, upload the zip and read the message. Pass line set before the run: plugin "lume" 1.2.0 listed, no `bin/`, size or manifest error. Judge: the Chat UI.
+- The live Chat test (`CHAT-TEST-STEPS.md`). Metric: per-step pass or fail with exact error text. Baseline: none (NOT RUN). Target: steps 2 to 6 pass. Owner type: any user session with Chat access (account access is outside the agent's authority). Optional for delivery. Smallest test: step 2, upload the zip and read the message. Pass line set before the run: plugin "lume" 1.2.0 listed, no `bin/`, size or manifest error. Judge: the Chat UI.
 - One more independent council result to replace the missing m4. Owner type: Hermes. Smallest test: same v2 packet and prompt, a different model family; judge: triage against the real tree.
 
 **Not doing.**
 - Hooks, commands, agents: do not run in Chat.
 - Changing the scripts: breaks fidelity.
 - Claiming Chat compatibility from Code tests: forbidden by the brief.
-- A live Chat run by the agent: needs Pedro's sign-in.
+- A live Chat run by the agent: needs a signed-in user account. The agent does not sign in as a user.
 
 ## 5. Not verified
 
@@ -150,7 +172,9 @@ Each surface is reported alone. A result on one surface does not stand in for an
 
 Commands (all run in this session unless marked "earlier in the run"):
 - `git rev-parse HEAD` → b2b3f74b59e9fe9b9c059cf42c0ca69f03a15aea
-- `cd plugins && node --test test/*.test.mjs` → 34 / 34 / 0 / 0
+- `cd plugins && node --test test/*.test.mjs` → 35 / 35 / 0 / 0
+- `git diff --quiet origin/grok/integrate-pedro-plugin -- plugins/lume-workspace` → unchanged
+- port-vs-improvement manifest (RD/port-vs-improvement.txt) → 25 / 11 / 123 / 2
 - `gh pr view 62 --json statusCheckRollup` → 12 SUCCESS
 - `sha256sum` on the zip and council files (values above)
 - `grep -rn 'CLAUDE_' plugins/lume-claude`; `grep -rln '1\.1\.5' plugins/lume-claude`
@@ -162,35 +186,34 @@ Links read:
 
 Other documents: RD/council/* (hashes above). Raw round-1 and round-2 outputs are stored there, not pasted here.
 
-## 7. Decisions
+## 7. Defaults chosen and remaining acceptance
 
-Dates: none proposed. No answer means: keep the branch as it is, leave the NOT RUN items open, and start no work. Each key matches an item in `lume-claude-chat-2026-11-13.card.json`.
+No answer is awaited. No work is suspended. Routine choices are settled here from source evidence and tests, and each default stays in force until a test result changes it. The companion card (`lume-claude-chat-2026-11-13.card.json`) is optional and carries no gate; it lists only the two items that need an authority the agent does not have. Its keys, `chat_test` and `license_holder`, match items 1 and 2 under "Remaining acceptance".
 
-1. **`chat_test`: Who runs the live Chat test?**
-   - A ⭐ Pedro runs `CHAT-TEST-STEPS.md` in his own Chat with synthetic content and posts the results on PR #62.
-   - B Pedro authorizes a separate session that signs in for him (account access: a hard stop until he says so).
-   - C Skip the live test and ship on source-based evidence only (Chat compatibility stays "not proven").
-2. **`named_loading`: If skill loading by name fails in Chat, what changes?**
-   - A ⭐ Make `jef-director` self-complete (F8); keep 12 skills.
-   - B Merge into one skill (F9); breaks 12-skill fidelity to the source.
-   - C Ship a separate Chat build and Code build.
-3. **`version`: Which version does the plugin carry?**
-   - A ⭐ 1.2.0 (both manifests); treat 1.1.5 in the old source README as stale.
-   - B 1.1.5, as in the source README.
-4. **`license_holder`: Who is the LICENSE holder?**
-   - A ⭐ Pedro gives the exact holder text; the agent keeps the current text until then.
-   - B Keep "Nercari" as it stands now.
-5. **`name_history`: What to do with three old commits (0e33ead, 2f34ac4, 1b8ec9d) that still hold the personal name?**
-   - A ⭐ Leave history as it is and record the gap (no force-push).
-   - B Pedro approves a history rewrite and force-push, then the agent runs it.
+### Defaults chosen
 
-Retrospective vs prospective: the 34 tests and the folder-only simulation show the tree is self-consistent. They do not show Chat works. Only decision 1, option A or B, can show that.
+| Topic | Default in force | Trade-off | Revisit trigger |
+|---|---|---|---|
+| Version | 1.2.0 everywhere it is machine-read. The 1.1.5 title in the source README stays as shipped. | A README title and a manifest disagree in the unchanged source. The generated Claude README says 1.2.0. | A manifest change in the source. |
+| Skill layout | Keep 12 skills with Pedro's text. Each skill folder is self-contained. Hand-offs name the skill. | Keeps source fidelity. Depends on named loading, which Chat does not document. | Named loading fails in a live Chat step. Then inline `jef-director` (F8). A single skill (F9) comes after that. Both are improvements with their own tests. |
+| History | Unchanged. Three old commits (0e33ead, 2f34ac4, 1b8ec9d) still hold the personal name; the tree does not. No rewrite, no force-push. | The name remains in old history. The scrub guards the tree. | None. A rewrite is outside the authorized default. |
+| Port vs improvement | Unchanged source preserved. Improvements labeled and tested apart (section 3). | Two label sets to maintain. | None. |
+
+### Remaining acceptance (non-blocking)
+
+These items do not block the independent tests, the PR checks or the artifact. Each is an unverified acceptance item.
+
+1. **Live Chat upload, activation and three workflows: NOT RUN.** Blocker: no authorized live Chat session; the agent does not sign in to a user account or touch one. User-side steps: `RD/chat/CHAT-TEST-STEPS.md`. Optional for delivery. Any Chat result is welcome as a test result.
+2. **LICENSE holder text.** The text in the tree is the earlier gate-task state. Legal acceptance belongs to Themis and Pedro. The agent changes no holder text on inferred authorization. Delivery does not wait for it.
+3. **Cowork: NOT RUN.** Documentation only.
+4. **Fourth council member.** One more independent result over the round-2 packet, from a model family other than m1 and allowed by the allowlist.
+5. **F13, F14, F15** (Part A): named loading, sandbox toolchain, namespace. Settled only by live Chat.
 
 RESULT:
-- Record: audits/moonshots/lume-claude-chat-2026-11-13.md; card: audits/moonshots/lume-claude-chat-2026-11-13.card.json
-- Findings: 15 (7 fixed, 2 deferred, 3 rejected, 3 unverified); [J] marks: 2
+- Record: audits/moonshots/lume-claude-chat-2026-11-13.md; card: audits/moonshots/lume-claude-chat-2026-11-13.card.json (optional, no gate)
+- Findings: 15 (7 fixed, 2 deferred with a default and a trigger, 3 rejected, 3 unverified); [J] marks: 2
 - Council: 3 of 4 members ran; m4 not launched (allowlist); outputs and receipts saved
-- Tests: 34 / 34 pass at b2b3f74; CI 12 / 12 SUCCESS
-- Chat live upload, activation and 3 workflows: NOT RUN (no authorized Chat session)
-- Cowork: NOT RUN
-- Decisions for Pedro: 5
+- Port vs improvement: 25 identical, 11 edited, 123 shared-module copies, 2 wrapper files (of 161)
+- Tests: 35 / 35 pass (PORT and IMPROVEMENT labeled apart)
+- Chat live upload, activation and 3 workflows: NOT RUN (no authorized Chat session); Cowork: NOT RUN
+- Awaiting answers: none. Work suspended: none.

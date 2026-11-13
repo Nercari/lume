@@ -1,55 +1,27 @@
 {
   "id": "lume-claude-chat-2026-11-13",
-  "title": "Lume for Claude Chat: open decisions",
+  "title": "Lume for Claude Chat: optional acceptance items (no gate)",
   "repo": "Nercari/lume",
   "issue": 62,
   "items": [
     {
       "key": "chat_test",
-      "question": "Who runs the live Chat upload and workflow test?",
+      "question": "Optional, non-blocking: how should the live Chat upload and 3-workflow test be run? The plugin, the tests and the PR proceed whatever the answer; with no answer the item stays NOT RUN.",
       "options": [
-        "A · Pedro runs CHAT-TEST-STEPS.md in his own Chat with synthetic content and posts the results on PR #62.",
-        "B · Pedro authorizes a separate session that signs in for him.",
-        "C · Skip the live test; Chat compatibility stays not proven."
+        "A · A user runs CHAT-TEST-STEPS.md in their own Chat with synthetic content and posts the result on PR #62.",
+        "B · A user explicitly authorizes a separate signed-in session (account access).",
+        "C · Leave it NOT RUN; Chat compatibility stays unverified."
       ],
-      "recommended": "A · Pedro runs CHAT-TEST-STEPS.md in his own Chat with synthetic content and posts the results on PR #62."
-    },
-    {
-      "key": "named_loading",
-      "question": "If loading a skill by name fails in Chat, what changes?",
-      "options": [
-        "A · Make jef-director self-complete and keep 12 skills.",
-        "B · Merge into one skill (breaks 12-skill fidelity to the source).",
-        "C · Ship a separate Chat build and Code build."
-      ],
-      "recommended": "A · Make jef-director self-complete and keep 12 skills."
-    },
-    {
-      "key": "version",
-      "question": "Which version does the plugin carry?",
-      "options": [
-        "A · 1.2.0 in both manifests; treat 1.1.5 in the old source README as stale.",
-        "B · 1.1.5, as in the source README."
-      ],
-      "recommended": "A · 1.2.0 in both manifests; treat 1.1.5 in the old source README as stale."
+      "recommended": "A · A user runs CHAT-TEST-STEPS.md in their own Chat with synthetic content and posts the result on PR #62."
     },
     {
       "key": "license_holder",
-      "question": "Who is the LICENSE holder?",
+      "question": "Licensing approval, non-blocking: confirm the LICENSE holder text. The current text stays and no work waits; the agent changes it only on an explicit answer.",
       "options": [
-        "A · Pedro gives the exact holder text; the current text stays until then.",
-        "B · Keep Nercari as it stands now."
+        "A · Keep the current holder text as it stands.",
+        "B · Replace it with exact holder text given by Pedro or Themis."
       ],
-      "recommended": "A · Pedro gives the exact holder text; the current text stays until then."
-    },
-    {
-      "key": "name_history",
-      "question": "Three old commits still hold the personal name. What happens to them?",
-      "options": [
-        "A · Leave history as it is and record the gap (no force-push).",
-        "B · Pedro approves a history rewrite and force-push, then the agent runs it."
-      ],
-      "recommended": "A · Leave history as it is and record the gap (no force-push)."
+      "recommended": "A · Keep the current holder text as it stands."
     }
   ]
 }
