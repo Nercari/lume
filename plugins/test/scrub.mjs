@@ -37,7 +37,14 @@ function filesUnder(dir) {
 }
 
 // Files this package adds under plugins/ (paths relative to plugins/). Other plugins keep their own scrub tests.
-export const SCOPE = ["lume-workspace", "test/workspace.test.mjs", "test/scrub.mjs"];
+export const SCOPE = [
+  "lume-workspace",
+  "lume-claude",
+  "scripts/build-lume-claude.mjs",
+  "test/workspace.test.mjs",
+  "test/claude.test.mjs",
+  "test/scrub.mjs",
+];
 
 // Returns "file: pattern" for every text file in SCOPE under pluginsDir that matches a pattern.
 export function scrubHits(pluginsDir, scope = SCOPE) {

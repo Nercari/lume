@@ -1,0 +1,20 @@
+{
+  "name": "lume",
+  "version": "1.2.0",
+  "description": "Assistente para turmas recursais dos Juizados Especiais Federais. Analisa peças enviadas no chat, prepara relatórios e minutas, pesquisa jurisprudência e revisa textos.",
+  "author": {
+    "name": "Nercari",
+    "url": "https://github.com/Nercari"
+  },
+  "homepage": "https://github.com/Nercari/lume",
+  "repository": "https://github.com/Nercari/lume",
+  "license": "MIT",
+  "keywords": [
+    "jef",
+    "trf1",
+    "judiciário",
+    "minuta",
+    "voto",
+    "relatório"
+  ]
+}

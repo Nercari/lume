@@ -1,0 +1,8 @@
+# Perfil pessoal
+
+1. Reutilizar o perfil completo já lido se versão e alvo continuam atuais. Pedido atual explícito prevalece no seu escopo.
+2. Se o usuário nomear outro perfil, resolver esse arquivo. Caso contrário, usar o perfil pessoal marcado como padrão ativo. Usar primeiro a referência exata do contexto/projeto; sem referência, buscar `perfil-estilo.md` nos arquivos pessoais pelo conector suportado e ler o conteúdo completo. Não selecionar perfil de outra pessoa nem o mais recente apenas pelo nome.
+3. Se houver múltiplos candidatos incompatíveis sem padrão explícito, pedir uma escolha curta. Se não houver acesso, aplicar JEF-V1 e informar a limitação somente se material. Não exigir reenvio antes de tentar a fonte disponível.
+4. Registrar identidade, versão, origem e regras aplicáveis no estado do fluxo. Separar forma, fluxo/encerramento e identificação; não transportar fatos ou resultados dos exemplos. O nome do arquivo não retira força de instrução expressa sobre anonimização.
+5. “Lembre meu estilo”, “ajuste meu perfil” ou equivalente autoriza atualizar o perfil pessoal existente pelo mecanismo de arquivos suportado, preservando identidade e versão. Salvar somente regras abstratas aprovadas, sem dados de processo. Conferir conflito de versão antes de substituir. Não editar o plugin compartilhado para armazenar preferência pessoal.
+6. Sem conector de escrita, entregar o ajuste pronto para guardar e informar que não foi salvo. Não prometer persistência ou recuperação automática sem evidência. O caminho de conexão depende do ambiente; não fixar IDs de conta, usuário ou arquivo neste pacote.
