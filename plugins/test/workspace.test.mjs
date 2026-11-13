@@ -5,7 +5,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { scrubHits } from "./scrub.mjs";
+import { createHash } from "node:crypto";
+import { hasHashedName, scrubHits } from "./scrub.mjs";
 
 // plugins/lume-workspace is the workspace chat plugin (name "lume"). It sits next to,
 // and never replaces, plugins/lume-jef (the PJe button flow the extension and packaging use).
@@ -67,6 +68,13 @@ test("every skill has frontmatter and every referenced file exists", () => {
 
 test("public repo scrub: plugin files and tests carry no Drive/Docs URLs, identifiers, emails, phones or personal names", () => {
   assert.deepEqual(scrubHits(path.join(root, "..")), []);
+});
+
+test("hashed name check flags a name in any case, accent or order, and nothing else", () => {
+  // Synthetic name: the real one is never written in a file, only its hash.
+  const hashes = new Set(["jose peixoto", "peixoto jose"].map((n) => createHash("sha256").update(n).digest("hex")));
+  for (const text of ["José Peixoto", "JOSE  PEIXOTO escreveu", "Peixoto, José", "x\njose\npeixoto"]) assert.ok(hasHashedName(text, hashes), text);
+  for (const text of ["José", "Peixoto e Maria", "jose ou peixoto", ""]) assert.ok(!hasHashedName(text, hashes), text);
 });
 
 test("lume_check.py passes and fails as documented", () => {
