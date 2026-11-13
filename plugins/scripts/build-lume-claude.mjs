@@ -36,6 +36,15 @@ const LOADING_NEW =
 const LOAD_DIRECTOR_OLD = "Se `skills/jef-director/SKILL.md` ainda não foi lido nesta conversa, leia-o e siga-o primeiro";
 const LOAD_DIRECTOR_NEW = "Se a skill `jef-director` ainda não foi carregada nesta conversa, carregue-a e siga-a primeiro";
 
+// Label citations: "C5" means c5.md; "Leia o jef-director" and "contrato" mean contrato.md; "perfil" means profiles.md.
+const citesByLabel = (name, text) => {
+  const c = name.match(/^c([0-8])\.md$/);
+  if (c) return new RegExp(`(?<![\\w-])C${c[1]}(?![\\w-])`).test(text);
+  if (name === "contrato.md") return /contrato|jef-director/i.test(text);
+  if (name === "profiles.md") return /perfil|perfis/i.test(text);
+  return false;
+};
+
 // Copies each shared module into every skill folder whose files mention it by name, until nothing is missing.
 function closeModules(files) {
   const modules = new Map(); // basename -> source rel path (basenames are unique across skills)
@@ -52,7 +61,7 @@ function closeModules(files) {
       const text = own.map((r) => files.get(r).toString("utf8")).join("\n");
       for (const [name, from] of modules) {
         const to = `skills/${sk}/${from.split("/").slice(2).join("/")}`;
-        if (files.has(to) || !new RegExp(`(?<![\\w-])${name.replace(".", "\\.")}(?![\\w-])`).test(text)) continue;
+        if (files.has(to) || !(new RegExp(`(?<![\\w-])${name.replace(".", "\\.")}(?![\\w-])`).test(text) || citesByLabel(name, text))) continue;
         files.set(to, files.get(from));
         changed = true;
       }
@@ -79,8 +88,22 @@ export function build() {
       "Scripts ficam em `scripts/`, relativo à pasta da skill que contém esta referência. Rodar os comandos a partir dessa pasta, com `python3`.",
       w,
     );
-    return t.replace(/`python (extract_pdf|lume_check)\.py/g, (_m, s) => `\`python3 scripts/${s}.py`);
+    t = t.replace(/`python (extract_pdf|lume_check)\.py/g, (_m, s) => `\`python3 scripts/${s}.py`);
+    return replaceOnce(
+      t,
+      "## Extração\n",
+      "## Extração\n\nAntes de extrair, confira o ambiente: `python3 -c \"import pypdf\"`, `which pdftoppm tesseract` e `tesseract --list-langs`. No Chat, o sandbox pode não ter essas ferramentas nem rede; se faltarem, não alegue extração: leia o PDF anexado diretamente (texto ou imagem) e registre a lacuna.\n",
+      w,
+    );
   });
+  edit("skills/jef-director/references/profiles.md", (t, w) =>
+    replaceOnce(
+      t,
+      "6. Sem conector de escrita,",
+      "6. No Chat, sem conector de arquivos, o perfil vem de `perfil-estilo.md` anexado na conversa e o ajuste volta como arquivo para o usuário guardar; nada é salvo automaticamente. Sem conector de escrita,",
+      w,
+    ),
+  );
   edit("skills/jef-voto/references/jef-v1.md", (t, w) =>
     replaceOnce(t, "`skills/jef-director/references/contrato.md`", "`references/contrato.md`", w),
   );

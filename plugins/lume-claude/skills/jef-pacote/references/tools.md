@@ -4,6 +4,8 @@ Scripts ficam em `scripts/`, relativo à pasta da skill que contém esta referê
 
 ## Extração
 
+Antes de extrair, confira o ambiente: `python3 -c "import pypdf"`, `which pdftoppm tesseract` e `tesseract --list-langs`. No Chat, o sandbox pode não ter essas ferramentas nem rede; se faltarem, não alegue extração: leia o PDF anexado diretamente (texto ou imagem) e registre a lacuna.
+
 `python3 scripts/extract_pdf.py INPUT.pdf --output NOVO.json --language por`
 
 Requer Python, pypdf; OCR requer pdftoppm, tesseract e idioma solicitado. Não instala dependências nem faz rede. Usa texto nativo e OCR por página quando pouco texto, caractere inválido ou página forçada com `--ocr-pages 2,4`. A heurística não detecta todo texto defeituoso nem texto rasterizado em página mista: inspecionar original e forçar páginas necessárias. Saída preserva hash, número físico, método, idioma, texto, lacuna e review_required. Não cria página interna nem ID. Código 0: extração produzida; 2: lacunas; 1: falha. Idioma ausente é lacuna explícita, nunca troca automática para inglês. Conferir trechos decisivos na imagem original.
