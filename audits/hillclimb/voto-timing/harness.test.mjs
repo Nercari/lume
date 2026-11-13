@@ -118,3 +118,50 @@ test("an unusable voto reports no time-to-usable", () => {
   assert.equal(r.totalSec, null);
   assert.ok(r.elapsedSec > 0);
 });
+
+// Dispositive validation (Cipher finding on PR #62, discussion_r4568496726). All inputs are invented.
+const P4 = "**4.** Nego provimento ao recurso e mantenho a sentença.";
+const withP4 = (s) => canned("voto").replace(P4, s);
+
+test("verify rejects an absent, wrong, ambiguous or contradictory dispositive even when the ementa says DESPROVIDO", () => {
+  const v = canned("voto");
+  const cases = {
+    "dispositive paragraph deleted": v.replace("\n\n" + P4, ""),
+    "partial grant": withP4("**4.** Dou parcial provimento ao recurso e reformo a sentença."),
+    "partial grant, no verb": withP4("**4.** Parcial provimento ao recurso."),
+    "full grant": withP4("**4.** Dou provimento ao recurso e reformo a sentença."),
+    "no outcome stated": withP4("**4.** Mantenho a sentença."),
+    "not known": withP4("**4.** Não conheço do recurso."),
+    "deny and grant in one paragraph": withP4("**4.** Nego provimento ao recurso e, de ofício, dou provimento parcial."),
+    "deny then grant in two paragraphs": withP4("**4.** Nego provimento ao recurso.\n\n**5.** Dou provimento ao recurso."),
+    "ementa grants, dispositive denies": v.replace("RECURSO DESPROVIDO", "RECURSO PROVIDO"),
+    "ementa partial grant, dispositive denies": v.replace("RECURSO DESPROVIDO", "RECURSO PARCIALMENTE PROVIDO"),
+    "ementa denies, dispositive grants partially": withP4("**4.** Dou parcial provimento ao recurso."),
+  };
+  for (const [key, text] of Object.entries(cases)) assert.ok(verify("voto", text, docs, expected).length > 0, `${key} not rejected`);
+});
+
+test("verify accepts legitimate dispositive wordings", () => {
+  const v = canned("voto");
+  const ok = {
+    "canned": v,
+    "voto pelo desprovimento, then a costs paragraph": withP4("**4.** Voto pelo desprovimento do recurso e pela manutenção da sentença.\n\n**5.** Condeno a recorrente em custas, nos termos da lei."),
+    "negado provimento": withP4("**4.** Negado provimento ao recurso."),
+    "não dou provimento": withP4("**4.** Não dou provimento ao recurso."),
+    "recurso não provido": withP4("**4.** Recurso não provido."),
+    "recurso improvido": withP4("**4.** Recurso improvido."),
+    "two consistent dispositive paragraphs": withP4("**4.** Nego provimento ao recurso.\n\n**5.** Desprovido o recurso, mantenho a sentença."),
+    "ementa without an outcome word": v.replace(" RECURSO DESPROVIDO.", ""),
+    "ementa DESPROVIMENTO": v.replace("RECURSO DESPROVIDO", "DESPROVIMENTO"),
+  };
+  for (const [key, text] of Object.entries(ok)) assert.deepEqual(verify("voto", text, docs, expected), [], `${key} wrongly rejected`);
+});
+
+test("a voto with a missing or contradictory dispositive is not usable and reports no time-to-usable", () => {
+  for (const bad of [canned("voto").replace("\n\n" + P4, ""), withP4("**4.** Dou parcial provimento ao recurso e reformo a sentença.")]) {
+    const f = fake({ auth: AUTH, calls: [ok(canned("relatorio")), ok(bad)] });
+    const r = run({ mode: "live", model: MODEL, env, bin: f.bin });
+    assert.equal(r.usable, false);
+    assert.equal(r.totalSec, null);
+  }
+});

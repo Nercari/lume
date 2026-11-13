@@ -91,6 +91,16 @@ export function buildPrompt(kind, docs, relatorio, expected) {
 }
 
 // Structural proxy checks. They are NOT Law's vetoes. Each returns a failure string or null.
+// Outcome classes found in one segment (the ementa or one numbered paragraph). A segment that yields two classes is ambiguous.
+// shortcut: keyword classes, not a parser; a reasoning sentence such as "não há que se dar provimento" reads as PROVIMENTO and the voto is rejected (false reject, never a false accept), upgrade with Law's veto list.
+const OUTCOME_CLASSES = {
+  PARCIAL: /parcial(?:mente)?\s+(?:provimento|provid[oa])|provimento\s+parcial/i,
+  NAO_CONHECIMENTO: /n[aã]o\s+conhe[çc]o|n[aã]o\s+conhecid|n[aã]o\s+conhecimento/i,
+  DESPROVIMENTO: /\b(?:nego|negar|negado)\s+provimento|\bn[aã]o\s+(?:dou|dar|dado)\s+provimento|desprovimento|desprovid|improvid|improvimento|\bn[aã]o\s+provid/i,
+  PROVIMENTO: /(?<!n[aã]o\s)\b(?:dou|dar|dado)\s+provimento|(?<!n[aã]o\s)\bprovid[oa]\b/i,
+};
+export const outcomes = (segment) => Object.entries(OUTCOME_CLASSES).filter(([, re]) => re.test(segment)).map(([c]) => c);
+
 export function verify(kind, text, docs, expected) {
   const all = docs.map((d) => d.text).join("\n");
   const fail = [];
@@ -110,7 +120,10 @@ export function verify(kind, text, docs, expected) {
     const ementa = head.replace(/\s*\[doc-\d+\]/g, ""); // locators inside the ementa do not count for the case test
     add(/^\*\*[^*]+\*\*$/.test(ementa) && ementa === ementa.toUpperCase(), "ementa missing or not bold upper case");
     add(!/^#|^\s*[-*] |;/m.test(text), "forbidden format: heading, list or semicolon");
-    add(new RegExp(expected.expectedOutcome, "i").test(text) && !new RegExp(expected.forbiddenOutcome, "i").test(text), "dispositivo does not match the oriented outcome"); // whole text, regex from expected.json
+    const body = m.map((x, i) => text.slice(x.index, m[i + 1]?.index ?? text.length));
+    const bodyOutcomes = new Set(body.flatMap(outcomes));
+    add(bodyOutcomes.size === 1 && bodyOutcomes.has(expected.expectedOutcomeClass), `dispositive absent, ambiguous or not ${expected.expectedOutcomeClass} (found: ${[...bodyOutcomes].join(", ") || "none"})`);
+    add(outcomes(ementa).every((c) => c === expected.expectedOutcomeClass), "ementa outcome contradicts the oriented outcome"); // the ementa alone never satisfies the dispositive check
   }
   return fail;
 }

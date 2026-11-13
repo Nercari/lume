@@ -8,7 +8,7 @@ Four segments, each with a monotonic clock: `t_pack` (local pack build plus the 
 
 Elapsed time and edit burden stay apart. `editBurden` is always `UNMEASURED`: it needs Law's paired human edits.
 
-The checks are structural proxies, **not Law's vetoes**: required facts, `[doc-NN]` locators exist, «quotes» are literal in the docs, dates and amounts occur in the docs, the relatório does not decide, numbered paragraphs, ementa, no headings, lists or semicolons, and the dispositivo matches the oriented outcome. Law's vetoes and holdout are not defined, so nothing here is tuned against them.
+The checks are structural proxies, **not Law's vetoes**: required facts, `[doc-NN]` locators exist, «quotes» are literal in the docs, dates and amounts occur in the docs, the relatório does not decide, numbered paragraphs, ementa, no headings, lists or semicolons, and the dispositive itself matches the oriented outcome. The check classifies each numbered paragraph (DESPROVIMENTO, PARCIAL, PROVIMENTO, NAO_CONHECIMENTO). It needs at least one paragraph with an outcome, and every outcome in the body must equal the oriented class, so an absent, ambiguous or mixed dispositive fails. An ementa outcome that differs from it fails. The ementa never satisfies the check by itself. A keyword limit remains: a reasoning sentence such as "não há que se dar provimento" reads as PROVIMENTO, so such a voto is rejected (false reject, not false accept). Law's vetoes and holdout are not defined, so nothing here is tuned against them.
 
 ## Run
 
@@ -37,5 +37,7 @@ A live run makes a model call only if all hold, else it stops with exit 2:
 - Tests run locally. `audits/` is not a CI package.
 
 ## Smoke runs (2026-11-13, `claude-haiku-5-5`, subscription)
+
+**UNCONFIRMED pending repair (2026-11-13, PR #62 review finding).** The evaluator used for both runs matched the oriented outcome over the whole voto text, so "RECURSO DESPROVIDO" in the ementa alone could pass it, and it did not reject "parcial provimento" or an absent dispositive. The check is repaired in the commit that follows head 37ebddc (see the PR). Both smoke runs were scored by the defective evaluator, so their usability verdicts and segment times are **unconfirmed and count as nothing**. No timing counts as T or as a baseline until the repaired evaluator passes a live run and an independent evaluator approves it. The originals below are kept unchanged. An offline re-verify of the saved run 2 voto with the repaired check gives only `required facts missing`. No new model run was made for this finding.
 
 See `runs/`. Both runs: receipts clean, output **not usable** under the proxy checks. Run 1 did not save the outputs. Run 2 saved them. After run 2, two checks were found defective and fixed (dispositivo accepted only "nego provimento" and looked at the last paragraph only; a locator inside the ementa broke the upper-case test). The saved run 2 outputs were re-verified offline with no new model call. The two remaining failures are real omissions: the relatório does not name the ré, and the voto does not give the sentence date. `runs/smoke-*/report.json` hold the original reports, produced before the check fix.

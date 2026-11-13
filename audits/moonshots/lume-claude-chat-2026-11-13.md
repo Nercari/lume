@@ -41,18 +41,20 @@ Task IDs use the form `node:delegated-task:command%3Amcp%3A609e957f-f544-4cc2-84
 | 2 (Chat) | m1 | claudeAgent / claude-fable-5-2 (executed: claude-fable-5-2) | effort=high | 13bdcedd-6c60-410b-bf31-35488df5ec01 | completed |
 | 2 (Chat) | m2 | opencode / opencode/beam-free (executed: not reported) | variant=high | eb6f5736-172b-4eb6-83cf-71f46d0de1e6 | completed |
 | 2 (Chat) | m3 | opencode / opencode-go/deepseek-v4.1-flash (executed: not reported) | variant=high | 4bfd16ba-799d-4bd1-8f02-838e6ee60981 | completed |
-| 2 (Chat) | m4 | opencode / opencode/big-pickle | - | - | **NOT LAUNCHED** |
+| 2 (Chat) | m4 | opencode / opencode/big-pickle | - | - | **NOT LAUNCHED** (allowlist) |
+| 2 (Chat) | m5 | opencode / opencode/glm-5.3-flash-free (executed: **not reported**) | variant=high | 9a888841-5870-4f18-a437-e65b72918cd0 | completed (added 2026-11-13, see "Acceptance addendum") |
 | 1 (Code, superseded) | m1 | claudeAgent / claude-fable-5-2 | effort=high | 2c17342a-43db-4d29-85f8-3576ea9075e5 | completed |
 | 1 (Code, superseded) | m2 | opencode / opencode/beam-free | variant=high | 9d6bb255-252b-4995-a033-fbaec3b92a92 | completed |
 | 1 (Code, superseded) | m3 | opencode / opencode-go/deepseek-v4.1-flash | variant=high | 9a366902-c6a9-4c0c-bb3e-97e9e8e3649d | completed |
 | 1 (Code, superseded) | m4 | opencode / opencode/big-pickle | - | - | **NOT LAUNCHED** |
 
-m4 was refused by the paid-model allowlist hook in round 1. It was not retried and no paid model was used, so the council has three members, not four. **Remaining acceptance: one more independent council result (for example a Claude-pool model other than m1, or an allowed free model) over the round-2 packet. Nobody has run it.**
+m4 was refused by the paid-model allowlist hook in round 1. It was not retried and no paid model was used. A fifth seat (m5, a free allowed model) ran later over the unchanged round-2 packet. **m5 has no executed-model receipt (`executedModel` null), so it does not count as a verified participant.** Receipt status: m1 verified; m2, m3, m5 unverified. See "Acceptance addendum".
 
 Hashes (sha256):
 - RD/council/evidence-packet-v2.md 024e80a5303f0ff4175e2ca9a0ebce31dccf24564b1af770251cc8a5fe64af4c
 - RD/council/round2-prompt.md 56144fe7eec82e477b58a8c602b9149e64c2a257a75bca00033b2633c64b5b0d
 - RD/council/outputs-round2.md b0ee52681d3f0e05de0f4b2af86ab63720cb4da15752451f7cd80271df304635
+- RD/council/output-round2-m4.md (m5 output, verbatim) 9d992e76c7db52ad0d9aa72edf8ee6d67076d8f8be3867aa5c46ece0faf146e3
 - RD/council/outputs-round1.md c39ca619cbd4f73ec26ebe3f2fbdcf92c7334cabaaddb20f457fbf0505d26249 (superseded)
 - RD/council/evidence-packet.md eb6b92cfec2b0aec900be706412c1efcd8824e7a26534940684d30ae1166ec89 (superseded)
 - RD/council/round1-prompt.md 61911ae01e0c393edb3f8ccab51fe2ddc13a90874bbf63a59759c2331d4565fa (superseded)
@@ -206,13 +208,23 @@ These items do not block the independent tests, the PR checks or the artifact. E
 1. **Live Chat upload, activation and three workflows: NOT RUN.** Blocker: no authorized live Chat session; the agent does not sign in to a user account or touch one. User-side steps: `RD/chat/CHAT-TEST-STEPS.md`. Optional for delivery. Any Chat result is welcome as a test result.
 2. **LICENSE holder text.** The text in the tree is the earlier gate-task state. Legal acceptance belongs to Themis and Pedro. The agent changes no holder text on inferred authorization. Delivery does not wait for it.
 3. **Cowork: NOT RUN.** Documentation only.
-4. **Fourth council member.** One more independent result over the round-2 packet, from a model family other than m1 and allowed by the allowlist.
+4. **Verified fourth council member: NOT MET.** m5 ran, but its executed model is not reported, so it is unverified. A verified seat needs a task result with `executedModel` set (for example a Claude-pool member, which is the same family as m1) or a platform that reports it for opencode models.
 5. **F13, F14, F15** (Part A): named loading, sandbox toolchain, namespace. Settled only by live Chat.
+
+### Acceptance addendum (2026-11-13, PR #62)
+
+Request: obtain the missing independent council participant and executed-model receipts, and check the three Chat workflows only where the authorized session can run them. Nothing here is a pass unless a receipt shows it.
+
+- **Council.** m5 (`opencode/glm-5.3-flash-free`, task 9a888841-5870-4f18-a437-e65b72918cd0) ran on the unchanged round-2 packet. The task result reports no `executedModel`, and its `MODEL:` line is self-report. So m5 is **unverified**. Verified receipts: m1 only. m2 and m3 executed models are also unverified. m4 stays refused (paid-model allowlist, not retried). Members share one packet, so they are one input, not independent confirmations. The m5 output is 1144 words against a 900-word limit (m3 about 1023, m1 about 958, rough counts). Output kept verbatim in the run directory (`council/output-round2-m4.md`, SHA-256 `9d992e76c7db52ad0d9aa72edf8ee6d67076d8f8be3867aa5c46ece0faf146e3`).
+- **m5 claims checked against the source (read-only).** Three claims are false: the Claude manifest is not emitted (it exists and is clean); `profiles.md` is missing in `jef-voto` (it is there); `c5.md` is missing in `jef-materias` (it is there). One claim holds: `jef-triagem` has no `references/formato.md` and depends on loading `jef-pacote` by name. The residual `skills/jef-` token is in `LEIA-ME.md` line 9 (text, not a path). Quality note on an unverified member, not a repo defect.
+- **F16 (new, unverified in Chat, deferred).** `jef-triagem` lacks a local copy of `formato.md`; a lume-caso/1 hand-off needs named loading of `jef-pacote`. Default: unchanged. Trigger: the F13 live Chat result. If named loading fails, copy `formato.md` into `jef-triagem` through `closeModules` (an improvement with its own test).
+- **Three Chat workflows: NOT RUN.** No authorized live Chat session or tool exists in this agent. CLI tests and the Code-surface smoke do not stand in for Chat. Steps stay in `RD/chat/CHAT-TEST-STEPS.md`.
+- **Head at the time of this addendum:** the commit that carries it (see the PR comment for the SHA).
 
 RESULT:
 - Record: audits/moonshots/lume-claude-chat-2026-11-13.md; card: audits/moonshots/lume-claude-chat-2026-11-13.card.json (optional, no gate)
 - Findings: 15 (7 fixed, 2 deferred with a default and a trigger, 3 rejected, 3 unverified); [J] marks: 2
-- Council: 3 of 4 members ran; m4 not launched (allowlist); outputs and receipts saved
+- Council: 4 seats ran (m1, m2, m3, m5); only m1 has a verified executed model; m4 not launched (allowlist); outputs and receipts saved
 - Port vs improvement: 25 identical, 11 edited, 123 shared-module copies, 2 wrapper files (of 161)
 - Tests: 35 / 35 pass (PORT and IMPROVEMENT labeled apart)
 - Chat live upload, activation and 3 workflows: NOT RUN (no authorized Chat session); Cowork: NOT RUN

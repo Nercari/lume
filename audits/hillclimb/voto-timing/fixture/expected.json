@@ -19,6 +19,5 @@
     ]
   },
   "orientation": "negar provimento ao recurso e manter a sentença",
-  "expectedOutcome": "\\bnego provimento|\\bnegar provimento|\\bnegado provimento|desprovimento|desprovid",
-  "forbiddenOutcome": "\\bdou provimento|\\bdar provimento|\\bdado provimento"
+  "expectedOutcomeClass": "DESPROVIMENTO"
 }

@@ -78,4 +78,12 @@ sha256sum -c lume-claude-chat.zip.sha256          -> lume-claude-chat.zip: OK (1
 
 Port vs improvement (kept apart; `lume-workspace` is unchanged): of 161 shipped files, 25 are port-identical, 11 are edited, 123 are byte copies of shared modules into the skill folders that cite them, and 2 are Chat wrapper files. PORT tests compare with the source; `IMPROVEMENT (Chat)` tests check the declared edits. Defaults in force: version 1.2.0 (manifests agree; a test pins it), 12 skills kept, history unchanged. LICENSE holder legal acceptance stays with Themis and Pedro; the agent changes no holder text. Nothing here waits on an answer.
 
-Untested in Chat (undocumented): loading a skill by name, the `lume:` namespace, pypdf/OCR/network in the sandbox, profile persistence. Record: `audits/moonshots/lume-claude-chat-2026-11-13.md`. Council: 3 of 4 members ran; the fourth was not launched (paid-model allowlist), so one more independent result stays open.
+Untested in Chat (undocumented): loading a skill by name, the `lume:` namespace, pypdf/OCR/network in the sandbox, profile persistence. Record: `audits/moonshots/lume-claude-chat-2026-11-13.md`. Council: 4 seats ran (m1, m2, m3, m5); only m1 has a verified executed model; m4 was refused by the paid-model allowlist. A verified fourth participant is **NOT MET**. Chat workflows: **NOT RUN**. See the Acceptance addendum in the record.
+
+## Voto timing harness (synthetic proxy, `audits/hillclimb/voto-timing/`)
+
+Measurements from the two haiku smoke runs are **UNCONFIRMED pending repair**: the evaluator accepted a dispositive found only in the ementa and did not reject partial, absent or conflicting outcomes (PR #62 finding). The repaired check classifies each numbered paragraph, needs a dispositive of the oriented class, and rejects ambiguous, mixed or ementa-conflicting outcomes. No timing counts as T. No climb is initialized, so lock and relock do not apply. No new model run was made.
+
+```
+node --test audits/hillclimb/voto-timing/harness.test.mjs -> tests 12, pass 12, fail 0 (old evaluator with the same 12 tests: pass 9, fail 3)
+```
