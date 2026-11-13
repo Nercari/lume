@@ -270,6 +270,25 @@ test("a passive without a named source is not attribution and cannot hide a cont
   for (const [key, text] of Object.entries(ok)) assert.deepEqual(verify("voto", text, docs, expected), [], `${key} wrongly rejected`);
 });
 
+// Independent review run3 at 364bd546: a plural participle and a source mentioned inside an introductory phrase. All inputs are invented.
+test("a plural provido is an outcome and a source inside a longer phrase is not attribution", () => {
+  const bad = {
+    "run3 A, plural providos": P5("Foram providos os embargos."),
+    "plural providos, recursos": P5("Foram providos os recursos."),
+    "run3 B, source inside nos termos do voto": P5("Nos termos do voto do relator na Turma, foi dado provimento parcial ao recurso."),
+    "conformity phrase with a source": P5("De acordo com o precedente da Turma, foi dado provimento parcial ao recurso."),
+    "source phrase, then own grant after the comma": P5("Na Turma, foi negado provimento, e foi dado provimento parcial ao recurso."),
+  };
+  for (const [key, text] of Object.entries(bad)) assert.ok(verify("voto", text, docs, expected).length > 0, `${key} not rejected`);
+  const ok = {
+    "sourced precedent, plural participle": P5("No precedente da Turma, foram providos recursos idênticos."),
+    "sourced precedent, passive with a subject": P5("Em precedente citado, o recurso foi provido por exclusão expressa."),
+    "own passive denial agrees": P5("Foi negado provimento ao recurso."),
+  };
+  for (const [key, text] of Object.entries(ok)) assert.deepEqual(verify("voto", text, docs, expected), [], `${key} wrongly rejected`);
+  assert.deepEqual(operative("**5.** Foram providos os embargos."), ["PROVIMENTO"]);
+});
+
 test("the shipped gates are all UNMET, so a live run stops before preflight and makes no model call", () => {
   const gates = loadGates();
   assert.equal(gates.length, 4);

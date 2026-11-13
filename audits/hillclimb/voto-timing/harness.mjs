@@ -106,12 +106,12 @@ const LOOSE = {
   PARCIAL: /parcial(?:mente)?\s+(?:provimento|provid[oa])|provimento\s+parcial/i,
   NAO_CONHECIMENTO: /n[aã]o\s+conhe[çc]o|n[aã]o\s+conhecid|n[aã]o\s+conhecimento/i,
   DESPROVIMENTO: /\b(?:nego|negar|negado)(?:-lhe)?\s+provimento|\bn[aã]o\s+(?:dou|dar|dado)(?:-lhe)?\s+provimento|desprovimento|desprovid|improvid|improvimento|\bn[aã]o\s+provid/i,
-  PROVIMENTO: /(?<!n[aã]o\s)\b(?:dou|dar|dado)(?:-lhe)?\s+provimento|(?<!n[aã]o\s)\bprovid[oa]\b/i,
+  PROVIMENTO: /(?<!n[aã]o\s)\b(?:dou|dar|dado)(?:-lhe)?\s+provimento|(?<!n[aã]o\s)\bprovid[oa]s?\b/i,
 };
 const OPERATIVE = {
   ...LOOSE,
   DESPROVIMENTO: /\b(?:nego|negado)(?:-lhe)?\s+provimento|\bn[aã]o\s+(?:dou|dado)(?:-lhe)?\s+provimento|\bvoto\s+(?:por|no\s+sentido\s+de)\s+negar\s+provimento|desprovimento|desprovid|improvid|improvimento|\bn[aã]o\s+provid/i,
-  PROVIMENTO: /(?<!n[aã]o\s)\b(?:dou|dado)(?:-lhe)?\s+provimento|\bvoto\s+(?:por|no\s+sentido\s+de)\s+dar\s+provimento|(?<!n[aã]o\s)\bprovid[oa]\b/i,
+  PROVIMENTO: /(?<!n[aã]o\s)\b(?:dou|dado)(?:-lhe)?\s+provimento|\bvoto\s+(?:por|no\s+sentido\s+de)\s+dar\s+provimento|(?<!n[aã]o\s)\bprovid[oa]s?\b/i,
 };
 // A negated denial ("não nego provimento", "não é caso de negar provimento", "não desprovido") inverts the outcome; it is never a denial.
 const NEGATED = /\b(?:n[aã]o|nunca|jamais|nem|tampouco)\b[^.,;:]{0,30}?\b(?:nego|negar|negam|negado|desprov\w*|improv\w*)\b/i;
@@ -121,12 +121,23 @@ const QUOTED = /«[^»]*»|“[^”]*”|"[^"]*"/g;
 const ATTRIBUTED = /\b(?:negou|negaram|desproveu|desprovera?m|deu|deram|proveu|proveram|decidiu|decidiram|assentou|assentaram|firmou|firmaram|entendeu|entenderam|consignou|reconheceu|restou)\b|\bcomo\s+(?:j[aá]\s+)?(?:se\s+)?decid|^(?:\*\*\d+\.\*\*\s*)?\W*n[oa]s?\s+(?:precedentes?|julgados?|ac[óo]rd[ãa]os?|paradigmas?)\b/i;
 const PASSIVE = /\b(?:foi|foram|ficou|ficaram)\s+(?:negado|desprovid|improvid|provid|dado|n[aã]o\s+provid)|\b(?:foi|foram|ficou|ficaram)\s+\w+\s+provimento/i;
 const SOURCE = "(?:turma|tribunal|ac[óo]rd[ãa]o|precedentes?|julgados?|paradigmas?|c[âa]mara|colegiado|corte|stj|stf|tnu|trf\\d?)";
-const SOURCED_PASSIVE = new RegExp(`\\b(?:n[oa]s?|pel[ao]s?|em)\\s+(?:\\w+\\s+){0,3}${SOURCE}\\b[^.]*?(?:${PASSIVE.source})`, "i");
+const SOURCED_PASSIVE = new RegExp(`^(?:\\*\\*\\d+\\.\\*\\*\\s*)?\\W*(?:n[oa]s?|pel[ao]s?|em)\\s+(?:[^\\s,.;]+\\s+){0,3}${SOURCE}\\b[^,.;]*,?\\s+(?:[^\\s,.;]+\\s+){0,3}?(?:${PASSIVE.source})`, "i");
 const attributed = (x) => ATTRIBUTED.test(x) || SOURCED_PASSIVE.test(x);
 const CLAUSE = /[,;:]\s+|\s+(?:e|mas|por[ée]m|contudo|todavia|enquanto)\s+/i;
 const FIRST_PERSON = /\b(?:nego|dou|conhe[çc]o|voto|julgo)\b/i;
+// A bare passive clause is the source's outcome only while it is the first outcome clause; a later one is treated as own.
+const ownClauses = (x) => {
+  let seen = false;
+  return x.split(CLAUSE).filter((c) => {
+    const a = attributed(c);
+    const p = PASSIVE.test(c);
+    const own = !a && (FIRST_PERSON.test(c) || (p && seen));
+    seen ||= p || (a && /provimento|provid|improvid|negad|negou/i.test(c));
+    return own;
+  });
+};
 const sentences = (segment) => segment.replace(QUOTED, " ").split(/(?<=[.!?])\s+/)
-  .flatMap((x) => (attributed(x) ? x.split(CLAUSE).filter((c) => !attributed(c) && FIRST_PERSON.test(c)) : [x]));
+  .flatMap((x) => (attributed(x) ? ownClauses(x) : [x]));
 const classes = (table, texts) => Object.entries(table).filter(([, re]) => texts.some((x) => re.test(x))).map(([c]) => c);
 export const outcomes = (segment) => { const s = sentences(segment); return [...classes(LOOSE, s), ...(s.some((x) => NEGATED.test(x)) ? ["INVERTIDO"] : [])]; };
 export const operative = (segment) => classes(OPERATIVE, sentences(segment).filter((x) => !NEGATED.test(x)));
