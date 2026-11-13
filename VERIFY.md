@@ -58,3 +58,22 @@ after:  {"query":"tema do processo e","removed":["case_term"],"caseIdPresent":fa
 ```
 
 `npm test --prefix source-panel` covers the sent query and the diagnostic log with neither value, the refusal when either is missing, and the non-CNJ number.
+
+## lume-claude (Lume plugin for Claude Chat)
+
+Target: Claude Chat (claude.ai web and the Chat tab in Claude Desktop). Cowork and Code are separate surfaces. A result on one surface does not stand in for another. Run ID `lume-claude-20261113T185757Z-fd8b0c59`. The tree is built from `plugins/lume-workspace` by `node plugins/scripts/build-lume-claude.mjs`; `--check` fails when the committed tree differs.
+
+```
+cd plugins && node --test test/*.test.mjs        -> tests 34, pass 34, fail 0, skipped 0
+node plugins/scripts/build-lume-claude.mjs --check -> PASS: 161 files match
+node plugins/test/scrub.mjs                       -> PASS: no matches under plugins/
+sha256sum -c lume-claude-chat.zip.sha256          -> lume-claude-chat.zip: OK (161 entries, 4b47bb5a…2f74)
+```
+
+| Surface | Evidence | Status |
+|---|---|---|
+| Chat | Official upload rules read; every skill folder is self-contained (SKILL.md-relative paths, no `${CLAUDE_*}`, no `bin/`); folder-only sandbox simulation | Live upload, activation and 3 workflows: **NOT RUN**. Blocker: no authorized live Chat session; the agent does not sign in as Pedro. Steps for Pedro: `chat/CHAT-TEST-STEPS.md` in the run directory. |
+| Cowork | Official page read only | **NOT RUN** |
+| Code | `claude plugin validate --strict`, isolated install (12 skills, 1.2.0), 34 tests, Haiku smoke | Executed. Does not prove Chat. |
+
+Untested in Chat (undocumented): loading a skill by name, the `lume:` namespace, pypdf/OCR/network in the sandbox, profile persistence. Record: `audits/moonshots/lume-claude-chat-2026-11-13.md`. Council: 3 of 4 members ran; the fourth was not launched (paid-model allowlist), so one more independent result stays open.
