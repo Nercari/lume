@@ -1,0 +1,55 @@
+{
+  "id": "lume-claude-chat-2026-11-13",
+  "title": "Lume for Claude Chat: open decisions",
+  "repo": "Nercari/lume",
+  "issue": 62,
+  "items": [
+    {
+      "key": "chat_test",
+      "question": "Who runs the live Chat upload and workflow test?",
+      "options": [
+        "A · Pedro runs CHAT-TEST-STEPS.md in his own Chat with synthetic content and posts the results on PR #62.",
+        "B · Pedro authorizes a separate session that signs in for him.",
+        "C · Skip the live test; Chat compatibility stays not proven."
+      ],
+      "recommended": "A · Pedro runs CHAT-TEST-STEPS.md in his own Chat with synthetic content and posts the results on PR #62."
+    },
+    {
+      "key": "named_loading",
+      "question": "If loading a skill by name fails in Chat, what changes?",
+      "options": [
+        "A · Make jef-director self-complete and keep 12 skills.",
+        "B · Merge into one skill (breaks 12-skill fidelity to the source).",
+        "C · Ship a separate Chat build and Code build."
+      ],
+      "recommended": "A · Make jef-director self-complete and keep 12 skills."
+    },
+    {
+      "key": "version",
+      "question": "Which version does the plugin carry?",
+      "options": [
+        "A · 1.2.0 in both manifests; treat 1.1.5 in the old source README as stale.",
+        "B · 1.1.5, as in the source README."
+      ],
+      "recommended": "A · 1.2.0 in both manifests; treat 1.1.5 in the old source README as stale."
+    },
+    {
+      "key": "license_holder",
+      "question": "Who is the LICENSE holder?",
+      "options": [
+        "A · Pedro gives the exact holder text; the current text stays until then.",
+        "B · Keep Nercari as it stands now."
+      ],
+      "recommended": "A · Pedro gives the exact holder text; the current text stays until then."
+    },
+    {
+      "key": "name_history",
+      "question": "Three old commits still hold the personal name. What happens to them?",
+      "options": [
+        "A · Leave history as it is and record the gap (no force-push).",
+        "B · Pedro approves a history rewrite and force-push, then the agent runs it."
+      ],
+      "recommended": "A · Leave history as it is and record the gap (no force-push)."
+    }
+  ]
+}
