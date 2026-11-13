@@ -165,3 +165,30 @@ test("a voto with a missing or contradictory dispositive is not usable and repor
     assert.equal(r.totalSec, null);
   }
 });
+
+// Residual false-usable (Ops continuation on PR #62): a quoted or attributed precedent outcome must not stand in for this voto's own decision. All inputs are invented.
+const P3 = canned("voto").match(/\*\*3\.\*\*[^\n]*/)[0];
+const withP3 = (s) => canned("voto").replace(P3, s);
+const noDispositive = (text) => verify("voto", text, docs, expected).some((f) => /^dispositive absent/.test(f));
+
+test("a precedent's outcome, quoted or attributed, is not this voto's dispositive", () => {
+  const cases = {
+    "attributed past denial, no own decision": withP4("**4.** A Turma Recursal, em caso análogo, negou provimento ao recurso do segurado."),
+    "was-denied in a precedent, no own decision": withP4("**4.** Em precedente citado, o recurso foi desprovido por exclusão expressa."),
+    "quoted denial in curly quotes, no own decision": withP4("**4.** O paradigma consignou: “Nego provimento ao recurso e mantenho a sentença”."),
+    "quoted denial in straight quotes, no own decision": withP4('**4.** O paradigma consignou: "Nego provimento ao recurso".'),
+    "precedent denial in reasoning, own paragraph has no outcome": withP3(P3 + " A Turma Recursal negou provimento a recurso idêntico.").replace(P4, "**4.** Mantenho a sentença."),
+    "ementa denies, reasoning quotes a precedent denial, no own decision": withP4("**4.** Como já se decidiu, “desprovimento do recurso” é a solução."),
+  };
+  for (const [key, text] of Object.entries(cases)) assert.ok(noDispositive(text), `${key} not rejected as a missing dispositive`);
+});
+
+test("a precedent in the reasoning does not reject a voto that has its own operative decision", () => {
+  const ok = {
+    "precedent grants partially, own decision denies": withP3(P3 + " A Turma Recursal deu parcial provimento a caso diverso."),
+    "precedent denies, own decision denies": withP3(P3 + " A Turma Recursal negou provimento a recurso idêntico."),
+    "own decision cites the precedent": withP4("**4.** Nego provimento ao recurso, nos termos do precedente da Turma, e mantenho a sentença."),
+    "own decision with quoted precedent in the same paragraph": withP4("**4.** Conforme “desprovimento” em precedente, nego provimento ao recurso."),
+  };
+  for (const [key, text] of Object.entries(ok)) assert.deepEqual(verify("voto", text, docs, expected), [], `${key} wrongly rejected`);
+});

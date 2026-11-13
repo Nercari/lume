@@ -86,4 +86,7 @@ Measurements from the two haiku smoke runs are **UNCONFIRMED pending repair**: t
 
 ```
 node --test audits/hillclimb/voto-timing/harness.test.mjs -> tests 12, pass 12, fail 0 (old evaluator with the same 12 tests: pass 9, fail 3)
+node --test audits/hillclimb/voto-timing/harness.test.mjs -> tests 14, pass 14, fail 0 (head 5033c25 evaluator with the same 14 tests: pass 12, fail 2)
 ```
+
+Second repair: a precedent's denial that is quoted or attributed in the reasoning is not this voto's dispositive. The check drops quoted spans and attribution sentences, then classifies each paragraph. Earlier missing-dispositive and contradictory-partial cases stay rejected; legitimate decisions stay accepted. Keyword limit: an own decision phrased with an attributed verb is a false reject, never a false accept. All usable-voto timing stays **UNCONFIRMED**; an independent evaluator approval is required before any climb.

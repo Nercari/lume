@@ -99,7 +99,12 @@ const OUTCOME_CLASSES = {
   DESPROVIMENTO: /\b(?:nego|negar|negado)\s+provimento|\bn[aã]o\s+(?:dou|dar|dado)\s+provimento|desprovimento|desprovid|improvid|improvimento|\bn[aã]o\s+provid/i,
   PROVIMENTO: /(?<!n[aã]o\s)\b(?:dou|dar|dado)\s+provimento|(?<!n[aã]o\s)\bprovid[oa]\b/i,
 };
-export const outcomes = (segment) => Object.entries(OUTCOME_CLASSES).filter(([, re]) => re.test(segment)).map(([c]) => c);
+// Only this voto's own operative sentences count: quoted spans and sentences that attribute a decision to a precedent or another court are dropped.
+// shortcut: keyword list, not a parser; an own decision phrased with one of these verbs is a false reject, never a false accept, upgrade with Law's veto list.
+const QUOTED = /«[^»]*»|“[^”]*”|"[^"]*"/g;
+const ATTRIBUTED = /\b(?:negou|negaram|desproveu|desprovera?m|deu|deram|proveu|proveram|decidiu|decidiram|assentou|assentaram|firmou|firmaram|entendeu|entenderam|consignou|reconheceu|restou)\b|\b(?:foi|foram|ficou|ficaram)\s+(?:negado|desprovid|improvid|provid|dado|n[aã]o\s+provid)|\bcomo\s+(?:j[aá]\s+)?(?:se\s+)?decid/i;
+const own = (segment) => segment.replace(QUOTED, " ").split(/(?<=[.!?])\s+/).filter((x) => !ATTRIBUTED.test(x)).join(" ");
+export const outcomes = (segment) => { const t = own(segment); return Object.entries(OUTCOME_CLASSES).filter(([, re]) => re.test(t)).map(([c]) => c); };
 
 export function verify(kind, text, docs, expected) {
   const all = docs.map((d) => d.text).join("\n");
