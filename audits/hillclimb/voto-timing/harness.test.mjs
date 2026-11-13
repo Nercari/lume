@@ -194,6 +194,47 @@ test("a precedent in the reasoning does not reject a voto that has its own opera
   for (const [key, text] of Object.entries(ok)) assert.deepEqual(verify("voto", text, docs, expected), [], `${key} wrongly rejected`);
 });
 
+// Independent review rv-integrate-pedro-plugin-a14f-6206 at 58674067: an infinitive or a negation is not an operative denial. All inputs are invented.
+test("an infinitive, a negated denial or a normative sentence is not this voto's dispositive", () => {
+  const cases = {
+    "reviewer case 1: precedent with deve-se negar, nothing else decided": withP4("**4.** No precedente da Turma, deve-se negar provimento ao recurso. Nada mais a decidir."),
+    "reviewer case 2: negated denial": withP4("**4.** Não nego provimento ao recurso."),
+    "infinitive only": withP4("**4.** É caso de negar provimento ao recurso."),
+    "deve-se negar, own voice": withP4("**4.** Deve-se negar provimento ao recurso."),
+    "precedent locative, participle": withP4("**4.** No precedente da Turma, negado provimento ao recurso."),
+    "precedent locative, first person": withP4("**4.** No julgado paradigma, nego provimento ao recurso."),
+    "double negative, grant": withP4("**4.** Não deixo de negar provimento ao recurso."),
+    "not desprovido": withP4("**4.** O recurso não está desprovido."),
+    "negation with a stretch of words": withP4("**4.** Não é o caso de se negar provimento ao recurso."),
+  };
+  for (const [key, text] of Object.entries(cases)) assert.ok(verify("voto", text, docs, expected).length > 0, `${key} not rejected`);
+  assert.ok(noDispositive(cases["reviewer case 1: precedent with deve-se negar, nothing else decided"]));
+  assert.ok(noDispositive(cases["reviewer case 2: negated denial"]));
+});
+
+test("an infinitive or a negation elsewhere cannot hide a contradiction of an own denial", () => {
+  const cases = {
+    "own denial, then a negated denial": withP4("**4.** Nego provimento ao recurso.\n\n**5.** Não é caso de negar provimento."),
+    "own denial, then a grant infinitive": withP4("**4.** Nego provimento ao recurso.\n\n**5.** É caso de dar provimento ao recurso."),
+    "own denial, then não nego": withP4("**4.** Nego provimento ao recurso. Não nego provimento ao recurso."),
+  };
+  for (const [key, text] of Object.entries(cases)) assert.ok(verify("voto", text, docs, expected).length > 0, `${key} not rejected`);
+});
+
+test("legitimate operative denials in other grammatical forms are still accepted", () => {
+  const ok = {
+    "nego-lhe provimento": withP4("**4.** Nego-lhe provimento e mantenho a sentença."),
+    "voto por negar provimento": withP4("**4.** Voto por negar provimento ao recurso."),
+    "voto no sentido de negar provimento": withP4("**4.** Voto no sentido de negar provimento ao recurso."),
+    "reasoning with an infinitive denial, own denial after": withP3(P3 + " Não há razão para dar provimento a tese contrária.").replace(P4, "**4.** Nego provimento ao recurso."),
+    "own denial after a normative reasoning sentence": withP4("**4.** Deve prevalecer a cláusula 7. Nego provimento ao recurso."),
+  };
+  for (const [key, text] of Object.entries(ok)) {
+    const f = verify("voto", text, docs, expected);
+    if (key.startsWith("reasoning with")) assert.ok(f.length > 0, "documented false reject changed"); else assert.deepEqual(f, [], `${key} wrongly rejected`);
+  }
+});
+
 test("the shipped gates are all UNMET, so a live run stops before preflight and makes no model call", () => {
   const gates = loadGates();
   assert.equal(gates.length, 4);

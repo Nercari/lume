@@ -99,19 +99,30 @@ export function buildPrompt(kind, docs, relatorio, expected) {
 
 // Structural proxy checks. They are NOT Law's vetoes. Each returns a failure string or null.
 // Outcome classes found in one segment (the ementa or one numbered paragraph). A segment that yields two classes is ambiguous.
+// Two views. LOOSE sees any outcome phrase, bare infinitives included, and flags a negated one as INVERTIDO: it finds contradictions.
+// OPERATIVE sees only decision forms (first person, participle, noun phrase, "voto por/no sentido de ..."): it decides the dispositive.
 // shortcut: keyword classes, not a parser; a reasoning sentence such as "não há que se dar provimento" reads as PROVIMENTO and the voto is rejected (false reject, never a false accept), upgrade with Law's veto list.
-const OUTCOME_CLASSES = {
+const LOOSE = {
   PARCIAL: /parcial(?:mente)?\s+(?:provimento|provid[oa])|provimento\s+parcial/i,
   NAO_CONHECIMENTO: /n[aã]o\s+conhe[çc]o|n[aã]o\s+conhecid|n[aã]o\s+conhecimento/i,
-  DESPROVIMENTO: /\b(?:nego|negar|negado)\s+provimento|\bn[aã]o\s+(?:dou|dar|dado)\s+provimento|desprovimento|desprovid|improvid|improvimento|\bn[aã]o\s+provid/i,
-  PROVIMENTO: /(?<!n[aã]o\s)\b(?:dou|dar|dado)\s+provimento|(?<!n[aã]o\s)\bprovid[oa]\b/i,
+  DESPROVIMENTO: /\b(?:nego|negar|negado)(?:-lhe)?\s+provimento|\bn[aã]o\s+(?:dou|dar|dado)(?:-lhe)?\s+provimento|desprovimento|desprovid|improvid|improvimento|\bn[aã]o\s+provid/i,
+  PROVIMENTO: /(?<!n[aã]o\s)\b(?:dou|dar|dado)(?:-lhe)?\s+provimento|(?<!n[aã]o\s)\bprovid[oa]\b/i,
 };
+const OPERATIVE = {
+  ...LOOSE,
+  DESPROVIMENTO: /\b(?:nego|negado)(?:-lhe)?\s+provimento|\bn[aã]o\s+(?:dou|dado)(?:-lhe)?\s+provimento|\bvoto\s+(?:por|no\s+sentido\s+de)\s+negar\s+provimento|desprovimento|desprovid|improvid|improvimento|\bn[aã]o\s+provid/i,
+  PROVIMENTO: /(?<!n[aã]o\s)\b(?:dou|dado)(?:-lhe)?\s+provimento|\bvoto\s+(?:por|no\s+sentido\s+de)\s+dar\s+provimento|(?<!n[aã]o\s)\bprovid[oa]\b/i,
+};
+// A negated denial ("não nego provimento", "não é caso de negar provimento", "não desprovido") inverts the outcome; it is never a denial.
+const NEGATED = /\b(?:n[aã]o|nunca|jamais|nem|tampouco)\b[^.,;:]{0,30}?\b(?:nego|negar|negam|negado|desprov\w*|improv\w*)\b/i;
 // Only this voto's own operative sentences count: quoted spans and sentences that attribute a decision to a precedent or another court are dropped.
-// shortcut: keyword list, not a parser; an own decision phrased with one of these verbs is a false reject, never a false accept, upgrade with Law's veto list.
+// shortcut: keyword list, not a parser; an own decision phrased with one of these verbs, or opening with "No precedente/julgado/acórdão", is a false reject, never a false accept, upgrade with Law's veto list.
 const QUOTED = /«[^»]*»|“[^”]*”|"[^"]*"/g;
-const ATTRIBUTED = /\b(?:negou|negaram|desproveu|desprovera?m|deu|deram|proveu|proveram|decidiu|decidiram|assentou|assentaram|firmou|firmaram|entendeu|entenderam|consignou|reconheceu|restou)\b|\b(?:foi|foram|ficou|ficaram)\s+(?:negado|desprovid|improvid|provid|dado|n[aã]o\s+provid)|\bcomo\s+(?:j[aá]\s+)?(?:se\s+)?decid/i;
-const own = (segment) => segment.replace(QUOTED, " ").split(/(?<=[.!?])\s+/).filter((x) => !ATTRIBUTED.test(x)).join(" ");
-export const outcomes = (segment) => { const t = own(segment); return Object.entries(OUTCOME_CLASSES).filter(([, re]) => re.test(t)).map(([c]) => c); };
+const ATTRIBUTED = /\b(?:negou|negaram|desproveu|desprovera?m|deu|deram|proveu|proveram|decidiu|decidiram|assentou|assentaram|firmou|firmaram|entendeu|entenderam|consignou|reconheceu|restou)\b|\b(?:foi|foram|ficou|ficaram)\s+(?:negado|desprovid|improvid|provid|dado|n[aã]o\s+provid)|\bcomo\s+(?:j[aá]\s+)?(?:se\s+)?decid|^(?:\*\*\d+\.\*\*\s*)?\W*n[oa]s?\s+(?:precedentes?|julgados?|ac[óo]rd[ãa]os?|paradigmas?)\b/i;
+const sentences = (segment) => segment.replace(QUOTED, " ").split(/(?<=[.!?])\s+/).filter((x) => !ATTRIBUTED.test(x));
+const classes = (table, texts) => Object.entries(table).filter(([, re]) => texts.some((x) => re.test(x))).map(([c]) => c);
+export const outcomes = (segment) => { const s = sentences(segment); return [...classes(LOOSE, s), ...(s.some((x) => NEGATED.test(x)) ? ["INVERTIDO"] : [])]; };
+export const operative = (segment) => classes(OPERATIVE, sentences(segment).filter((x) => !NEGATED.test(x)));
 
 export function verify(kind, text, docs, expected) {
   const all = docs.map((d) => d.text).join("\n");
@@ -133,8 +144,9 @@ export function verify(kind, text, docs, expected) {
     add(/^\*\*[^*]+\*\*$/.test(ementa) && ementa === ementa.toUpperCase(), "ementa missing or not bold upper case");
     add(!/^#|^\s*[-*] |;/m.test(text), "forbidden format: heading, list or semicolon");
     const body = m.map((x, i) => text.slice(x.index, m[i + 1]?.index ?? text.length));
-    const bodyOutcomes = new Set(body.flatMap(outcomes));
-    add(bodyOutcomes.size === 1 && bodyOutcomes.has(expected.expectedOutcomeClass), `dispositive absent, ambiguous or not ${expected.expectedOutcomeClass} (found: ${[...bodyOutcomes].join(", ") || "none"})`);
+    const operativeSet = new Set(body.flatMap(operative));
+    add(operativeSet.size === 1 && operativeSet.has(expected.expectedOutcomeClass), `dispositive absent, ambiguous or not ${expected.expectedOutcomeClass} (found: ${[...operativeSet].join(", ") || "none"})`);
+    add(body.flatMap(outcomes).every((c) => c === expected.expectedOutcomeClass), "an outcome phrase in the body contradicts or negates the oriented outcome");
     add(outcomes(ementa).every((c) => c === expected.expectedOutcomeClass), "ementa outcome contradicts the oriented outcome"); // the ementa alone never satisfies the dispositive check
   }
   return fail;
