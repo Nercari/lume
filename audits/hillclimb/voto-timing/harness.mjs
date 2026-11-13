@@ -118,11 +118,15 @@ const NEGATED = /\b(?:n[aã]o|nunca|jamais|nem|tampouco)\b[^.,;:]{0,30}?\b(?:neg
 // Only this voto's own operative sentences count: quoted spans and sentences that attribute a decision to a precedent or another court are dropped.
 // shortcut: keyword list, not a parser; an own decision phrased with one of these verbs, or opening with "No precedente/julgado/acórdão", is a false reject, never a false accept, upgrade with Law's veto list.
 const QUOTED = /«[^»]*»|“[^”]*”|"[^"]*"/g;
-const ATTRIBUTED = /\b(?:negou|negaram|desproveu|desprovera?m|deu|deram|proveu|proveram|decidiu|decidiram|assentou|assentaram|firmou|firmaram|entendeu|entenderam|consignou|reconheceu|restou)\b|\b(?:foi|foram|ficou|ficaram)\s+(?:negado|desprovid|improvid|provid|dado|n[aã]o\s+provid)|\bcomo\s+(?:j[aá]\s+)?(?:se\s+)?decid|^(?:\*\*\d+\.\*\*\s*)?\W*n[oa]s?\s+(?:precedentes?|julgados?|ac[óo]rd[ãa]os?|paradigmas?)\b/i;
+const ATTRIBUTED = /\b(?:negou|negaram|desproveu|desprovera?m|deu|deram|proveu|proveram|decidiu|decidiram|assentou|assentaram|firmou|firmaram|entendeu|entenderam|consignou|reconheceu|restou)\b|\bcomo\s+(?:j[aá]\s+)?(?:se\s+)?decid|^(?:\*\*\d+\.\*\*\s*)?\W*n[oa]s?\s+(?:precedentes?|julgados?|ac[óo]rd[ãa]os?|paradigmas?)\b/i;
+const PASSIVE = /\b(?:foi|foram|ficou|ficaram)\s+(?:negado|desprovid|improvid|provid|dado|n[aã]o\s+provid)|\b(?:foi|foram|ficou|ficaram)\s+\w+\s+provimento/i;
+const SOURCE = "(?:turma|tribunal|ac[óo]rd[ãa]o|precedentes?|julgados?|paradigmas?|c[âa]mara|colegiado|corte|stj|stf|tnu|trf\\d?)";
+const SOURCED_PASSIVE = new RegExp(`\\b(?:n[oa]s?|pel[ao]s?|em)\\s+(?:\\w+\\s+){0,3}${SOURCE}\\b[^.]*?(?:${PASSIVE.source})`, "i");
+const attributed = (x) => ATTRIBUTED.test(x) || SOURCED_PASSIVE.test(x);
 const CLAUSE = /[,;:]\s+|\s+(?:e|mas|por[ée]m|contudo|todavia|enquanto)\s+/i;
 const FIRST_PERSON = /\b(?:nego|dou|conhe[çc]o|voto|julgo)\b/i;
 const sentences = (segment) => segment.replace(QUOTED, " ").split(/(?<=[.!?])\s+/)
-  .flatMap((x) => (ATTRIBUTED.test(x) ? x.split(CLAUSE).filter((c) => !ATTRIBUTED.test(c) && FIRST_PERSON.test(c)) : [x]));
+  .flatMap((x) => (attributed(x) ? x.split(CLAUSE).filter((c) => !attributed(c) && FIRST_PERSON.test(c)) : [x]));
 const classes = (table, texts) => Object.entries(table).filter(([, re]) => texts.some((x) => re.test(x))).map(([c]) => c);
 export const outcomes = (segment) => { const s = sentences(segment); return [...classes(LOOSE, s), ...(s.some((x) => NEGATED.test(x)) ? ["INVERTIDO"] : [])]; };
 export const operative = (segment) => classes(OPERATIVE, sentences(segment).filter((x) => !NEGATED.test(x)));

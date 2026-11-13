@@ -252,6 +252,24 @@ test("an attributed clause does not erase an own contradicting clause in the sam
   assert.deepEqual(operative("**5.** Diante do que decidiu a Turma no paradigma, dou parcial provimento ao recurso."), ["PARCIAL"]);
 });
 
+// Independent review run2 at affad4e2: a bare passive ("foi dado provimento parcial") has no named source, so it is not attribution. All inputs are invented.
+test("a passive without a named source is not attribution and cannot hide a contradiction", () => {
+  const bad = {
+    "reviewer pair, bare passive partial grant": P5("Assim, foi dado provimento parcial ao recurso."),
+    "bare passive grant": P5("Foi dado provimento ao recurso."),
+    "passive grant, source after the passive": P5("Foi dado provimento parcial ao recurso, nos termos do precedente da Turma."),
+    "passive grant, conforme source": P5("Conforme o precedente da Turma, foi dado provimento parcial ao recurso."),
+    "sourced passive, own grant in the same sentence": P5("No precedente da Turma, foi negado provimento, e dou parcial provimento ao recurso."),
+  };
+  for (const [key, text] of Object.entries(bad)) assert.ok(verify("voto", text, docs, expected).length > 0, `${key} not rejected`);
+  const ok = {
+    "locative source, passive grant elsewhere": P5("Na Turma, foi dado provimento parcial a recurso idêntico."),
+    "agent source, passive": P5("Pela Turma Recursal, foram providos recursos idênticos."),
+    "own passive denial agrees": P5("Foi negado provimento ao recurso."),
+  };
+  for (const [key, text] of Object.entries(ok)) assert.deepEqual(verify("voto", text, docs, expected), [], `${key} wrongly rejected`);
+});
+
 test("the shipped gates are all UNMET, so a live run stops before preflight and makes no model call", () => {
   const gates = loadGates();
   assert.equal(gates.length, 4);
