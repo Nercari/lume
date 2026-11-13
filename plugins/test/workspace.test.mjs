@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { scrubHits } from "./scrub.mjs";
 
 // plugins/lume-workspace is the workspace chat plugin (name "lume"). It sits next to,
 // and never replaces, plugins/lume-jef (the PJe button flow the extension and packaging use).
@@ -64,20 +65,8 @@ test("every skill has frontmatter and every referenced file exists", () => {
   assert.match(read("skills/jef-director/references/contrato.md"), /Revisão: 2026-11-12\.1/);
 });
 
-test("public repo scrub: no drive urls, identifiers, emails or personal names", () => {
-  const patterns = [
-    /drive\.google\.com/,
-    /msg_idx/,
-    /\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/,
-    /\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b/,
-    /\b\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}\b/,
-    /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/,
-    /Pedro Neres/,
-  ];
-  for (const file of filesUnder(root).filter((f) => /\.(md|json|py)$|LICENSE$/.test(f))) {
-    const text = readFileSync(file, "utf8");
-    for (const re of patterns) assert.equal(re.test(text), false, `${re} in ${file}`);
-  }
+test("public repo scrub: plugin files and tests carry no Drive/Docs URLs, identifiers, emails, phones or personal names", () => {
+  assert.deepEqual(scrubHits(path.join(root, "..")), []);
 });
 
 test("lume_check.py passes and fails as documented", () => {
