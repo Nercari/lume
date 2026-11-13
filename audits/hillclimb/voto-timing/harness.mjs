@@ -118,10 +118,12 @@ const NEGATED = /\b(?:n[aã]o|nunca|jamais|nem|tampouco)\b[^.,;:]{0,30}?\b(?:neg
 // Only this voto's own operative sentences count: quoted spans and sentences that attribute a decision to a precedent or another court are dropped.
 // shortcut: keyword list, not a parser; an own decision phrased with one of these verbs, or opening with "No precedente/julgado/acórdão", is a false reject, never a false accept, upgrade with Law's veto list.
 const QUOTED = /«[^»]*»|“[^”]*”|"[^"]*"/g;
-const ATTRIBUTED = /\b(?:negou|negaram|desproveu|desprovera?m|deu|deram|proveu|proveram|decidiu|decidiram|assentou|assentaram|firmou|firmaram|entendeu|entenderam|consignou|reconheceu|restou)\b|\bcomo\s+(?:j[aá]\s+)?(?:se\s+)?decid|^(?:\*\*\d+\.\*\*\s*)?\W*n[oa]s?\s+(?:precedentes?|julgados?|ac[óo]rd[ãa]os?|paradigmas?)\b/i;
+const ATTRIBUTED = /\b(?:negou|negaram|desproveu|desprovera?m|deu|deram|proveu|proveram|decidiu|decidiram|assentou|assentaram|firmou|firmaram|entendeu|entenderam|consignou|reconheceu|restou)\b|\bcomo\s+(?:j[aá]\s+)?(?:se\s+)?decid|^(?:\*\*\d+\.\*\*\s*)?\W*n[oa]s?\s+(?:precedentes?|julgados?|ac[óo]rd[ãa]os?|paradigmas?)\b(?!\s+(?:recorrid|embargad|impugnad|agravad|combatid|vergastad))/i;
 const PASSIVE = /\b(?:foi|foram|ficou|ficaram)\s+(?:negado|desprovid|improvid|provid|dado|n[aã]o\s+provid)|\b(?:foi|foram|ficou|ficaram)\s+\w+\s+provimento/i;
 const SOURCE = "(?:turma|tribunal|ac[óo]rd[ãa]o|precedentes?|julgados?|paradigmas?|c[âa]mara|colegiado|corte|stj|stf|tnu|trf\\d?)";
-const SOURCED_PASSIVE = new RegExp(`^(?:\\*\\*\\d+\\.\\*\\*\\s*)?\\W*(?:n[oa]s?|pel[ao]s?|em)\\s+(?:[^\\s,.;]+\\s+){0,3}${SOURCE}\\b[^,.;]*,?\\s+(?:[^\\s,.;]+\\s+){0,3}?(?:${PASSIVE.source})`, "i");
+const GROUND = "(?:raz[ãa]o|raz[õo]es|for[çc]a|termos|face|vista|virtude|acordo|conformidade|decorr[êe]ncia|consequ[êe]ncia|fun[çc]ão|rela[çc][ãa]o|aten[çc][ãa]o|aplica[çc][ãa]o)";
+const UNDER_REVIEW = "(?:recorrid|embargad|impugnad|agravad|combatid|vergastad)";
+const SOURCED_PASSIVE = new RegExp(`^(?:\\*\\*\\d+\\.\\*\\*\\s*)?\\W*(?:n[oa]s?|pel[ao]s?|em)\\s+(?!${GROUND}\\b)(?:[^\\s,.;]+\\s+){0,3}${SOURCE}\\b(?!\\s+${UNDER_REVIEW})[^,.;]*,?\\s+(?:[^\\s,.;]+\\s+){0,3}?(?:${PASSIVE.source})`, "i");
 const attributed = (x) => ATTRIBUTED.test(x) || SOURCED_PASSIVE.test(x);
 const CLAUSE = /[,;:]\s+|\s+(?:e|mas|por[ée]m|contudo|todavia|enquanto)\s+/i;
 const FIRST_PERSON = /\b(?:nego|dou|conhe[çc]o|voto|julgo)\b/i;

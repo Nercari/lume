@@ -289,6 +289,25 @@ test("a plural provido is an outcome and a source inside a longer phrase is not 
   assert.deepEqual(operative("**5.** Foram providos os embargos."), ["PROVIMENTO"]);
 });
 
+// Independent review run4 at 71489c2f: a ground or the decision under review is not a source. All inputs are invented.
+test("a ground phrase or the decision under review is not a source attribution", () => {
+  const bad = {
+    "run4, em razão do acórdão recorrido": P5("Em razão do acórdão recorrido, foi dado provimento ao recurso."),
+    "em virtude do precedente": P5("Em virtude do precedente da Turma, foi dado provimento ao recurso."),
+    "em face do julgado, plural": P5("Em face do julgado, foram providos os embargos."),
+    "em decorrência do acórdão": P5("Em decorrência do acórdão da Turma, foi dado provimento parcial ao recurso."),
+    "no acórdão recorrido": P5("No acórdão recorrido, foi dado provimento ao recurso."),
+  };
+  for (const [name, voto] of Object.entries(bad)) assert.ok(verify("voto", voto, docs, expected).length > 0, `${name} not rejected`);
+  const ok = {
+    "sourced precedent, plural participle": P5("No precedente da Turma, foram providos recursos idênticos."),
+    "sourced Turma passive": P5("Na Turma, foi dado provimento parcial a recurso idêntico."),
+    "sourced precedent with a subject": P5("Em precedente citado, o recurso foi provido por exclusão expressa."),
+    "own passive denial agrees": P5("Foi negado provimento ao recurso."),
+  };
+  for (const [name, voto] of Object.entries(ok)) assert.deepEqual(verify("voto", voto, docs, expected), [], `${name} wrongly rejected`);
+});
+
 test("the shipped gates are all UNMET, so a live run stops before preflight and makes no model call", () => {
   const gates = loadGates();
   assert.equal(gates.length, 4);
