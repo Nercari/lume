@@ -59,7 +59,7 @@ def run_bounded(argv, *, timeout_sec, max_output, env, cwd, stdin=b""):
             sel.register(proc.stdin, selectors.EVENT_WRITE, "in")
         else:
             proc.stdin.close()
-        while any(k.data != "in" for k in sel.get_map().values()):
+        while sel.get_map():
             left = deadline - time.monotonic()
             if left <= 0:
                 timed_out = True

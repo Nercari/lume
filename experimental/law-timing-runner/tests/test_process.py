@@ -74,7 +74,35 @@ class Process(unittest.TestCase):
             r = self.run_py(code, timeout_sec=0.5, stdin=b"y" * 5_000_000)
             self.assertTrue(r.timed_out)
             self.assertLess(time.monotonic() - t0, 3)
-            self.wait_dead(*map(int, open(pidfile).read().split()))
+            with open(pidfile) as fh:
+                self.wait_dead(*map(int, fh.read().split()))
+
+    def test_child_closes_outputs_then_reads_large_stdin(self):
+        with tempfile.TemporaryDirectory() as d:
+            mark = os.path.join(d, "mark")
+            code = ("import hashlib,os,sys;os.close(1);os.close(2);"
+                    "d=sys.stdin.buffer.read();"
+                    f"open({mark!r},'w').write(f'{{len(d)}} {{hashlib.sha256(d).hexdigest()}}')")
+            data = bytes(range(256)) * 782 + b"SYNTHETIC-MARKER"
+            t0 = time.monotonic()
+            r = self.run_py(code, stdin=data[:200000])
+            import hashlib
+            self.assertEqual((r.returncode, r.timed_out, r.overflow), (0, False, False))
+            self.assertLess(time.monotonic() - t0, 3)
+            self.assertEqual(open(mark).read(), f"200000 {hashlib.sha256(data[:200000]).hexdigest()}")
+
+    def test_child_closes_outputs_and_never_reads_times_out_with_descendant(self):
+        with tempfile.TemporaryDirectory() as d:
+            pidfile = os.path.join(d, "pids")
+            code = ("import os,subprocess,sys,time;"
+                    "p=subprocess.Popen([sys.executable,'-I','-c','import os,time;os.close(1);os.close(2);time.sleep(60)']);"
+                    f"open({pidfile!r},'w').write(f'{{os.getpid()}} {{p.pid}}');os.close(1);os.close(2);time.sleep(60)")
+            t0 = time.monotonic()
+            r = self.run_py(code, timeout_sec=0.6, stdin=b"y" * 200000)
+            self.assertTrue(r.timed_out)
+            self.assertLess(time.monotonic() - t0, 3)
+            with open(pidfile) as fh:
+                self.wait_dead(*map(int, fh.read().split()))
 
     def test_output_fills_before_child_reads_stdin(self):
         code = ("import sys;o=sys.stdout.buffer;o.write(b'x'*1000000);o.flush();"

@@ -58,6 +58,16 @@ def _open_output_dir(cfg):
     return fd
 
 
+def _lifetime_left(cfg, grant):
+    """Seconds of grant life left by a fresh wall-clock sample. Raises when the grant is not live now."""
+    w = cfg.wall_clock()
+    if w < grant.issued_at:
+        raise Reject("grant_not_yet_valid")
+    if w >= grant.expires_at:
+        raise Reject("grant_expired")
+    return grant.expires_at - w
+
+
 class Runner:
     def __init__(self, cfg: Optional[Config] = None):
         self.cfg = cfg
@@ -99,13 +109,17 @@ class Runner:
         started = 0
         try:
             ledger.open_exclusive()
+            _lifetime_left(cfg, grant)
             ledger.reserve(grant, req.units)
-            deadline = cfg.mono_clock() + min(req.timeout_sec, max(int(grant.expires_at - now), 1))
+            deadline = cfg.mono_clock() + min(req.timeout_sec, _lifetime_left(cfg, grant))
             rows, status = [], "complete"
             t0 = cfg.mono_clock()
             for it in range(req.iterations):
                 for case_id, data in zip(req.case_ids, sources):
-                    left = deadline - cfg.mono_clock()
+                    try:
+                        left = min(deadline - cfg.mono_clock(), _lifetime_left(cfg, grant))
+                    except Reject:
+                        left = 0
                     if left <= 0:
                         status = "timeout"
                         break
