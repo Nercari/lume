@@ -1,0 +1,6 @@
+import time:       404 |       3547 | tempfile
+import time:      1210 |       4145 |     inspect
+import time:       431 |       4570 |   re
+import time:       542 |       4789 |   dataclasses
+import time:       852 |       7066 | argparse
+import time:      3116 |       7904 | _colorize
