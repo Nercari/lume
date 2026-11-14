@@ -1,6 +1,8 @@
 """Local, standard-library checks. No network or legal conclusions."""
-import argparse, json, os, re
+import json, os, re, sys
 from pathlib import Path
+from types import SimpleNamespace
+COMMANDS=['package','locators','diff','checkpoint']
 
 def need(ok,msg):
     if not ok: raise ValueError(msg)
@@ -85,8 +87,13 @@ def checkpoint(data,path,expected):
         if fd is not None:os.close(fd);lock.unlink()
     return {'checked':'checkpoint local salvo','version':data['version']}
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('command',choices=['package','locators','diff','checkpoint']);parser.add_argument('input');parser.add_argument('--output');parser.add_argument('--expected-version',type=int)
-    a=parser.parse_args()
+    v=sys.argv[1:]
+    # shortcut: argparse costs ~16 ms of imports and setup; the plain `<command> <file>` shape skips it, any other argv goes through argparse unchanged
+    if len(v)==2 and v[0] in COMMANDS and v[1][:1]!='-':a=SimpleNamespace(command=v[0],input=v[1],output=None,expected_version=None)
+    else:
+        import argparse
+        parser=argparse.ArgumentParser();parser.add_argument('command',choices=COMMANDS);parser.add_argument('input');parser.add_argument('--output');parser.add_argument('--expected-version',type=int)
+        a=parser.parse_args()
     try:
         data=json.loads(Path(a.input).read_text());need(isinstance(data,dict),'objeto JSON obrigatório')
         if a.command=='checkpoint':

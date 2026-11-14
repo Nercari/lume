@@ -1,0 +1,19 @@
+{
+  "label": "SYNTHETIC PROXY. Local engineering timing only.",
+  "rounds": 200,
+  "interpreterStartFloor_ms": 7.399,
+  "fullSpawnCheck_ms": 31.344,
+  "phases_ms": {
+    "import argparse (pulls re, os, shutil, gettext...)": 5.629,
+    "import json": 0.857,
+    "import os, re (cached)": 0.002,
+    "from pathlib import Path": 2.019,
+    "exec module body (defs, imports cached)": 0.1,
+    "argparse build parser": 10.463,
+    "argparse parse_args": 0.071,
+    "Path.read_text": 0.055,
+    "json.loads": 0.018,
+    "package() all checks": 0.018,
+    "json.dumps result": 0.011
+  }
+}

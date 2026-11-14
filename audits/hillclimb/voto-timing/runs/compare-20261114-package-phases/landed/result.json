@@ -1,0 +1,94 @@
+{
+  "label": "SYNTHETIC PROXY. Local engineering timing only. Not a Law baseline. Not an improvement claim.",
+  "rounds": 200,
+  "python": "Python 3.14.9",
+  "workCounts": {
+    "spawnsPerPack": 1,
+    "filesWrittenPerPack": 1,
+    "argv": [
+      "-I",
+      "-S",
+      "<script>",
+      "package",
+      "<file>"
+    ],
+    "scriptBaseline": "audits/hillclimb/voto-timing/runs/compare-20261114-package-phases/baseline/lume_check.py",
+    "scriptCandidate": "plugins/lume-claude/skills/jef-pacote/scripts/lume_check.py"
+  },
+  "invariant": {
+    "valid": {
+      "equal": true,
+      "status": 0,
+      "stdout": "{\"status\": \"PASS\", \"checked\": \"estrutura e cobertura declarada; não prova leitura\"}"
+    },
+    "empty documents": {
+      "equal": true,
+      "status": 1,
+      "stdout": "{\"status\": \"FAIL\", \"error\": \"documents vazio/inválido\"}"
+    },
+    "duplicate id": {
+      "equal": true,
+      "status": 1,
+      "stdout": "{\"status\": \"FAIL\", \"error\": \"documents: duplicado\"}"
+    },
+    "status lido with gap": {
+      "equal": true,
+      "status": 1,
+      "stdout": "{\"status\": \"FAIL\", \"error\": \"status/lacuna incompatível\"}"
+    },
+    "status invalid": {
+      "equal": true,
+      "status": 1,
+      "stdout": "{\"status\": \"FAIL\", \"error\": \"status inválido\"}"
+    },
+    "part missing id": {
+      "equal": true,
+      "status": 1,
+      "stdout": "{\"status\": \"FAIL\", \"error\": \"cobertura de IDs divergente\"}"
+    },
+    "part number gap": {
+      "equal": true,
+      "status": 1,
+      "stdout": "{\"status\": \"FAIL\", \"error\": \"partes ausentes/duplicadas\"}"
+    },
+    "total_parts zero": {
+      "equal": true,
+      "status": 1,
+      "stdout": "{\"status\": \"FAIL\", \"error\": \"total_parts inválido\"}"
+    },
+    "not an object": {
+      "equal": true,
+      "status": 1,
+      "stdout": "{\"status\": \"FAIL\", \"error\": \"objeto JSON obrigatório\"}"
+    }
+  },
+  "allInvariantsEqual": true,
+  "ms": {
+    "mkdtempAndWrite": {
+      "median": 0.115,
+      "p10": 0.102,
+      "p90": 0.165
+    },
+    "spawnCheckBaseline": {
+      "median": 31.428,
+      "p10": 30.108,
+      "p90": 34.565
+    },
+    "spawnCheckCandidate": {
+      "median": 18.36,
+      "p10": 17.251,
+      "p90": 20.624
+    },
+    "pythonStartupFloorI": {
+      "median": 17.221,
+      "p10": 16.204,
+      "p90": 20.103
+    },
+    "pythonStartupFloorIS": {
+      "median": 7.131,
+      "p10": 6.394,
+      "p90": 9.336
+    }
+  },
+  "medianDeltaMs": 13.068
+}
