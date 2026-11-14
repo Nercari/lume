@@ -1,7 +1,24 @@
 """Local, standard-library checks. No network or legal conclusions."""
-import json, os, re, sys
+import sys
 from types import SimpleNamespace
 COMMANDS=['package','locators','diff','checkpoint']
+def loads(s):
+    # shortcut: the C scanner in _json (private) skips `import json` (~6 ms incl. re); any failure or doubt retries through json.loads, so error text is identical. Upgrade if _json changes shape (the fallback keeps it correct).
+    try:
+        from _json import make_scanner
+        c=SimpleNamespace(strict=True,object_hook=None,object_pairs_hook=None,parse_float=float,parse_int=int,parse_constant={'-Infinity':float('-inf'),'Infinity':float('inf'),'NaN':float('nan')}.__getitem__)
+        t=s.strip(' \t\n\r');obj,end=make_scanner(c)(t,0)
+        if end==len(t):return obj
+    except Exception:pass
+    import json;return json.loads(s)
+def dumps(o):
+    # shortcut: same C encoder json.dumps(ensure_ascii=False) uses, minus the json import; any failure retries through json.dumps
+    try:
+        from _json import make_encoder,encode_basestring
+        def no(x):raise TypeError
+        return ''.join(make_encoder({},no,encode_basestring,None,': ',', ',False,False,True)(o,0))
+    except Exception:pass
+    import json;return json.dumps(o,ensure_ascii=False)
 
 def need(ok,msg):
     if not ok: raise ValueError(msg)
@@ -44,6 +61,7 @@ def locators(data):
             need(any(r['quote'] in p.get('text','') for p in selected),'citação não encontrada literalmente')
     return {'checked':'ID/página e citação literal no texto fornecido; não autenticidade'}
 def blocks(text):
+    import re
     need(nonempty(text),'minuta vazia')
     matches=list(re.finditer(r'^\*\*(\d+)\.\*\*\s*',text,re.M));need(bool(matches),'numeração ausente')
     nums=[int(m[1]) for m in matches];need(nums==list(range(1,len(nums)+1)),'numeração não sequencial')
@@ -70,6 +88,7 @@ def state(data):
     return data
 
 def checkpoint(data,path,expected):
+    import json,os
     from pathlib import Path
     state(data);target=Path(path);target.parent.mkdir(parents=True,exist_ok=True)
     lock=target.with_name(target.name+'.lock');fd=None;tmp=None
@@ -101,15 +120,15 @@ def main():
         parser=argparse.ArgumentParser();parser.add_argument('command',choices=COMMANDS);parser.add_argument('input');parser.add_argument('--output');parser.add_argument('--expected-version',type=int)
         a=parser.parse_args()
     try:
-        data=json.loads(read(a.input));need(isinstance(data,dict),'objeto JSON obrigatório')
+        data=loads(read(a.input));need(isinstance(data,dict),'objeto JSON obrigatório')
         if a.command=='checkpoint':
             need(a.output is not None and a.expected_version is not None,'output e expected-version obrigatórios')
             from pathlib import Path
             need(Path(a.input).resolve()!=Path(a.output).resolve(),'entrada e saída devem diferir')
             result=checkpoint(data,a.output,a.expected_version)
         else:result={'package':package,'locators':locators,'diff':diff}[a.command](data)
-        print(json.dumps({'status':'PASS',**result},ensure_ascii=False))
+        print(dumps({'status':'PASS',**result}))
     except (ValueError,TypeError,KeyError,AttributeError,OSError) as e:
-        print(json.dumps({'status':'FAIL','error':str(e)},ensure_ascii=False));return 1
+        print(dumps({'status':'FAIL','error':str(e)}));return 1
     return 0
 if __name__=='__main__':raise SystemExit(main())
