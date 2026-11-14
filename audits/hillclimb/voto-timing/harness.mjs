@@ -155,8 +155,10 @@ const ownClauses = (x) => {
 const sentences = (segment) => segment.replace(QUOTED, " ").split(/(?<=[.!?])\s+/)
   .flatMap((x) => (attributed(x) ? ownClauses(x) : [x]));
 const classes = (table, texts) => Object.entries(table).filter(([, re]) => texts.some((x) => re.test(x))).map(([c]) => c);
-export const outcomes = (segment) => { const s = sentences(segment); return [...classes(LOOSE, s), ...(s.some((x) => NEGATED.test(x)) ? ["INVERTIDO"] : [])]; };
-export const operative = (segment) => classes(OPERATIVE, sentences(segment).filter((x) => !NEGATED.test(x)));
+const outcomesOf = (s) => [...classes(LOOSE, s), ...(s.some((x) => NEGATED.test(x)) ? ["INVERTIDO"] : [])];
+const operativeOf = (s) => classes(OPERATIVE, s.filter((x) => !NEGATED.test(x)));
+export const outcomes = (segment) => outcomesOf(sentences(segment));
+export const operative = (segment) => operativeOf(sentences(segment));
 
 export function verify(kind, text, docs, expected) {
   const all = docs.map((d) => d.text).join("\n");
@@ -178,9 +180,10 @@ export function verify(kind, text, docs, expected) {
     add(/^\*\*[^*]+\*\*$/.test(ementa) && ementa === ementa.toUpperCase(), "ementa missing or not bold upper case");
     add(!/^#|^\s*[-*] |;/m.test(text), "forbidden format: heading, list or semicolon");
     const body = m.map((x, i) => text.slice(x.index, m[i + 1]?.index ?? text.length));
-    const operativeSet = new Set(body.flatMap(operative));
+    const split = body.map(sentences); // one sentence split per paragraph, shared by both checks
+    const operativeSet = new Set(split.flatMap(operativeOf));
     add(operativeSet.size === 1 && operativeSet.has(expected.expectedOutcomeClass), `dispositive absent, ambiguous or not ${expected.expectedOutcomeClass} (found: ${[...operativeSet].join(", ") || "none"})`);
-    add(body.flatMap(outcomes).every((c) => c === expected.expectedOutcomeClass), "an outcome phrase in the body contradicts or negates the oriented outcome");
+    add(split.flatMap(outcomesOf).every((c) => c === expected.expectedOutcomeClass), "an outcome phrase in the body contradicts or negates the oriented outcome");
     add(outcomes(ementa).every((c) => c === expected.expectedOutcomeClass), "ementa outcome contradicts the oriented outcome"); // the ementa alone never satisfies the dispositive check
   }
   return fail;
