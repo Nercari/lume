@@ -94,7 +94,7 @@ export function buildPack(docs) {
   };
   const file = path.join(mkdtempSync(path.join(tmpdir(), "voto-pack-")), "pack.json");
   writeFileSync(file, JSON.stringify(pack));
-  const r = spawnSync("python3", ["-I", path.join(skills, "jef-pacote/scripts/lume_check.py"), "package", file], { encoding: "utf8" });
+  const r = spawnSync("python3", ["-I", "-S", path.join(skills, "jef-pacote/scripts/lume_check.py"), "package", file], { encoding: "utf8" });
   const out = JSON.parse(r.stdout || "{}");
   if (out.status !== "PASS") throw new Error(`pack check failed: ${r.stdout}`);
   return pack;

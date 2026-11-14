@@ -1,0 +1,99 @@
+{
+  "label": "SYNTHETIC PROXY. Local engineering timing only. Not a Law baseline. Not an improvement claim.",
+  "rounds": 200,
+  "python": "Python 3.14.9",
+  "workCounts": {
+    "spawnsPerPack": 1,
+    "filesWrittenPerPack": 1,
+    "validatorFileChanged": false,
+    "argvBaseline": [
+      "-I",
+      "<script>",
+      "package",
+      "<file>"
+    ],
+    "argvCandidate": [
+      "-I",
+      "-S",
+      "<script>",
+      "package",
+      "<file>"
+    ]
+  },
+  "invariant": {
+    "valid": {
+      "equal": true,
+      "status": 0,
+      "stdout": "{\"status\": \"PASS\", \"checked\": \"estrutura e cobertura declarada; não prova leitura\"}"
+    },
+    "empty documents": {
+      "equal": true,
+      "status": 1,
+      "stdout": "{\"status\": \"FAIL\", \"error\": \"documents vazio/inválido\"}"
+    },
+    "duplicate id": {
+      "equal": true,
+      "status": 1,
+      "stdout": "{\"status\": \"FAIL\", \"error\": \"documents: duplicado\"}"
+    },
+    "status lido with gap": {
+      "equal": true,
+      "status": 1,
+      "stdout": "{\"status\": \"FAIL\", \"error\": \"status/lacuna incompatível\"}"
+    },
+    "status invalid": {
+      "equal": true,
+      "status": 1,
+      "stdout": "{\"status\": \"FAIL\", \"error\": \"status inválido\"}"
+    },
+    "part missing id": {
+      "equal": true,
+      "status": 1,
+      "stdout": "{\"status\": \"FAIL\", \"error\": \"cobertura de IDs divergente\"}"
+    },
+    "part number gap": {
+      "equal": true,
+      "status": 1,
+      "stdout": "{\"status\": \"FAIL\", \"error\": \"partes ausentes/duplicadas\"}"
+    },
+    "total_parts zero": {
+      "equal": true,
+      "status": 1,
+      "stdout": "{\"status\": \"FAIL\", \"error\": \"total_parts inválido\"}"
+    },
+    "not an object": {
+      "equal": true,
+      "status": 1,
+      "stdout": "{\"status\": \"FAIL\", \"error\": \"objeto JSON obrigatório\"}"
+    }
+  },
+  "allInvariantsEqual": true,
+  "ms": {
+    "mkdtempAndWrite": {
+      "median": 0.128,
+      "p10": 0.107,
+      "p90": 0.195
+    },
+    "spawnCheckBaseline": {
+      "median": 38.443,
+      "p10": 34.238,
+      "p90": 43.399
+    },
+    "spawnCheckCandidate": {
+      "median": 36.842,
+      "p10": 32.977,
+      "p90": 42.979
+    },
+    "pythonStartupFloorI": {
+      "median": 19.196,
+      "p10": 17.05,
+      "p90": 22.627
+    },
+    "pythonStartupFloorIS": {
+      "median": 8.011,
+      "p10": 6.859,
+      "p90": 10.098
+    }
+  },
+  "medianDeltaMs": 1.6
+}
