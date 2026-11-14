@@ -1,0 +1,75 @@
+
+### fixture-5 (5 docs, text 2204 B, doc min/median/max 388/422/500 B, pack.json 2804 B, 200 rounds)
+
+| Stage | ref ms (IQR) | mid ms | head ms (IQR) | ref-head ms | head faster in |
+| --- | --- | --- | --- | --- | --- |
+| pack_build | 0.02 (0.01-0.02) | 0.02 | 0.02 (0.01-0.02) | -0.00 | 69/200 |
+| mkdtemp | 0.04 (0.04-0.05) | 0.04 | 0.04 (0.04-0.05) | -0.00 | 69/200 |
+| stringify | 0.01 (0.01-0.01) | 0.01 | 0.01 (0.01-0.01) | -0.00 | 89/200 |
+| write | 0.04 (0.04-0.04) | 0.04 | 0.04 (0.04-0.04) | -0.00 | 68/200 |
+| spawn | 34.67 (33.69-35.92) | 33.41 | 10.25 (9.52-11.19) | 24.48 | 200/200 |
+| tail | 0.01 (0.01-0.01) | 0.01 | 0.01 (0.01-0.01) | 0.00 | 141/200 |
+| buildpack_total | 34.79 (33.81-36.04) | 33.54 | 10.38 (9.64-11.33) | 24.47 | 200/200 |
+| verify | 0.08 (0.08-0.09) | 0.08 | 0.08 (0.08-0.09) | 0.00 | 137/200 |
+| flow_total | 34.88 (33.89-36.16) | 33.63 | 10.45 (9.71-11.43) | 24.48 | 200/200 |
+
+flow_total split: ref-mid (argv only) 1.34 ms, mid-head (validator changes) 23.37 ms.
+
+### medium-30 (30 docs, text 148563 B, doc min/median/max 388/4884/9010 B, pack.json 151975 B, 150 rounds)
+
+| Stage | ref ms (IQR) | mid ms | head ms (IQR) | ref-head ms | head faster in |
+| --- | --- | --- | --- | --- | --- |
+| pack_build | 0.02 (0.02-0.02) | 0.02 | 0.02 (0.02-0.02) | -0.00 | 53/150 |
+| mkdtemp | 0.04 (0.04-0.05) | 0.04 | 0.04 (0.04-0.05) | -0.00 | 49/150 |
+| stringify | 0.15 (0.15-0.16) | 0.15 | 0.15 (0.15-0.16) | -0.00 | 58/150 |
+| write | 0.11 (0.10-0.11) | 0.11 | 0.11 (0.10-0.11) | -0.00 | 61/150 |
+| spawn | 35.13 (34.09-36.25) | 33.53 | 10.96 (10.03-12.33) | 24.03 | 150/150 |
+| tail | 0.01 (0.01-0.01) | 0.01 | 0.01 (0.01-0.01) | 0.00 | 103/150 |
+| buildpack_total | 35.48 (34.42-36.59) | 33.98 | 11.38 (10.36-12.66) | 23.97 | 150/150 |
+| verify | 0.12 (0.11-0.12) | 0.12 | 0.11 (0.11-0.14) | 0.00 | 97/150 |
+| flow_total | 35.62 (34.57-36.72) | 34.12 | 11.50 (10.47-12.77) | 24.00 | 150/150 |
+
+flow_total split: ref-mid (argv only) 1.49 ms, mid-head (validator changes) 22.61 ms.
+
+### large-120 (120 docs, text 2570423 B, doc min/median/max 388/21514/39755 B, pack.json 2585966 B, 60 rounds)
+
+| Stage | ref ms (IQR) | mid ms | head ms (IQR) | ref-head ms | head faster in |
+| --- | --- | --- | --- | --- | --- |
+| pack_build | 0.02 (0.02-0.02) | 0.02 | 0.02 (0.02-0.02) | 0.00 | 31/60 |
+| mkdtemp | 0.06 (0.05-0.07) | 0.05 | 0.07 (0.05-0.07) | 0.00 | 32/60 |
+| stringify | 2.64 (2.51-2.69) | 2.64 | 2.65 (2.48-2.69) | 0.01 | 31/60 |
+| write | 1.00 (0.97-2.68) | 0.99 | 0.98 (0.96-1.05) | 0.02 | 35/60 |
+| spawn | 41.18 (40.61-42.76) | 40.26 | 16.80 (16.06-17.51) | 24.69 | 60/60 |
+| tail | 0.01 (0.01-0.01) | 0.01 | 0.01 (0.01-0.01) | -0.00 | 26/60 |
+| buildpack_total | 46.02 (44.54-48.48) | 44.36 | 20.67 (19.77-22.78) | 25.15 | 60/60 |
+| verify | 0.47 (0.46-0.52) | 0.47 | 0.49 (0.46-0.53) | -0.01 | 25/60 |
+| flow_total | 46.48 (45.00-48.98) | 44.84 | 21.16 (20.28-23.24) | 25.12 | 60/60 |
+
+flow_total split: ref-mid (argv only) 1.42 ms, mid-head (validator changes) 23.26 ms.
+
+### run({mode:"canned"}) on fixture-5 (150 rounds)
+
+| Segment | ref ms (IQR) | mid ms | head ms (IQR) | ref-head ms | head faster in |
+| --- | --- | --- | --- | --- | --- |
+| wall | 35.26 (34.37-36.23) | 33.99 | 11.31 (10.46-12.59) | 23.95 | 150/150 |
+| t_pack | 35.00 (34.00-36.00) | 34.00 | 11.00 (10.00-12.00) | 24.00 | 150/150 |
+| t_relatorio | 0.00 (0.00-0.00) | 0.00 | 0.00 (0.00-0.00) | 0.00 | 0/150 |
+| t_voto | 0.00 (0.00-0.00) | 0.00 | 0.00 (0.00-0.00) | 0.00 | 0/150 |
+| t_verify | 0.00 (0.00-0.00) | 0.00 | 0.00 (0.00-0.00) | 0.00 | 0/150 |
+| elapsed | 35.00 (34.00-36.00) | 34.00 | 11.00 (10.00-12.00) | 24.00 | 150/150 |
+
+report (minus timings) equal across arms: true
+
+### Parity (validator stdout/stderr/status, pack sha+bytes, verify failures, thrown message; 2 passes per arm)
+
+| Workload | docs | outcome | head==ref | mid==ref |
+| --- | --- | --- | --- | --- |
+| fixture-5 | 5 | PASS | true | true |
+| medium-30 | 30 | PASS | true | true |
+| large-120 | 120 | PASS | true | true |
+| edge-unicode | 7 | PASS | true | true |
+| err-duplicate-id | 2 | FAIL(throw) | true | true |
+| err-empty-id | 1 | FAIL(throw) | true | true |
+| err-whitespace-id | 1 | FAIL(throw) | true | true |
+| err-empty-docs | 0 | FAIL(throw) | true | true |
+
