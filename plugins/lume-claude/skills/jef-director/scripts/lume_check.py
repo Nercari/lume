@@ -1,6 +1,5 @@
 """Local, standard-library checks. No network or legal conclusions."""
 import json, os, re, sys
-from pathlib import Path
 from types import SimpleNamespace
 COMMANDS=['package','locators','diff','checkpoint']
 
@@ -71,6 +70,7 @@ def state(data):
     return data
 
 def checkpoint(data,path,expected):
+    from pathlib import Path
     state(data);target=Path(path);target.parent.mkdir(parents=True,exist_ok=True)
     lock=target.with_name(target.name+'.lock');fd=None;tmp=None
     try:
@@ -86,6 +86,12 @@ def checkpoint(data,path,expected):
         if tmp:os.unlink(tmp)
         if fd is not None:os.close(fd);lock.unlink()
     return {'checked':'checkpoint local salvo','version':data['version']}
+def read(p):
+    # shortcut: plain open() skips the pathlib import (~2 ms); any failure retries through Path so error text and path normalization stay identical
+    try:
+        with open(p) as f:return f.read()
+    except (OSError,ValueError):
+        from pathlib import Path;return Path(p).read_text()
 def main():
     v=sys.argv[1:]
     # shortcut: argparse costs ~16 ms of imports and setup; the plain `<command> <file>` shape skips it, any other argv goes through argparse unchanged
@@ -95,9 +101,10 @@ def main():
         parser=argparse.ArgumentParser();parser.add_argument('command',choices=COMMANDS);parser.add_argument('input');parser.add_argument('--output');parser.add_argument('--expected-version',type=int)
         a=parser.parse_args()
     try:
-        data=json.loads(Path(a.input).read_text());need(isinstance(data,dict),'objeto JSON obrigatório')
+        data=json.loads(read(a.input));need(isinstance(data,dict),'objeto JSON obrigatório')
         if a.command=='checkpoint':
             need(a.output is not None and a.expected_version is not None,'output e expected-version obrigatórios')
+            from pathlib import Path
             need(Path(a.input).resolve()!=Path(a.output).resolve(),'entrada e saída devem diferir')
             result=checkpoint(data,a.output,a.expected_version)
         else:result={'package':package,'locators':locators,'diff':diff}[a.command](data)
