@@ -1,0 +1,8 @@
+harness:
+ℹ tests 26
+ℹ pass 26
+ℹ fail 0
+plugins/test:
+ℹ tests 35
+ℹ pass 35
+ℹ fail 0

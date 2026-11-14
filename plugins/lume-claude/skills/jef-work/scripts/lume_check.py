@@ -1,5 +1,5 @@
 """Local, standard-library checks. No network or legal conclusions."""
-import argparse, json, os, re, tempfile
+import argparse, json, os, re
 from pathlib import Path
 
 def need(ok,msg):
@@ -77,7 +77,7 @@ def checkpoint(data,path,expected):
         if old:state(old);need(old['case_id']==data['case_id'],'case_id diferente')
         need((old['version'] if old else 0)==expected,'versão concorrente')
         need(data['version']==expected+1,'incremento de versão inválido')
-        handle,tmp=tempfile.mkstemp(dir=target.parent,prefix='.lume-')
+        import tempfile;handle,tmp=tempfile.mkstemp(dir=target.parent,prefix='.lume-')
         with os.fdopen(handle,'w') as f:json.dump(data,f,ensure_ascii=False,indent=2);f.flush();os.fsync(f.fileno())
         os.replace(tmp,target);tmp=None
     finally:

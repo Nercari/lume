@@ -41,3 +41,7 @@ About 1.2 to 1.3 ms (about 4%) per `t_pack`, a micro-gain on `t_pack` only if ap
 1. Apply the 2-line diff to the source `lume_check.py`.
 2. `node plugins/scripts/build-lume-claude.mjs` (deletes and rewrites `plugins/lume-claude`), then `--check`.
 3. Re-run harness and plugin tests.
+
+## Landed (run33, HQ stage reconciliation)
+
+Candidate applied to `plugins/lume-workspace/skills/jef-director/scripts/lume_check.py` (2 lines). Generated copies updated by `sync-generated.mjs`, which imports `build()` and `OUT`, requires equal keysets (161 files, no extra, no missing), and writes only differing entries. No `rmSync`, no generator CLI write mode, no file removed. Output: `sync-generated-output.txt` (11 `lume_check.py` copies written). `--check`: `check-output.txt` (PASS: 161 files match). Tests: `tests-after.txt` (26/26, 35/35). Timings vs the d0f900d copy, 200 interleaved rounds each: `landed/result-1.json` 32.679 to 31.567 ms, `landed/result-2.json` 32.874 to 31.666 ms. Parity: all 9 packs equal (valid exit 0, 8 invalid exit 1). Micro-gain on t_pack only, synthetic proxy, not a Law baseline.

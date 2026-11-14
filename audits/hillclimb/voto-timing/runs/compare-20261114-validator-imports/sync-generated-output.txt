@@ -1,0 +1,13 @@
+keysets equal: 161 files
+written 11:
+skills/jef-director/scripts/lume_check.py
+skills/jef-lote/scripts/lume_check.py
+skills/jef-pacote/scripts/lume_check.py
+skills/jef-revisao/scripts/lume_check.py
+skills/jef-triagem/scripts/lume_check.py
+skills/jef-voto/scripts/lume_check.py
+skills/jef-materias/scripts/lume_check.py
+skills/jef-pesquisa/scripts/lume_check.py
+skills/jef-estilo/scripts/lume_check.py
+skills/jef-relatorio/scripts/lume_check.py
+skills/jef-work/scripts/lume_check.py
