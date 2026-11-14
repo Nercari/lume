@@ -7,7 +7,7 @@ required before any future enablement. Independent review of the exact head come
 
 - Package: `experimental/law-timing-runner/lume_timing`
 - Code hash (`lume_timing.grant.package_hash()`, sha256 over the package `.py` and `.yaml` files):
-  `fdfb87c44137af63617c06062cc4053b947824b702c2149db789ef57b9bd78ee`
+  `8f3d76cb79fa98a31e00a18dd4fbfa0039dfaeb786b78787c995fc96fdd76b49`
 - A grant names this hash. If any package file changes, the hash changes and the grant is refused with
   `grant_stale_code`. A test compares this document with the live hash.
 

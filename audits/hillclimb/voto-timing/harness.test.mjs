@@ -1,6 +1,6 @@
 // Tests use a fake claude binary. No real model call, no network.
 import assert from "node:assert/strict";
-import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -22,12 +22,13 @@ function fake(cfg) {
   writeFileSync(bin, `#!/usr/bin/env node
 const fs = require("node:fs");
 const cfg = ${JSON.stringify(cfg)};
-if (process.argv[2] === "auth") { console.log(JSON.stringify(cfg.auth)); process.exit(0); }
+const AUTHF = ${JSON.stringify(state + ".auth")};
+if (process.argv[2] === "auth") { fs.writeFileSync(AUTHF, String((fs.existsSync(AUTHF) ? +fs.readFileSync(AUTHF, "utf8") : 0) + 1)); console.log(JSON.stringify(cfg.auth)); process.exit(0); }
 const n = +fs.readFileSync(${JSON.stringify(state)}, "utf8"); fs.writeFileSync(${JSON.stringify(state)}, String(n + 1));
 process.stdin.resume(); process.stdin.on("data", () => {}); process.stdin.on("end", () => console.log(JSON.stringify(cfg.calls[n])));
 `);
   chmodSync(bin, 0o755);
-  return { bin, count: () => +readFileSync(state, "utf8") };
+  return { bin, count: () => +readFileSync(state, "utf8"), authCount: () => (existsSync(state + ".auth") ? +readFileSync(state + ".auth", "utf8") : 0) };
 }
 const AUTH = { loggedIn: true, authMethod: "claude.ai", apiProvider: "firstParty", subscriptionType: "max", email: "x@example.invalid" };
 const ok = (text, models = [MODEL]) => ({ is_error: false, subtype: "success", result: text, apiKeySource: null, duration_ms: 5, usage: { input_tokens: 1, output_tokens: 1 }, modelUsage: Object.fromEntries(models.map((m) => [m, {}])) });
@@ -325,6 +326,44 @@ test("a gate needs status VERIFIED and a Nercari GitHub issue or PR link", () =>
   assert.equal(gatesBlocker(OPEN), null);
   for (const bad of [{ status: "UNMET" }, { evidence: "" }, { evidence: "done" }, { evidence: "https://example.com/Nercari/lume/pull/1" }, { evidence: "https://github.com/other/lume/pull/1" }])
     assert.ok(gatesBlocker([{ ...OPEN[0], ...bad }]), JSON.stringify(bad));
+});
+
+test("the gate list must hold all four required gates exactly once, each VERIFIED with evidence", () => {
+  assert.equal(OPEN.length, 4);
+  assert.equal(gatesBlocker(OPEN), null);
+  assert.match(gatesBlocker([]), /missing gate/);
+  assert.match(gatesBlocker([OPEN[0]]), /missing gate/);
+  assert.match(gatesBlocker(OPEN.slice(0, 3)), /missing gate case-readiness/);
+  assert.match(gatesBlocker([...OPEN, OPEN[0]]), /duplicate gate independent-evaluator/);
+  assert.match(gatesBlocker([OPEN[0], OPEN[0], OPEN[1], OPEN[2]]), /duplicate/);
+  assert.match(gatesBlocker([...OPEN, { ...OPEN[0], id: "extra-gate" }]), /unknown/);
+  assert.match(gatesBlocker(OPEN.map((g, i) => (i ? g : { ...g, id: "Independent-Evaluator" }))), /unknown/);
+  for (const bad of [null, undefined, {}, "gates", 4, new Map(), { length: 4 }]) assert.match(gatesBlocker(bad), /not an array/, String(bad));
+  for (const entry of [null, "x", 1, [], undefined]) assert.match(gatesBlocker([entry, ...OPEN.slice(1)]), /not an object/);
+  for (const bad of [{ id: 1 }, { id: null }, { id: undefined }, { status: 1 }, { status: undefined }, { evidence: undefined }, { evidence: 5 }, { owner: "" }, { owner: undefined }])
+    assert.match(gatesBlocker(OPEN.map((g, i) => (i ? g : { ...g, ...bad }))), /invalid/, JSON.stringify(bad));
+  for (const bad of [{ status: "verified" }, { status: "UNMET" }, { status: "VERIFIED " }, { evidence: "" }, { evidence: "https://github.com/Nercari/lume/pull/62 trailing" }, { evidence: "https://github.com/Nercari/lume/pull/x" }, { evidence: "https://github.com/Nercari/lume/blob/main/x" }])
+    assert.match(gatesBlocker(OPEN.map((g, i) => (i ? g : { ...g, ...bad }))), /gates not verified: independent-evaluator/, JSON.stringify(bad));
+  assert.equal(gatesBlocker(OPEN.map((g, i) => ({ ...g, evidence: `https://github.com/Nercari/lume/issues/${i + 1}` }))), null);
+  assert.equal(gatesBlocker([...OPEN].reverse()), null);
+});
+
+test("an empty, partial, duplicate or malformed gate list stops a live run before preflight with zero auth and model calls", () => {
+  for (const gates of [[], [OPEN[0]], OPEN.slice(0, 3), [...OPEN, OPEN[1]], [OPEN[0], OPEN[0], OPEN[0], OPEN[0]], null, "x", {}, [null, ...OPEN.slice(1)]]) {
+    const f = fake({ auth: AUTH, calls: [] });
+    const r = run({ mode: "live", model: MODEL, env, bin: f.bin, gates });
+    assert.match(r.blocked, /gate/, JSON.stringify(gates));
+    assert.equal(r.modelCalls, 0);
+    assert.equal(f.count(), 0, "model call made");
+    assert.equal(f.authCount(), 0, "auth probe made");
+    assert.equal(r.usable, false);
+    assert.equal(r.totalSec, null);
+  }
+  const f = fake({ auth: AUTH, calls: [ok(canned("relatorio")), ok(canned("voto"))] });
+  const r = run({ mode: "live", model: MODEL, env, bin: f.bin, gates: OPEN });
+  assert.equal(r.usable, true);
+  assert.equal(f.authCount(), 1);
+  assert.equal(f.count(), 2);
 });
 
 test("a revision is timed, counted and summed into the time to a usable voto; the revision cap holds", () => {

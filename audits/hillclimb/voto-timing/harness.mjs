@@ -23,8 +23,22 @@ export const LABEL = "SYNTHETIC PROXY. Not a real baseline. Not an improvement c
 
 // A model call needs every gate VERIFIED with a GitHub evidence link. The harness cannot prove who wrote the link; the owner's comment is the proof.
 export const loadGates = () => JSON.parse(read(here, "gates.json")).gates;
+export const REQUIRED_GATE_IDS = ["independent-evaluator", "law-vetoes", "heldout-isolation", "case-readiness"];
+const EVIDENCE = /^https:\/\/github\.com\/Nercari\/[A-Za-z0-9._-]+\/(issues|pull)\/\d+(#[A-Za-z0-9_-]+)?$/;
+// The list must hold each required gate exactly once. A missing, duplicate, unknown or malformed entry blocks, so an empty or partial list never passes.
 export const gatesBlocker = (gates) => {
-  const open = gates.filter((g) => g.status !== "VERIFIED" || !/^https:\/\/github\.com\/Nercari\/[^/]+\/(issues|pull)\/\d+/.test(g.evidence ?? ""));
+  if (!Array.isArray(gates)) return "gate list invalid: not an array";
+  const seen = new Set();
+  for (const g of gates) {
+    if (g === null || typeof g !== "object" || Array.isArray(g)) return "gate list invalid: entry is not an object";
+    if (typeof g.id !== "string" || !REQUIRED_GATE_IDS.includes(g.id)) return "gate list invalid: unknown or malformed gate id";
+    if (seen.has(g.id)) return `gate list invalid: duplicate gate ${g.id}`;
+    if (typeof g.owner !== "string" || !g.owner || typeof g.status !== "string" || typeof g.evidence !== "string") return `gate list invalid: malformed entry ${g.id}`;
+    seen.add(g.id);
+  }
+  const missing = REQUIRED_GATE_IDS.filter((id) => !seen.has(id));
+  if (missing.length) return `gate list invalid: missing gate ${missing.join(", ")}`;
+  const open = gates.filter((g) => g.status !== "VERIFIED" || !EVIDENCE.test(g.evidence));
   return open.length ? `gates not verified: ${open.map((g) => `${g.id} (owner: ${g.owner})`).join("; ")}` : null;
 };
 

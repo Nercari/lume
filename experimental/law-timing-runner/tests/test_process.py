@@ -51,6 +51,62 @@ class Process(unittest.TestCase):
                 time.sleep(0.1)
             self.assertFalse(alive(grand), "grandchild survived the timeout")
 
+    def wait_dead(self, *pids):
+        for _ in range(50):
+            if not any(alive(p) for p in pids):
+                return
+            time.sleep(0.1)
+        self.fail("process survived: " + ",".join(str(p) for p in pids if alive(p)))
+
+    def test_nonreading_child_with_large_stdin_times_out_fast(self):
+        t0 = time.monotonic()
+        r = self.run_py("import time;time.sleep(0.5)", timeout_sec=0.05, stdin=b"x" * 200000)
+        self.assertTrue(r.timed_out)
+        self.assertLess(time.monotonic() - t0, 0.4)
+
+    def test_nonexiting_child_never_reading_is_killed_with_descendant(self):
+        with tempfile.TemporaryDirectory() as d:
+            pidfile = os.path.join(d, "pids")
+            code = ("import os,subprocess,sys,time;"
+                    "p=subprocess.Popen([sys.executable,'-I','-c','import time;time.sleep(60)']);"
+                    f"open({pidfile!r},'w').write(f'{{os.getpid()}} {{p.pid}}');time.sleep(60)")
+            t0 = time.monotonic()
+            r = self.run_py(code, timeout_sec=0.5, stdin=b"y" * 5_000_000)
+            self.assertTrue(r.timed_out)
+            self.assertLess(time.monotonic() - t0, 3)
+            self.wait_dead(*map(int, open(pidfile).read().split()))
+
+    def test_output_fills_before_child_reads_stdin(self):
+        code = ("import sys;o=sys.stdout.buffer;o.write(b'x'*1000000);o.flush();"
+                "n=len(sys.stdin.buffer.read());o.write(str(n).encode())")
+        r = self.run_py(code, max_output=2_000_000, stdin=b"y" * 500000)
+        self.assertEqual((r.returncode, r.timed_out, r.overflow), (0, False, False))
+        self.assertEqual(r.stdout, b"x" * 1000000 + b"500000")
+
+    def test_large_input_echoed_back_exactly(self):
+        code = ("import sys\nwhile True:\n c=sys.stdin.buffer.read(8192)\n if not c: break\n"
+                " sys.stdout.buffer.write(c);sys.stdout.buffer.flush()")
+        data = bytes(range(256)) * 4096
+        r = self.run_py(code, max_output=2_000_000, stdin=data)
+        self.assertEqual((r.returncode, r.timed_out, r.overflow), (0, False, False))
+        self.assertEqual(r.stdout, data)
+
+    def test_early_stdin_close_is_not_an_error(self):
+        r = self.run_py("import os,sys,time;os.close(0);time.sleep(0.2);sys.stdout.write('done')", stdin=b"z" * 5_000_000)
+        self.assertEqual((r.returncode, r.stdout, r.timed_out), (0, b"done", False))
+
+    def test_partial_writes_deliver_every_byte(self):
+        code = ("import hashlib,sys,time;time.sleep(0.2);d=sys.stdin.buffer.read();"
+                "sys.stdout.write(f'{len(d)} {hashlib.sha256(d).hexdigest()}')")
+        data = os.urandom(300000)
+        import hashlib
+        r = self.run_py(code, stdin=data)
+        self.assertEqual(r.stdout.decode(), f"{len(data)} {hashlib.sha256(data).hexdigest()}")
+
+    def test_empty_stdin_gives_the_child_eof(self):
+        r = self.run_py("import sys;sys.stdout.write(str(len(sys.stdin.buffer.read())))")
+        self.assertEqual(r.stdout, b"0")
+
     def test_output_overflow_kills_and_caps(self):
         r = self.run_py("import sys,time\nwhile True: sys.stdout.write('x'*4096); sys.stdout.flush()", max_output=5000)
         self.assertTrue(r.overflow)
