@@ -1,0 +1,63 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "author": {
+    "name": "Nercari",
+    "url": "https://github.com/Nercari"
+  },
+  "description": "Assistente para turmas recursais dos Juizados Especiais Federais. Analisa peças enviadas no chat, prepara relatórios e minutas, pesquisa jurisprudência e revisa textos.",
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "brandColor": "#01193D",
+        "capabilities": [
+          "Análise de peças e lacunas",
+          "Relatórios e minutas",
+          "Pesquisa de jurisprudência",
+          "Perfil de estilo e revisão"
+        ],
+        "category": "Productivity",
+        "composerIcon": "./assets/logo.png",
+        "defaultPrompt": [
+          "Monte o relatório e a minuta de voto deste processo",
+          "Faça a triagem deste lote de processos",
+          "Revise esta minuta antes de eu assinar"
+        ],
+        "developerName": "Nercari",
+        "displayName": "Lume",
+        "logo": "./assets/logo.png",
+        "longDescription": "O Lume auxilia juízes, assessores e servidores de turmas recursais dos Juizados Especiais Federais. Recebe as peças coladas ou anexadas no chat, confere a cobertura, registra lacunas e prepara triagens, relatórios e minutas. Pesquisa jurisprudência e súmulas e indica o link da fonte oficial consultada.\n\nCria um perfil de estilo a partir de 3 a 6 votos do usuário. O perfil muda a forma, nunca os fatos ou a conclusão. Sem perfil, usa JEF-V1.\n\nNão usa servidor, MCP, API externa ou acesso automatizado ao PJe. O plugin não coleta dados. O texto enviado é processado pelo ChatGPT conforme as configurações da conta e do workspace. Ferramenta independente, sem vínculo com o CNJ, o TRF1 ou outro tribunal.",
+        "privacyPolicyURL": "https://nercari.github.io/lume/diretorio/privacidade.html",
+        "shortDescription": "Relatórios e minutas no JEF",
+        "supportURL": "https://nercari.github.io/lume/diretorio/suporte.html",
+        "termsOfServiceURL": "https://nercari.github.io/lume/diretorio/termos.html",
+        "websiteURL": "https://nercari.github.io/lume/diretorio/"
+      },
+      "onboardingSkill": "./skills/jef-inicio/SKILL.md",
+      "publication": {
+        "countries": [
+          "BR"
+        ],
+        "release_notes": "Fluxo consolidado, OCR permitido com conferência, perfil pessoal recuperável, ferramentas locais de validação e checkpoint, método de ementas com fontes oficiais.",
+        "translations": {
+          "pt-BR": {
+            "description": "O Lume auxilia juízes, assessores e servidores de turmas recursais dos Juizados Especiais Federais. Recebe as peças coladas ou anexadas no chat, confere a cobertura, registra lacunas e prepara triagens, relatórios e minutas. Pesquisa jurisprudência e súmulas e indica o link da fonte oficial consultada.\n\nCria um perfil de estilo a partir de 3 a 6 votos do usuário. O perfil muda a forma, nunca os fatos ou a conclusão. Sem perfil, usa JEF-V1.\n\nNão usa servidor, MCP, API externa ou acesso automatizado ao PJe. O plugin não coleta dados. O texto enviado é processado pelo ChatGPT conforme as configurações da conta e do workspace. Ferramenta independente, sem vínculo com o CNJ, o TRF1 ou outro tribunal.",
+            "subtitle": "Relatórios e minutas no JEF"
+          }
+        }
+      }
+    }
+  },
+  "homepage": "https://github.com/Nercari/lume",
+  "keywords": [
+    "jef",
+    "trf1",
+    "judiciário",
+    "minuta",
+    "voto",
+    "relatório"
+  ],
+  "license": "MIT",
+  "name": "lume",
+  "repository": "https://github.com/Nercari/lume",
+  "version": "1.2.0"
+}

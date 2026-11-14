@@ -1,0 +1,23 @@
+{
+  "note": "Invented synthetic case. These are structural proxy checks, not Law's vetoes.",
+  "requiredFacts": {
+    "relatorio": [
+      "Heloísa Exemplar Prado",
+      "Seguradora Modelo S.A.",
+      "SM-0001",
+      "R$ 2.400,00",
+      "R$ 3.000,00",
+      "20/08/2026",
+      "cláusula 7"
+    ],
+    "voto": [
+      "Heloísa Exemplar Prado",
+      "Seguradora Modelo S.A.",
+      "SM-0001",
+      "20/08/2026",
+      "cláusula 7"
+    ]
+  },
+  "orientation": "negar provimento ao recurso e manter a sentença",
+  "expectedOutcomeClass": "DESPROVIMENTO"
+}
