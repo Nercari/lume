@@ -1,5 +1,6 @@
 # turno | mensagem do usuário | estado esperado do host
 T1|relatório e minuta do recurso, sem orientação|PAUSA
-T2|pode seguir|PAUSA
+T2|pode seguir|VOTO
 T3|4|PEDE_POSICAO
 T4|2|VOTO
+T5|não sei|PAUSA

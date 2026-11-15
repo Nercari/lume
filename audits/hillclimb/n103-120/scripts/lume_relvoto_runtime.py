@@ -28,6 +28,8 @@ def decide(msg: str) -> str:
         return "PEDE_POSICAO"
     if re.fullmatch(r"[123]\s*\.?", m):
         return "VOTO"
+    if re.fullmatch(r"pode seguir\s*[.!]?", m, re.I):  # D2: delegates the outcome, only at this prompt
+        return "VOTO"
     if len(m.split()) >= 4 and re.search(r"provimento|procedente|improcedente|acolh|rejeit", m, re.I):
         return "VOTO"
     return "PAUSA"
@@ -87,7 +89,9 @@ def turnos_ok(text: str) -> set[str]:
     got = {r[0]: (decide(r[1]), r[2].strip()) for r in rows if len(r) == 3}
     if got.get("T1", ("", ""))[0] == "PAUSA" == got["T1"][1]:
         found.add("pausa_apos_relatorio")
-    if got.get("T2") and got["T2"][0] == got["T2"][1] == "PAUSA":
+    if got.get("T2") and got["T2"][0] == got["T2"][1] == "VOTO":
+        found.add("pode_seguir_delega")
+    if got.get("T5") and got["T5"][0] == got["T5"][1] == "PAUSA":
         found.add("nao_escolha_mantem_pausa")
     if got.get("T3") and got["T3"][0] == got["T3"][1] == "PEDE_POSICAO":
         found.add("quatro_pede_posicao")

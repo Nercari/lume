@@ -37,6 +37,7 @@ NEEDS = {
     "RT103-b": ("relatorio_hierarquia", "posicao_quatro_opcoes", "pausa_sem_voto"),
     "RT103-c": ("nomes_completos", "sem_ressalva"),
     "RT103-d": ("nao_escolha_mantem_pausa",),
+    "RT103-p": ("pode_seguir_delega",),
     "RT103-e": ("escolha_libera_voto",),
     "RT103-f": ("perfil_neutro_menos_de_tres",),
     "RT103-g": ("voto_ementa_forma", "voto_segue_posicao"),
@@ -85,6 +86,7 @@ def steps(t: pathlib.Path) -> dict[str, bool]:
     voto, c6 = flat(sk / "jef-voto/SKILL.md"), flat(sk / "jef-voto/references/c6.md")
     dire, ctr = flat(sk / "jef-director/SKILL.md"), flat(sk / "jef-director/references/contrato.md")
     prof = flat(sk / "jef-director/references/profiles.md")
+    estilo = flat(sk / "jef-estilo/SKILL.md")
     everywhere = (rel, c4, voto, c6, dire, ctr, prof)
     hold = r"pausa|não redij|mantenh|permane|continu"
     pos = "Posição a ser adotada"
@@ -94,9 +96,10 @@ def steps(t: pathlib.Path) -> dict[str, bool]:
         "RT103-c": any(has_sentence(x, r"nomes? completos?", r"segredo de justiça") for x in (rel, c4, c6, ctr)),
         "RT103-d": any(has_sentence(x, r"outra resposta|qualquer outra|nenhum d|nem n[úu]mero|não for", r"n[úu]mero", r"posição", hold)
                        for x in everywhere),
+        "RT103-p": any(has_sentence(x, r"pode seguir", r"posição", r"delega|escolh") for x in everywhere),
         "RT103-e": any(re.search(r"não reconfirm|dispensa reconfirma", x) for x in (voto, c6, ctr)),
         "RT103-f": any(has_sentence(x, r"3 a 6 votos", r"menos de 3|fora desse|sem perfil|ausência|neutro", r"JEF-V1")
-                       for x in (voto, c6, prof, ctr)),
+                       for x in (voto, c6, prof, ctr, estilo)),
         "RT103-g": all(re.search(p, c6) for p in (r"caixa alta e negrito", r"sem rótulo VOTO-EMENTA", r"numeração manual", r"ponto e vírgula")),
         "RT103-h": any(re.search(r"Posição antes da minuta|" + pos, x) for x in (dire, ctr)) and len(dire.split()) <= 430,
         "RT103-o": any(has_sentence(x, r"\b4\b|quarta", r"peça|solicite|pergunte", r"texto|escrit", r"posição") for x in everywhere),
