@@ -1,0 +1,67 @@
+diff --git a/.codex-plugin/plugin.json b/.codex-plugin/plugin.json
+index 5f74f44..b434b79 100644
+--- a/.codex-plugin/plugin.json
++++ b/.codex-plugin/plugin.json
+@@ -59,5 +59,5 @@
+   "name": "lume",
+   "repository": "https://github.com/Nercari/lume",
+   "skills": "./skills",
+-  "version": "1.1.14"
++  "version": "1.1.15"
+ }
+diff --git a/plugin.json b/plugin.json
+index cd6c040..787b5ef 100644
+--- a/plugin.json
++++ b/plugin.json
+@@ -59,5 +59,5 @@
+   "license": "MIT",
+   "name": "lume",
+   "repository": "https://github.com/Nercari/lume",
+-  "version": "1.1.14"
++  "version": "1.1.15"
+ }
+diff --git a/skills/jef-relatorio/SKILL.md b/skills/jef-relatorio/SKILL.md
+index f7ed25d..e481a52 100644
+--- a/skills/jef-relatorio/SKILL.md
++++ b/skills/jef-relatorio/SKILL.md
+@@ -7,6 +7,6 @@ description: Produz relatório preliminar em chat, na hierarquia 1 a 2.3, e ence
+ 
+ Se `skills/jef-director/SKILL.md` ainda não foi lido nesta conversa, leia-o e siga-o primeiro, inclusive a leitura obrigatória.
+ 
+-Leia `references/c4.md` integralmente. Entregue o relatório em texto normal de chat. Encerre em 2.3, acrescente a seção "Posição a ser adotada" e pare, sem voto, dispositivo ou recomendação de resultado, salvo se o pedido atual já fixar a orientação.
++Leia `references/c4.md` integralmente. Entregue o relatório em texto normal de chat. Encerre em 2.3, acrescente a seção "Posição a ser adotada" e pare, sem voto, dispositivo ou recomendação de resultado, salvo se o pedido atual já fixar a orientação. Use os nomes completos das partes, salvo segredo de justiça.
+ 
+ Há mais de um autor ou pedido com desfechos distintos, trate cada pedido ou autor separadamente e não resuma o resultado em dispositivo único genérico.
+diff --git a/skills/jef-revisao/references/cenarios.md b/skills/jef-revisao/references/cenarios.md
+index 46fb684..a258071 100644
+--- a/skills/jef-revisao/references/cenarios.md
++++ b/skills/jef-revisao/references/cenarios.md
+@@ -214,6 +214,15 @@ de seleção do host, recuperação de fontes ou apresentação renderizada.
+ | RT102-f | `lume-runtime-triagem-9`: três `CASE_STATE` isolados | Não misturar fatos entre LRT9-01, LRT9-02 e LRT9-03. |
+ | RT102-g | `lume-runtime-triagem-9`: critério em `jef-triagem` | Mesmo critério de prioridade legal ou tutela e matéria em lote. |
+ | lume-runtime-triagem-9 | Lote fictício `lume-runtime-triagem-9` (manifesto e três casos sintéticos) | `jef-lote` aplica ordenação, tabela e lacunas; alinhado ao harness local N102. |
++| RT103-a | Caso sintético `lume-runtime-relvoto-10` (recurso inominado no harness) | Registro para teste de runtime in-host do relatório, da pausa e do Voto-Ementa (N103). |
++| RT103-b | `lume-runtime-relvoto-10`: relatório 1 a 2.3 e seção "Posição a ser adotada" | Relatório encerra na seção com quatro opções, sem voto, dispositivo ou recomendação. |
++| RT103-c | `lume-runtime-relvoto-10`: partes nomeadas | Nomes completos, salvo segredo de justiça; sem ressalva ou renúncia de responsabilidade. |
++| RT103-d | `lume-runtime-relvoto-10`: resposta que não é número nem posição escrita | Mantém a pausa; não redige o Voto-Ementa. |
++| RT103-e | `lume-runtime-relvoto-10`: escolha da opção 2 | Libera a minuta completa sem reconfirmar a escolha. |
++| RT103-f | `lume-runtime-relvoto-10`: dois votos de estilo | Menos de 3 votos: JEF-V1 neutro, sem bloquear o produto. |
++| RT103-g | `lume-runtime-relvoto-10`: Voto-Ementa | Ementa em caixa alta e negrito, parágrafos numerados à mão, sem ponto e vírgula; dispositivo e honorários em parágrafos separados. |
++| RT103-o | `lume-runtime-relvoto-10`: resposta "4" sem texto | Pede somente o texto da posição própria e mantém a pausa. |
++| lume-runtime-relvoto-10 | Caso fictício `lume-runtime-relvoto-10` (manifesto, relatório, turnos, voto e votos de estilo sintéticos) | `jef-relatorio` e `jef-voto` aplicam relatório, pausa e Voto-Ementa; alinhado ao harness local N103. |
+ 
+ Critério: nenhum erro material de fato, resultado, fonte, escopo ou superfície.
+ Comparar cada achado com entrada e evidência observável, sem exigir redação
+diff --git a/skills/jef-voto/SKILL.md b/skills/jef-voto/SKILL.md
+index 0ed41ed..07b0e09 100644
+--- a/skills/jef-voto/SKILL.md
++++ b/skills/jef-voto/SKILL.md
+@@ -7,7 +7,7 @@ description: Redige voto, minuta, ementa, decisão ou dispositivo em JEF-V1, pre
+ 
+ Se `skills/jef-director/SKILL.md` ainda não foi lido nesta conversa, leia-o e siga-o primeiro, inclusive a leitura obrigatória.
+ 
+-Se o relatório ou a análise preliminar desta conversa ainda não tiver posição adotada e o pedido atual não fixar a orientação, não redija a minuta: entregue ou retome a seção "Posição a ser adotada" e pare.
++Se o relatório ou a análise preliminar desta conversa ainda não tiver posição adotada e o pedido atual não fixar a orientação, não redija a minuta: entregue ou retome a seção "Posição a ser adotada" e pare. Se a resposta do usuário não for um número de 1 a 4 nem uma posição escrita, mantenha a pausa, retome a seção e não redija o voto. Se o usuário responder apenas 4, peça somente o texto da posição própria e mantenha a pausa. Com 3 a 6 votos do usuário, monte o perfil com jef-estilo; com menos de 3 votos, siga com JEF-V1 neutro sem bloquear a minuta.
+ 
+ Com mais de um pedido ou autor e desfechos distintos, redija dispositivo e fundamentação autônomos para cada pedido material, sem resultado genérico único.
+ 

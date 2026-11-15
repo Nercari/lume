@@ -1,0 +1,17 @@
+$ python3 /home/nercari/tmp/lume-n103-20261114/scripts/count_lume_runtime.py /home/nercari/tmp/lume-n103-20261114/plugin
+RUNTIME_FINDINGS: 13
+escolha_libera_voto
+laudo_linha_coerente
+nao_escolha_mantem_pausa
+nomes_completos
+pausa_apos_relatorio
+pausa_sem_voto
+perfil_neutro_menos_de_tres
+posicao_quatro_opcoes
+quatro_pede_posicao
+relatorio_hierarquia
+sem_ressalva
+voto_ementa_forma
+voto_segue_posicao
+N103-runtime-steps: 0
+RUNTIME_SCORE: 0

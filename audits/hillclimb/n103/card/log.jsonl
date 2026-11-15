@@ -1,0 +1,6 @@
+{"time": "2026-11-14 22:08:44", "kind": "baseline", "score": 5.0, "spread": 0.0, "seconds": 4.13}
+{"time": "2026-11-14 22:09:18", "kind": "step", "step": 1, "idea": "Register lume-runtime-relvoto-10 and RT103 rows in cenarios.md", "score": 4.0, "seconds": 4.03, "result": "kept", "gain": true}
+{"time": "2026-11-14 22:09:38", "kind": "step", "step": 2, "idea": "jef-relatorio: full party names unless segredo de justica", "score": 3.0, "seconds": 4.15, "result": "kept", "gain": true}
+{"time": "2026-11-14 22:09:57", "kind": "step", "step": 3, "idea": "jef-voto: reply that is neither a number nor a written position keeps the pause", "score": 2.0, "seconds": 4.11, "result": "kept", "gain": true}
+{"time": "2026-11-14 22:10:17", "kind": "step", "step": 4, "idea": "jef-voto: bare 4 asks only for the written position", "score": 1.0, "seconds": 4.09, "result": "kept", "gain": true}
+{"time": "2026-11-14 22:11:26", "kind": "step", "step": 5, "idea": "jef-voto: 3 to 6 votos build profile, fewer means neutral JEF-V1", "score": 0.0, "seconds": 4.89, "result": "kept", "gain": true}

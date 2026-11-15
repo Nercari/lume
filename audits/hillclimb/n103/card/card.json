@@ -1,0 +1,42 @@
+{
+  "name": "n103-relvoto",
+  "goal": "N103 runtime: relatorio structure, Posicao a ser adotada pause, Voto-Ementa; local N103 check scores 0",
+  "check": [
+    "python3 /home/nercari/tmp/lume-n103-20261114/scripts/count_lume_runtime.py /home/nercari/tmp/lume-n103-20261114/plugin"
+  ],
+  "score": [
+    "RUNTIME_SCORE:\\s*(\\d+)"
+  ],
+  "direction": "min",
+  "guards": [],
+  "target": 0.0,
+  "target_text": "0",
+  "after": "stop",
+  "runs": 3,
+  "min_gain": "0.5",
+  "timeout": 1800,
+  "holdout": null,
+  "lock": [
+    "../scripts"
+  ],
+  "fingerprint": "ac408e72e49836ed1dd38a96678ced198564505fa8e8c4983d9f7c32590c9da7",
+  "max_steps": null,
+  "paired": false,
+  "max_hours": null,
+  "hard": false,
+  "min_steps": 0,
+  "zero": false,
+  "signoff": false,
+  "tree": null,
+  "started": 1794704924.0165915,
+  "base": "master",
+  "branch": "master",
+  "start_commit": "1d4657b6de0bc33d13563f0184bc0e4172998756",
+  "repos": [],
+  "baseline": 5.0,
+  "best": {
+    "score": 0.0,
+    "commit": "6a0dce4bdc0fd397f4751e2713bfb17bde348e3c",
+    "step": 5
+  }
+}

@@ -1,0 +1,3 @@
+# votos de estilo colados pelo usuário (sintéticos, só o rótulo)
+VOTO: voto-estilo-01
+VOTO: voto-estilo-02

@@ -1,0 +1,13 @@
+name: n103-relvoto
+goal: N103 runtime: relatorio structure, Posicao a ser adotada pause, Voto-Ementa; local N103 check scores 0
+branch: master
+check: ["python3 /home/nercari/tmp/lume-n103-20261114/scripts/count_lume_runtime.py /home/nercari/tmp/lume-n103-20261114/plugin"]
+direction: min
+baseline: 5.0
+best: 0.0
+steps: 5
+kept: 5
+bar: 0.0
+holdout: None
+epochs: {"relocks": 0, "unreviewed": []}
+verdict: BAR REACHED
