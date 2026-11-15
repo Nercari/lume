@@ -10,10 +10,12 @@ import subprocess
 import sys
 
 ROOT = pathlib.Path(sys.argv[1]).resolve()
+MANIFEST = next((m for m in ("plugin.json", ".claude-plugin/plugin.json", ".codex-plugin/plugin.json")
+                 if (ROOT / m).is_file()), "plugin.json")
 if len(sys.argv) > 2:
     VERSION = sys.argv[2]
 else:
-    VERSION = json.loads((ROOT / "plugin.json").read_text(encoding="utf-8"))["version"]
+    VERSION = json.loads((ROOT / MANIFEST).read_text(encoding="utf-8"))["version"]
 CHECK_V3 = pathlib.Path(__file__).resolve().parent.parent / (
     "reports/lume-plugin-v3-fable-2026-11-11/check_v3.py"
 )
@@ -94,7 +96,7 @@ def violations() -> list[str]:
     diretor = texts.get(ROOT / "skills/jef-director/references/diretor.md", "")
     c2 = texts.get(ROOT / "skills/jef-director/references/c2.md", "")
     c7 = texts.get(ROOT / "skills/jef-materias/references/c7.md", "")
-    pj = texts.get(ROOT / "plugin.json", "")
+    pj = texts.get(ROOT / MANIFEST, "")
 
     # --- Pedro standing rules ---
     for p, t in texts.items():
@@ -134,7 +136,7 @@ def violations() -> list[str]:
     except (KeyError, json.JSONDecodeError, TypeError):
         v.append("P-starters-parse")
 
-    for rel in ["plugin.json", ".codex-plugin/plugin.json"]:
+    for rel in dict.fromkeys([MANIFEST, ".codex-plugin/plugin.json"]):
         try:
             d = json.loads(texts.get(ROOT / rel, "{}"))
             if d.get("version") != VERSION:

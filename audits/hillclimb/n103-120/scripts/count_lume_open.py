@@ -10,10 +10,12 @@ import subprocess
 import sys
 
 ROOT = pathlib.Path(sys.argv[1]).resolve()
+MANIFEST = next((m for m in ("plugin.json", ".claude-plugin/plugin.json", ".codex-plugin/plugin.json")
+                 if (ROOT / m).is_file()), "plugin.json")
 if len(sys.argv) > 2:
     VERSION = sys.argv[2]
 else:
-    VERSION = json.loads((ROOT / "plugin.json").read_text(encoding="utf-8"))["version"]
+    VERSION = json.loads((ROOT / MANIFEST).read_text(encoding="utf-8"))["version"]
 HERE = pathlib.Path(__file__).resolve().parent.parent
 CHECK_V3 = HERE / "reports/lume-plugin-v3-fable-2026-11-11/check_v3.py"
 CENARIOS = ROOT / "skills/jef-revisao/references/cenarios.md"
@@ -40,7 +42,7 @@ def fable_open() -> list[str]:
     formato = read("skills/jef-pacote/references/formato.md")
     c6 = read("skills/jef-voto/references/c6.md")
     c7 = read("skills/jef-materias/references/c7.md")
-    pj = json.loads(read("plugin.json") or "{}")
+    pj = json.loads(read(MANIFEST) or "{}")
     codex = json.loads(read(".codex-plugin/plugin.json") or "{}")
     lic = read("LICENSE")
 

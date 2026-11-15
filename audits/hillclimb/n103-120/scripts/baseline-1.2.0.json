@@ -1,4 +1,4 @@
 {
   "lume-workspace": {"e2e": 31, "north": 16, "open": 19, "daily": 14, "hard": 10, "lint": 15, "runtime-n106": 14, "runtime-n101": 11, "runtime-n102": 7},
-  "lume-claude":    {"e2e": 31, "north": 16, "open": "check-error", "daily": 14, "hard": 10, "lint": "check-error", "runtime-n106": 14, "runtime-n101": 11, "runtime-n102": 7}
+  "lume-claude":    {"e2e": 31, "north": 16, "open": 22, "daily": 14, "hard": 10, "lint": 20, "runtime-n106": 14, "runtime-n101": 11, "runtime-n102": 7}
 }
