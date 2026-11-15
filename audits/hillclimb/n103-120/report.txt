@@ -1,0 +1,33 @@
+N103 re-baseline on Lume 1.2.0 (run 41). Branch claude/lume-n103-120-baseline.
+
+COMMAND  python3 audits/hillclimb/n103-120/scripts/count_lume_n103_120.py
+RUN 1    RUNTIME_SCORE: 10
+RUN 2    RUNTIME_SCORE: 10   (same items, diff clean)
+CLIMB    climb.py init n103-120: baseline 10, verify REPRODUCED 10.
+
+ITEMS    RT103-b, d, f, h, o fail on lume-workspace and on lume-claude (10 items).
+         RT103-c, e, g pass. RT103-a is N/A (no cenarios.md in 1.2.0).
+         lume-claude equals the build output (drift check passes).
+
+GUARD BASELINES (1.2.0, ratchet)    lume-workspace   lume-claude
+  e2e                               31               31
+  north                             16               16
+  open                              19               check-error (no plugin.json)
+  daily                             14               14
+  hard                              10               10
+  lint                              15               check-error (no plugin.json)
+  runtime-n106                      14               14
+  runtime-n101                      11               11
+  runtime-n102                      7                7
+
+INJECTED FAULTS (scratch copy of the tree, not the repo)
+  1. 'numeração manual' removed from the source c6.md: 10 -> 12
+     (new items: RT103-g:lume-workspace, DRIFT:lume-claude-differs-from-build)
+  2. one byte appended to a locked fixture: HARNESS:fixtures-changed appears
+  3. LUME_RUNTIME_N103_PLANT=1: PLANT:test-runtime appears, +1
+LOCK     climb.py init --lock audits/hillclimb/n103-120/scripts
+
+NEXT STEP (own run, own verification): hand-port the N103 text into plugins/lume-workspace
+(RT103-b, d, o, h, f), rebuild lume-claude with build-lume-claude.mjs, rerun this check and
+the guards. Owner decision needed first: the literal 'Posição a ser adotada' gate vs the 1.2.0
+contract rule 'uma pergunta breve' and c6 'não impor seção de posição'.

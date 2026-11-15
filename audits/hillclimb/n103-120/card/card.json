@@ -1,0 +1,42 @@
+{
+  "name": "n103-120",
+  "goal": "N103 on Lume 1.2.0: re-baseline only. Check scores plugins/lume-workspace and plugins/lume-claude; no behavior change in this run",
+  "check": [
+    "python3 audits/hillclimb/n103-120/scripts/count_lume_n103_120.py"
+  ],
+  "score": [
+    "RUNTIME_SCORE:\\s*(\\d+)"
+  ],
+  "direction": "min",
+  "guards": [],
+  "target": 0.0,
+  "target_text": "0",
+  "after": "stop",
+  "runs": 3,
+  "min_gain": "0.5",
+  "timeout": 1800,
+  "holdout": null,
+  "lock": [
+    "audits/hillclimb/n103-120/scripts"
+  ],
+  "fingerprint": "c29bb044237b7bc0ff90c8287be83108ae0842b0913e63759baece370c2ef3d6",
+  "max_steps": null,
+  "paired": false,
+  "max_hours": null,
+  "hard": false,
+  "min_steps": 0,
+  "zero": false,
+  "signoff": false,
+  "tree": null,
+  "started": 1794708111.800781,
+  "base": "claude/lume-n103-120-baseline",
+  "branch": "claude/lume-n103-120-baseline",
+  "start_commit": "60549d51f1b49cb7b5a812ad46cde85dcb067ae4",
+  "repos": [],
+  "baseline": 10.0,
+  "best": {
+    "score": 10.0,
+    "commit": "60549d51f1b49cb7b5a812ad46cde85dcb067ae4",
+    "step": 0
+  }
+}
