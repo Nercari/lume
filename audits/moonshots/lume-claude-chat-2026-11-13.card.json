@@ -1,0 +1,27 @@
+{
+  "id": "lume-claude-chat-2026-11-13",
+  "title": "Lume for Claude Chat: optional acceptance items (no gate)",
+  "repo": "Nercari/lume",
+  "issue": 62,
+  "items": [
+    {
+      "key": "chat_test",
+      "question": "Optional, non-blocking: how should the live Chat upload and 3-workflow test be run? The plugin, the tests and the PR proceed whatever the answer; with no answer the item stays NOT RUN.",
+      "options": [
+        "A · A user runs CHAT-TEST-STEPS.md in their own Chat with synthetic content and posts the result on PR #62.",
+        "B · A user explicitly authorizes a separate signed-in session (account access).",
+        "C · Leave it NOT RUN; Chat compatibility stays unverified."
+      ],
+      "recommended": "A · A user runs CHAT-TEST-STEPS.md in their own Chat with synthetic content and posts the result on PR #62."
+    },
+    {
+      "key": "license_holder",
+      "question": "Licensing approval, non-blocking: confirm the LICENSE holder text. The current text stays and no work waits; the agent changes it only on an explicit answer.",
+      "options": [
+        "A · Keep the current holder text as it stands.",
+        "B · Replace it with exact holder text given by Pedro or Themis."
+      ],
+      "recommended": "A · Keep the current holder text as it stands."
+    }
+  ]
+}

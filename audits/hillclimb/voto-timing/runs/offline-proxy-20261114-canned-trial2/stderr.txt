@@ -1,0 +1,22 @@
+node:fs:3028
+    return binding.writeFileUtf8(
+                   ^
+
+Error: ENOENT: no such file or directory, open 'audits/hillclimb/voto-timing/runs/offline-proxy-20261114-canned-trial2/out/relatorio.md'
+    at writeFileSync (node:fs:3028:20)
+    at run (file:///home/nercari/.t3/worktrees/lume/grok-integrate-pedro-pl-12f186c8dd7e22e2/audits/hillclimb/voto-timing/harness.mjs:215:50)
+    at file:///home/nercari/.t3/worktrees/lume/grok-integrate-pedro-pl-12f186c8dd7e22e2/audits/hillclimb/voto-timing/harness.mjs:245:18
+    at #evaluateSync (node:internal/modules/esm/module_job:702:24)
+    at ModuleJobSync.runSync (node:internal/modules/esm/module_job:717:43)
+    at node:internal/modules/esm/loader:383:11
+    at TracingChannel.traceSync (node:diagnostics_channel:557:14)
+    at ModuleLoader.importForEntryPoint (node:internal/modules/esm/loader:372:21)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:184:34)
+    at node:internal/main/run_main_module:33:47 {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'audits/hillclimb/voto-timing/runs/offline-proxy-20261114-canned-trial2/out/relatorio.md'
+}
+
+Node.js v26.12.0

@@ -1,0 +1,71 @@
+{
+  "label": "SYNTHETIC PROXY. Not a real baseline. Not an improvement claim.",
+  "mode": "live",
+  "model": "claude-haiku-5-5",
+  "fixtureDocs": 5,
+  "segmentsSec": {
+    "t_pack": 0.039,
+    "t_relatorio": 27.561,
+    "t_voto": 50.361,
+    "t_verify": 0.001
+  },
+  "receipts": [
+    {
+      "kind": "relatorio",
+      "requestedModel": "claude-haiku-5-5",
+      "executedModels": [
+        "claude-haiku-5-5"
+      ],
+      "apiKeySource": null,
+      "subtype": "success",
+      "isError": false,
+      "cliDurationMs": 22619,
+      "tokens": {
+        "input": 2,
+        "cacheCreation": 13620,
+        "cacheRead": 658,
+        "output": 5040
+      }
+    },
+    {
+      "kind": "voto",
+      "requestedModel": "claude-haiku-5-5",
+      "executedModels": [
+        "claude-haiku-5-5"
+      ],
+      "apiKeySource": null,
+      "subtype": "success",
+      "isError": false,
+      "cliDurationMs": 45162,
+      "tokens": {
+        "input": 2,
+        "cacheCreation": 23231,
+        "cacheRead": 658,
+        "output": 9880
+      }
+    }
+  ],
+  "modelCalls": 2,
+  "auth": {
+    "authMethod": "claude.ai",
+    "apiProvider": "firstParty",
+    "subscriptionType": "max"
+  },
+  "relatorioInstructionHash": "244470d73921f8dc",
+  "votoInstructionHash": "4d0881d625c3c8b0",
+  "failures": {
+    "relatorio": [
+      "required facts missing"
+    ],
+    "voto": [
+      "required facts missing",
+      "ementa missing or not bold upper case",
+      "dispositivo does not match the oriented outcome"
+    ]
+  },
+  "usable": false,
+  "elapsedSec": 77.962,
+  "totalSec": null,
+  "editBurden": "UNMEASURED",
+  "vetoes": "structural proxy checks only; Law vetoes and holdout are NOT DEFINED"
+}

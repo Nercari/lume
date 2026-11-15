@@ -1,0 +1,29 @@
+{
+  "label": "SYNTHETIC PROXY. Not a real baseline. Not an improvement claim.",
+  "timingKind": "SYNTHETIC_PROXY",
+  "uploadSec": "UNMEASURED (t_pack is a local proxy, not a real upload)",
+  "humanReviewSec": "UNMEASURED",
+  "revisions": 0,
+  "mode": "canned",
+  "model": null,
+  "fixtureDocs": 5,
+  "segmentsSec": {
+    "t_pack": 0.037,
+    "t_relatorio": 0,
+    "t_voto": 0,
+    "t_verify": 0.003
+  },
+  "receipts": [],
+  "modelCalls": 0,
+  "relatorioInstructionHash": "244470d73921f8dc",
+  "votoInstructionHash": "4d0881d625c3c8b0",
+  "failures": {
+    "relatorio": [],
+    "voto": []
+  },
+  "usable": true,
+  "elapsedSec": 0.04,
+  "totalSec": 0.04,
+  "editBurden": "UNMEASURED",
+  "vetoes": "structural proxy checks only; Law vetoes and holdout are NOT DEFINED"
+}

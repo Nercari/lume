@@ -1,0 +1,1 @@
+TMPDIR="$CLAUDE_CODE_TMPDIR" node audits/hillclimb/voto-timing/runs/compare-20261114-verify-sentences/measure.mjs audits/hillclimb/voto-timing/harness.mjs audits/hillclimb/voto-timing/runs/compare-20261114-verify-sentences/candidate/result.json
