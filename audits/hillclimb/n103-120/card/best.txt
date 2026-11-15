@@ -1,12 +1,2 @@
 $ python3 audits/hillclimb/n103-120/scripts/count_lume_n103_120.py
-RUNTIME_SCORE: 10
-RT103-b:lume-workspace
-RT103-d:lume-workspace
-RT103-f:lume-workspace
-RT103-h:lume-workspace
-RT103-o:lume-workspace
-RT103-b:lume-claude
-RT103-d:lume-claude
-RT103-f:lume-claude
-RT103-h:lume-claude
-RT103-o:lume-claude
+RUNTIME_SCORE: 0

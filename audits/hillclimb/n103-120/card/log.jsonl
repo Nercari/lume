@@ -1,2 +1,3 @@
 {"time": "2026-11-14 23:01:51", "kind": "baseline", "score": 10.0, "spread": 0.0, "seconds": 8.6}
 {"time": "2026-11-14 23:36:32", "kind": "relock", "epoch": 1, "why": "guard repair: count_lume_open.py and lint_lume_plugin.py now resolve the manifest per layout; baseline-1.2.0.json lume-claude open/lint check-error replaced by 22/20; check scoring unchanged", "score": 10.0, "before": 10.0}
+{"time": "2026-11-15 00:25:50", "kind": "relock", "epoch": 2, "why": "D1-D3 applied: pode_seguir_delega finding and RT103-p added, RT103-f scope gains jef-estilo, fixture turnos T2 now VOTO and T5 added, sha locks updated", "score": 0.0, "before": 10.0}

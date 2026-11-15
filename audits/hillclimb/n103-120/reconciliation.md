@@ -76,3 +76,13 @@ Run after this note was committed:
     git diff --name-only e63870c HEAD | grep -v '^audits/hillclimb/'
 
 Both print nothing. `e63870c` is the PR #62 head. The branch adds only files under `audits/hillclimb/`.
+
+## Decisions applied (run 44)
+
+The operator answered D1 = A, D2 = permission to choose, D3 = neutral. Applied to `plugins/lume-workspace/skills/` and regenerated into `plugins/lume-claude` (commit 695de03).
+
+- D1: `jef-director/references/contrato.md:9` (fixed section "3 Posição a ser adotada", options 1 to 4, then stop) and `:29` (section 3 in the relatório hierarchy); `jef-relatorio/references/c4.md:7`; `jef-relatorio/SKILL.md:6`; `jef-voto/SKILL.md:8`; `jef-voto/references/c6.md:3` (the section belongs to the relatório, not the voto). Relatório-only and already-directed requests are unchanged.
+- D2: `contrato.md:9` and `:29`, `jef-voto/SKILL.md:8`. "pode seguir" delegates the outcome only at the Posição menu. Any other non-choice reply keeps the pause.
+- D3: `jef-estilo/SKILL.md:8`, `jef-director/references/profiles.md:5`. Fewer than 3 votos gives neutral JEF-V1.
+
+Check changes, relocked as epoch 2: fixture `turnos.txt` T2 "pode seguir" now VOTO and new T5 "não sei" PAUSA; audit finding `pode_seguir_delega`; new RT103-p; RT103-f now also reads `jef-estilo/SKILL.md`. Score 10 to 0. Guards: no number rose; e2e fell 31 to 29; `baseline-1.2.0.json` is unchanged.
