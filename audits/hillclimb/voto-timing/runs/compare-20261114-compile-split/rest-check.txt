@@ -1,0 +1,5 @@
+head top-level functions: ['blocks', 'checkpoint', 'diff', 'dumps', 'loads', 'locators', 'main', 'need', 'nonempty', 'not_gaps', 'package', 'read', 'state', 'unique']
+candB top-level functions (before _rest): ['_rest', 'dumps', 'loads', 'main', 'need', 'nonempty', 'not_gaps', 'package', 'read', 'unique']
+names present after _rest(): {'locators': True, 'blocks': True, 'diff': True, 'state': True, 'checkpoint': True, 'package': True, 'main': True, 'read': True, 'loads': True, 'dumps': True}
+same set after _rest(): True
+moved functions text-identical: {'locators': True, 'blocks': True, 'diff': True, 'state': True, 'checkpoint': True}
