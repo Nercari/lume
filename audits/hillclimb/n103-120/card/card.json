@@ -19,7 +19,7 @@
   "lock": [
     "audits/hillclimb/n103-120/scripts"
   ],
-  "fingerprint": "c29bb044237b7bc0ff90c8287be83108ae0842b0913e63759baece370c2ef3d6",
+  "fingerprint": "f512facd5b1686cc7d22200ecfbeb047ad25ad530b0c81fabe6bed44c6622348",
   "max_steps": null,
   "paired": false,
   "max_hours": null,
@@ -36,7 +36,7 @@
   "baseline": 10.0,
   "best": {
     "score": 10.0,
-    "commit": "60549d51f1b49cb7b5a812ad46cde85dcb067ae4",
+    "commit": "b44b20379381520e5b6f523cb4245fc073fd75f3",
     "step": 0
   }
 }

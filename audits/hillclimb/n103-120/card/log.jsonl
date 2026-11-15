@@ -1,1 +1,2 @@
 {"time": "2026-11-14 23:01:51", "kind": "baseline", "score": 10.0, "spread": 0.0, "seconds": 8.6}
+{"time": "2026-11-14 23:36:32", "kind": "relock", "epoch": 1, "why": "guard repair: count_lume_open.py and lint_lume_plugin.py now resolve the manifest per layout; baseline-1.2.0.json lume-claude open/lint check-error replaced by 22/20; check scoring unchanged", "score": 10.0, "before": 10.0}
