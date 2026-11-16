@@ -5,7 +5,7 @@ description: "Redige voto, minuta, ementa, decisão ou dispositivo com fidelidad
 
 # Voto
 
-Leia o jef-director. Para minuta, consulte `references/c6.md` e `references/ementas.md`; ementa isolada exige texto decisório atual, não nova análise de mérito. Resolva o perfil conforme profiles.md. Sem posição materialmente necessária, pergunte somente a escolha pendente; resultado já dado dispensa reconfirmação.
+Leia o jef-director. Para minuta, consulte `references/c6.md` e `references/ementas.md`; ementa isolada exige texto decisório atual, não nova análise de mérito. Resolva o perfil conforme profiles.md. Sem resultado definido, siga o menu “Posição a ser adotada” do contrato: aguarde a escolha e, se o usuário responder “pode seguir”, escolha o resultado pelos autos e redija. Resultado já dado dispensa reconfirmação.
 
 ## Prioridade da qualidade dos parágrafos
 

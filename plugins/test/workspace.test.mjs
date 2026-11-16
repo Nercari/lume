@@ -26,7 +26,7 @@ test("both manifests agree and the version is the manifest version", () => {
   const ui = main.extensions["com.openai"].interface;
   assert.equal(main.name, "lume");
   assert.equal(codex.name, main.name);
-  assert.equal(main.version, "1.2.0");
+  assert.equal(main.version, "1.2.2");
   assert.equal(codex.version, main.version);
   assert.equal(codex.skills, "./skills");
   assert.deepEqual(codex.interface.defaultPrompt, ui.defaultPrompt);
@@ -115,6 +115,41 @@ test("lume_check.py passes and fails as documented", () => {
   const repeat = spawnSync("python3", ["-I", script, "checkpoint", input, "--output", cp, "--expected-version", "0"], { encoding: "utf8" });
   assert.equal(repeat.status, 1, "stale expected version must be rejected");
   assert.equal(JSON.parse(readFileSync(cp, "utf8")).version, 1);
+});
+
+// Synthetic regression (no real case): the "Posição a ser adotada" menu in contrato.md must not
+// order the pause for the approved reply "pode seguir". The reply is read against the rules that
+// the contract text itself states, so the test fails when one line both delegates and pauses.
+function menuReply(reply) {
+  const paragraph = read("skills/jef-director/references/contrato.md")
+    .split("\n")
+    .find((line) => line.startsWith("RTE-003"));
+  assert.ok(paragraph, "menu paragraph RTE-003 present");
+  const norm = (t) => t.toLowerCase().replace(/[“”".]/g, "").trim();
+  const answer = norm(reply);
+  if (/^[1-4]$/.test(answer)) return "choose-option";
+  const pause = paragraph.match(/Qualquer outra resposta que não seja ([^;.]*?) mantém a pausa/);
+  assert.ok(pause, "pause rule present");
+  const exempt = pause[1].split(/,| nem /).map(norm).filter(Boolean);
+  const delegates = new RegExp(`Responder “${reply}” ao menu da posição delega a escolha ao Lume, que decide o resultado pelos autos e redige o voto`).test(paragraph);
+  if (delegates && exempt.includes(answer)) return "decide-and-draft";
+  if (delegates) return "conflict: delegates and pauses";
+  return exempt.includes(answer) ? "unspecified" : "pause";
+}
+
+test("REGRESSION menu Posição a ser adotada: \"pode seguir\" chooses the outcome and drafts, never pauses", () => {
+  assert.equal(menuReply("pode seguir"), "decide-and-draft");
+  const paragraph = read("skills/jef-director/references/contrato.md");
+  assert.match(paragraph, /não seja número, posição nem “pode seguir” mantém a pausa/);
+  assert.match(paragraph, /neste menu, “pode seguir” nunca mantém a pausa e leva a decidir o resultado pelos autos e redigir o voto, sem repetir a pergunta/);
+  // Approved content stays: four options and a delegation scoped to this menu only.
+  assert.match(paragraph, /1 dar provimento; 2 negar provimento; 3 dar provimento parcial; 4 posição fornecida pelo usuário/);
+  assert.match(paragraph, /essa delegação vale só para esse menu/);
+  assert.equal(menuReply("2"), "choose-option");
+});
+
+test("REGRESSION menu Posição a ser adotada: an unknown reply keeps the pause", () => {
+  for (const reply of ["talvez depois", "ok", "continue", "pode ser", "quero pensar"]) assert.equal(menuReply(reply), "pause", reply);
 });
 
 test("the existing PJe plugin is untouched by this package", () => {
