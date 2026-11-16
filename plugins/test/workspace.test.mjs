@@ -26,7 +26,7 @@ test("both manifests agree and the version is the manifest version", () => {
   const ui = main.extensions["com.openai"].interface;
   assert.equal(main.name, "lume");
   assert.equal(codex.name, main.name);
-  assert.equal(main.version, "1.2.0");
+  assert.equal(main.version, "1.2.1");
   assert.equal(codex.version, main.version);
   assert.equal(codex.skills, "./skills");
   assert.deepEqual(codex.interface.defaultPrompt, ui.defaultPrompt);
