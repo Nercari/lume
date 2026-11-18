@@ -11,7 +11,7 @@ export const TESTED_PATHS = Object.freeze([
   'trust/src/failure.js',
   'trust/src/storage.js',
   'trust/src/page.js',
-  'chatgpt/PROJETO-LUME.md',
+  'chatgpt/LUME-ADENDO.md',
   'case-store/src/store.js',
   'case-store/src/codec.js',
   'case-store/src/backend.js',

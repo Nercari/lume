@@ -38,7 +38,7 @@ come from `case-store/` (#7).
 
 | Issue | What packaging references |
 |-------|-------------------------|
-| #5 | `chatgpt/PROJETO-LUME.md`, manual package flow |
+| #5 | `chatgpt/LUME-ADENDO.md` (was `PROJETO-LUME.md` when #5 shipped; removed in #44), manual package flow |
 | #7 | `deleteCase`, crypto-erase, per-case isolation |
 | #9 | Transfer is user-only; guide references authorized transfer, not automation |
 | #12 | Trust interruptions copy defers to product UI; packaging does not duplicate UI strings |

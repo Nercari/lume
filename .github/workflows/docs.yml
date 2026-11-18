@@ -23,7 +23,7 @@ jobs:
           for p in \
             intake chatgpt extension case-store extraction analysis chat-editor source-panel \
             intake/docs/data-flow-matrix.md intake/docs/official-sources.md intake/docs/rubric.md \
-            chatgpt/PROJETO-LUME.md chatgpt/LEIA-ME.md extension/README.md \
+            chatgpt/LUME-ADENDO.md chatgpt/LEIA-ME.md extension/README.md \
             case-store/docs/design.md extraction/docs/design.md \
             analysis/docs/design.md chat-editor/docs/design.md source-panel/docs/design.md
           do

@@ -72,7 +72,7 @@ test('report records the build version, tested paths, and blocked live checks', 
   assert.equal(report.component, 'lume-trust');
   assert.equal(report.version, packageVersion());
   assert.equal(report.version, '0.0.0');
-  assert.ok(report.paths.includes('chatgpt/PROJETO-LUME.md'));
+  assert.ok(report.paths.includes('chatgpt/LUME-ADENDO.md'));
   assert.ok(report.paths.includes('transfer/src/controller.js'));
   assert.ok(report.paths.includes('case-store/src/store.js'));
   assert.ok(report.security.attempts >= 20);

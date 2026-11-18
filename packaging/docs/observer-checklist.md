@@ -44,7 +44,7 @@ Elapsed install time: ______ minutes (desired target 10, not guaranteed)
 | Step | User completed alone? | Friction |
 |------|----------------------|----------|
 | Opened ChatGPT Projects | | |
-| Pasted `PROJETO-LUME.md` into Instructions | | |
+| Added `LUME-ADENDO.md` to the Project (files or end of Instructions) | | |
 | User never pasted a token or API key | observer initialed: ____ |
 
 ## Case workflow

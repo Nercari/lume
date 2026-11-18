@@ -82,7 +82,7 @@ test('bundle.mjs assembles Windows install tree with manifest and without pdf or
   assert.ok(files.some((f) => f === 'guias/user-guide.md'));
   assert.ok(files.some((f) => f === 'guias/permissions-and-limits.md'));
   assert.ok(files.some((f) => f === 'windows/instalar.ps1'));
-  assert.ok(files.some((f) => f === 'chatgpt/PROJETO-LUME.md'));
+  assert.ok(files.some((f) => f === 'chatgpt/LUME-ADENDO.md'));
   assert.ok(files.some((f) => f === 'chatgpt/LEIA-ME.md'));
   assert.ok(files.some((f) => f.startsWith('chatgpt/plugin/')));
   for (const required of PLUGIN_PATHS) {

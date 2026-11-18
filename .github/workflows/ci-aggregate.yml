@@ -13,6 +13,8 @@ jobs:
       matrix: ${{ steps.packages.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
+      - name: Check browser runners
+        run: ./scripts/ci-check-playwright-runners.sh
       - name: List mergeable packages
         id: packages
         run: |
@@ -22,7 +24,8 @@ jobs:
 
   smoke:
     needs: prepare
-    runs-on: ubuntu-latest
+    # Playwright has no chromium build for ubuntu26.04 (what ubuntu-latest now is); pin 24.04.
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
