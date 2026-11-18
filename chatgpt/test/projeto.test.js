@@ -60,6 +60,14 @@ test('no voto template or private method in adapter docs', () => {
   assert.deepEqual(names, ['adendo.md', 'decisao.md', 'despacho.md', 'sentenca.md']);
 });
 
+test('piece templates cite with the label the pack emits', () => {
+  for (const name of ['decisao.md', 'despacho.md', 'sentenca.md']) {
+    const body = readFileSync(join(templatesDir, name), 'utf8');
+    assert.match(body, /\[ID X, pág\. Y\]/);
+    assert.doesNotMatch(body, /\[Id X, fl\. Y\]/);
+  }
+});
+
 test('no sigilo or case-restriction wording', () => {
   for (const text of [adendo, leia]) {
     for (const re of FORBIDDEN) {
@@ -77,6 +85,7 @@ test('LEIA-ME explains Project file + parts per case', () => {
 test('plugin manifest and generic skill exist', () => {
   const manifest = JSON.parse(readFileSync(join(root, 'plugin/plugin.json'), 'utf8'));
   assert.equal(manifest.name, 'lume');
+  assert.equal(manifest.$schema, 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json');
   const skill = readFileSync(join(root, 'plugin/skills/lume/SKILL.md'), 'utf8');
   assert.match(skill, /name: lume/);
   assert.match(skill, /não substitui/i);
