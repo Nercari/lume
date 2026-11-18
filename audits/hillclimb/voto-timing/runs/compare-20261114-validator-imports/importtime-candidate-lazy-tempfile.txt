@@ -1,0 +1,6 @@
+import time:       551 |       1957 | pathlib
+import time:       301 |       3497 |   re
+import time:      1112 |       4099 |     inspect
+import time:       361 |       4851 |   dataclasses
+import time:       614 |       5659 | argparse
+import time:      3160 |       8010 | _colorize

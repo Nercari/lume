@@ -12,6 +12,8 @@ on:
       - 'extraction/package-lock.json'
       - 'case-store/src/**'
       - 'intake/src/**'
+      - 'manual/src/prompt.js'
+      - 'manual/src/ocr-text.js'
       - '.github/workflows/chat-editor.yml'
   push:
     branches: [main]

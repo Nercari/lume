@@ -1,19 +1,21 @@
 # Lume no ChatGPT
 
-O Lume gera **partes do caso** no seu computador. O **método de minuta** (instruções, contrato, módulos, etc.) é **seu** — não vem neste repositório.
+O Lume monta um **pacote do caso** no seu computador: um arquivo (`lume-pacote-do-caso.md`) ou, no caso grande, **partes** em ordem (`lume-caso-parte-01-de-NN.md`, …). Você usa o **seu** plano do ChatGPT, sem API paga do Lume. O **método de minuta** (instruções, contrato, módulos) é **seu** — não vem neste repositório.
 
-## Configuração (uma vez)
+## Opção 1 — Projeto no ChatGPT (recomendado)
 
-1. Mantenha **suas instruções** no Projeto ChatGPT como já usa hoje.
-2. Adicione o arquivo **`LUME-ADENDO.md`** aos arquivos do Projeto **ou** cole o conteúdo ao **final** das suas instruções.
-3. (Opcional) Plugin em `plugin/` — skill genérica; o adendo é a fonte das regras do pacote.
+1. Abra o **ChatGPT**.
+2. **Projetos** → **Novo projeto** → nome **Lume**.
+3. Mantenha **suas instruções** no Projeto como já usa hoje. Adicione o arquivo **`LUME-ADENDO.md`** (nesta pasta) aos arquivos do Projeto **ou** cole o texto ao **final** das suas instruções. Salve.
+4. A cada processo: no Lume, **Gerar pacote do caso** (extensão) ou **Baixar pacote do caso (.md)**. No projeto Lume, comece uma conversa, **anexe todas** as partes e siga o adendo (leitura integral, listagem de IDs, lacunas).
 
-## Por caso
+## Opção 2 — Plugin (se o seu plano oferecer)
 
-1. Gere as partes na extensão Lume (`lume-caso-parte-01-de-N.md`, …).
-2. Anexe **todas** as partes no chat do Projeto.
-3. Siga o adendo (leitura integral, listagem de IDs, lacunas).
+1. Instale a pasta `plugin/` (manifesto Agent Plugin, com `skills/lume/`).
+2. As regras do pacote e os modelos de peça são os mesmos (`skills/lume/SKILL.md` e `skills/lume/templates/`).
+3. O fluxo continua igual: gere o pacote no Lume e **anexe** o `.md` (ou todas as partes) na conversa.
 
-## Limites
+## O que não é necessário
 
-Sem tokens do Lume. Só o que você anexa vai ao ChatGPT.
+- Não cole tokens, chaves de API nem senhas.
+- O Lume não envia o processo a nenhum servidor; só vai ao ChatGPT o que você anexar.

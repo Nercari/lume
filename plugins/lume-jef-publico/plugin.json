@@ -1,0 +1,63 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "lume-jef",
+  "version": "1.0.0",
+  "description": "Workflows for Brazilian Federal Small Claims Court (JEF/TRF1) appeals: read a case already gathered in the Lume case format, write the preliminary report, and draft the ruling for a judge to review. Skills only. No server and no MCP.",
+  "license": "MIT",
+  "keywords": [
+    "jef",
+    "trf1",
+    "judiciário",
+    "minuta",
+    "voto",
+    "relatório"
+  ],
+  "homepage": "https://github.com/Nercari/lume",
+  "repository": "https://github.com/Nercari/lume",
+  "author": {
+    "name": "Nercari",
+    "url": "https://github.com/Nercari"
+  },
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/jef-inicio/SKILL.md",
+      "interface": {
+        "displayName": "Lume JEF",
+        "shortDescription": "JEF case reports and drafts",
+        "longDescription": "Lume JEF helps judges and legal advisors at Brazil's Federal Small Claims Courts (JEF/TRF1) work on appeals in ChatGPT. It reads a case you already have access to, gathered in the Lume case format (the case tab or the attached case parts), lists the documents it read and the gaps it could not read, and then writes the preliminary report or a draft ruling (voto, ementa, dispositivo) in a neutral standard format. You can create your own style profile from three to six of your own past rulings, and later drafts follow that form without copying facts from them.\n\nIntended users: judges, advisors and court staff who are authorized to read the case. Every output is a draft for a qualified professional to check against the case file before any use. It is not legal advice and it does not decide cases.\n\nLimitations: Lume JEF has no server and does not sign in to PJe, download case files or run OCR. Gaps marked as unreadable stay gaps unless you send the page image. It cites only authorities it has verified and never carries facts from one case into another.\n\nPrivacy: the plugin itself collects nothing. Case text you share is processed only by ChatGPT, under your ChatGPT account and workspace settings.",
+        "developerName": "Nercari",
+        "category": "Productivity",
+        "capabilities": [
+          "Read a Lume case package with a coverage list",
+          "Write the preliminary report",
+          "Draft votos, ementas and dispositivos for review",
+          "Create a personal style profile from your own rulings"
+        ],
+        "websiteURL": "https://nercari.github.io/lume/diretorio/",
+        "supportURL": "https://nercari.github.io/lume/diretorio/suporte.html",
+        "privacyPolicyURL": "https://nercari.github.io/lume/diretorio/privacidade.html",
+        "termsOfServiceURL": "https://nercari.github.io/lume/diretorio/termos.html",
+        "defaultPrompt": [
+          "Ler o processo da aba do Lume e entregar o relatório preliminar.",
+          "Redigir a minuta de voto com o resultado que eu indicar.",
+          "Criar meu perfil de estilo a partir destes votos meus."
+        ],
+        "brandColor": "#0E3A4A",
+        "logo": "./assets/logo.png",
+        "composerIcon": "./assets/logo.png"
+      },
+      "publication": {
+        "countries": [
+          "BR"
+        ],
+        "release_notes": "First public version: case reading from the Lume case format, preliminary report, draft ruling in a neutral standard format, and personal style profiles.",
+        "translations": {
+          "pt-BR": {
+            "subtitle": "Relatório e minuta no JEF",
+            "description": "O Lume JEF ajuda magistrados e assessores dos Juizados Especiais Federais (JEF/TRF1) a trabalhar recursos no ChatGPT. Ele lê o processo a que você já tem acesso, reunido no formato do Lume (a aba do caso ou as partes anexadas), lista os documentos lidos e as lacunas ilegíveis e então entrega o relatório preliminar ou a minuta (voto, ementa, dispositivo) num formato padrão neutro. Você pode criar seu próprio perfil de estilo a partir de três a seis votos seus, e as minutas seguintes seguem essa forma sem copiar fatos deles.\n\nPúblico: magistrados, assessores e servidores autorizados a ler o processo. Todo resultado é minuta para conferência por profissional habilitado antes de qualquer uso. Não é consultoria jurídica e não decide processos.\n\nLimites: o Lume JEF não tem servidor, não entra no PJe, não baixa autos e não faz OCR. Lacuna ilegível fica como lacuna, salvo se você enviar a imagem da página. Só cita autoridade conferida e nunca leva fato de um processo para outro.\n\nPrivacidade: o plugin não coleta nada. O texto do processo vai apenas ao ChatGPT, conforme as configurações da sua conta e do seu workspace."
+          }
+        }
+      }
+    }
+  }
+}

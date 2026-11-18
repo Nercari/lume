@@ -1,0 +1,33 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "lume-jef",
+  "version": "0.2.0",
+  "description": "Skills de relatório e minuta do JEF/TRF1 no chat regular. No Work, só pede ao ChatGPT o clique no botão Lume na aba do PJe já aberta. Sem servidor e sem MCP.",
+  "license": "MIT",
+  "keywords": ["lume", "jef", "trf1", "minuta", "voto"],
+  "homepage": "https://github.com/Nercari/lume/tree/main/plugins/lume-jef",
+  "repository": "https://github.com/Nercari/lume",
+  "author": {
+    "name": "Nercari",
+    "url": "https://github.com/Nercari"
+  },
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/jef-inicio/SKILL.md",
+      "interface": {
+        "displayName": "Lume JEF",
+        "shortDescription": "Minutas JEF no chat regular",
+        "longDescription": "Skills de relatório e minuta do JEF/TRF1 para o chat regular. Aplica o método publicado (contrato JEF-WORKFLOW-v1, revisão 2026-11-04.4, formato JEF-V1) ao processo já reunido: a vista na aba, o pacote anexado ou as partes lume-caso-parte-k-de-N.md. No Work, só pede ao ChatGPT que clique no botão Lume na aba do PJe em que você já entrou; não faz login e não baixa os autos. Não há servidor nem MCP. Lacuna ilegível não é adivinhada. Fato de um processo não passa para outro.",
+        "developerName": "Nercari",
+        "category": "Productivity",
+        "defaultPrompt": [
+          "Ler todas as partes do processo anexado e entregar o relatório preliminar.",
+          "Redigir a minuta de voto com o resultado que eu indicar, sem inventar lacuna.",
+          "Revisar a minuta anexada e listar a pendência material."
+        ],
+        "logo": "./assets/logo.png",
+        "composerIcon": "./assets/logo.png"
+      }
+    }
+  }
+}

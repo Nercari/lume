@@ -52,8 +52,10 @@ every decisive entry with no found, current citation and no unsupported label. I
 The research client is injected (the approved data route from #3). This module makes no network
 call. Tests use a stub client that records each query.
 
-- Callers must pass known party names. `caseTermsOf(L, extra)` collects document IDs from the
-  ledger and the terms the caller names. The ledger has no party names, and this module does not
+- The case id and the open case number (any format, CNJ or not) are required. `research` refuses
+  the query when either is absent. `caseTermsOf(L, { caseId, caseNumber, extra })` collects
+  document IDs from the ledger, the case identity, and the terms the caller names.
+- Callers must pass known party names. The ledger has no party names, and this module does not
   discover them. Free-text addresses are not stripped. A known address has to be passed in
   `caseTerms` if it must not be sent. Minimization is not address redaction.
 - `minimizeQuery` folds case and accents, then removes CNJ case numbers, CPF, CNPJ, e-mail,

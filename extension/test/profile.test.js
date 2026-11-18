@@ -80,7 +80,8 @@ test('a RichFaces-shaped page and an autos table fall through to later profiles'
 });
 
 test('a bad selector is skipped and the same-origin iframe is read', async () => {
-  const profiles = [{ ...PROFILES[0], layoutMarker: ['<<<', ...PROFILES[0].layoutMarker] }, ...PROFILES.slice(1)];
+  const placeholder = PROFILES.find((profile) => profile.id === 'trf1-placeholder-unverified');
+  const profiles = [{ ...placeholder, layoutMarker: ['<<<', ...placeholder.layoutMarker] }, ...PROFILES.filter((profile) => profile !== placeholder)];
   const found = resolveBinding(page1(), profiles);
   assert.equal(found.ok, true);
   assert.equal(found.profile.layoutMarker, '#autosDigitais');
@@ -119,7 +120,7 @@ test('a stored profile is tried first and rejected when the schema is wrong', ()
     setInstalledProfile(null);
   }
   setInstalledProfile({ id: 'Nope' });
-  assert.equal(activeProfiles()[0].id, 'trf1-placeholder-unverified');
+  assert.equal(activeProfiles()[0].id, 'trf1-list-autos-digitais-unverified');
   setInstalledProfile(null);
 
   const missingLogin = baseProfile();
@@ -131,6 +132,7 @@ test('a stored profile is tried first and rejected when the schema is wrong', ()
     [missingLogin, 'Campo obrigatório: login.'],
     [baseProfile({ id: 'Bad' }), 'id inválido.'],
     [baseProfile({ unverified: 'yes' }), 'unverified precisa ser true ou false.'],
+    [baseProfile({ useDownloadAutos: 'yes' }), 'useDownloadAutos precisa ser true ou false.'],
     [baseProfile({ layoutMarker: ['div'] }), 'Seletor amplo demais em layoutMarker.'],
     [baseProfile({ layoutMarker: ['<img>'] }), 'Seletor inválido em layoutMarker.'],
     [baseProfile({ docRow: [] }), 'Lista de seletores inválida em docRow.'],
@@ -146,7 +148,7 @@ test('a stored profile is tried first and rejected when the schema is wrong', ()
 
 test('the panel names the missing role and offers calibration or the full PDF', () => {
   assert.equal(ERROR_COPY.docList, 'Não encontrei a lista de documentos.');
-  assert.match(CALIBRATION_HINT, /Modo calibração/);
+  assert.match(CALIBRATION_HINT, /Calibrar PJe/);
   assert.match(CALIBRATION_HINT, /PDF completo do processo \(Download dos autos\)/);
   for (const role of ROLES) {
     if (role === 'login') continue;
@@ -168,14 +170,16 @@ test('the panel names the missing role and offers calibration or the full PDF', 
 
   const html = readFileSync(new URL('../src/panel.html', import.meta.url), 'utf8');
   const js = readFileSync(new URL('../src/panel.js', import.meta.url), 'utf8');
-  assert.match(html, /Modo calibração/);
-  assert.match(html, /Baixar JSON de calibração/);
+  assert.match(html, /Calibrar PJe/);
+  assert.match(html, /Salvar calibração/);
+  assert.match(html, /envie este arquivo ao Grok/);
   assert.match(html, />Copiar</);
   assert.match(html, /Carregar perfil/);
   assert.match(html, /Não contém texto do processo/);
+  assert.match(html, /Estudar processo/);
   assert.match(js, /CALIBRATION_HINT/);
   assert.match(js, /ERROR_COPY/);
-  assert.match(js, /calibrationFilename/);
+  assert.match(js, /CALIBRATION_DOWNLOAD_NAME/);
   assert.match(js, /validateStoredProfile/);
   assert.doesNotMatch(js, /\.click\(/);
 });

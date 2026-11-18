@@ -1,0 +1,2 @@
+trial1 rev=995d919e6f3ea87f33bd6a730c47563bbf551ba2 cmd: TMPDIR="$CLAUDE_CODE_TMPDIR" node audits/hillclimb/voto-timing/harness.mjs --mode canned --out audits/hillclimb/voto-timing/runs/offline-proxy-20261114-canned-trial1/out
+trial1 exit=1

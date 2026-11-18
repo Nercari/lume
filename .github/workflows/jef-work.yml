@@ -1,0 +1,26 @@
+name: jef-work
+
+on:
+  pull_request:
+    paths:
+      - 'plugins/lume-jef/**'
+      - 'plugins/test/plugin.test.mjs'
+      - 'plugins/test/install.test.mjs'
+      - 'plugins/scripts/**'
+      - '.github/workflows/jef-work.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Build logo and zip
+        run: node plugins/scripts/build-zip.mjs
+      - name: Test
+        run: node --test plugins/test/plugin.test.mjs plugins/test/install.test.mjs

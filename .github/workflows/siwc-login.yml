@@ -1,0 +1,32 @@
+name: siwc-login
+
+on:
+  pull_request:
+    paths:
+      - 'extension/**'
+      - '.github/workflows/siwc-login.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'extension/**'
+      - '.github/workflows/siwc-login.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: extension
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install
+      - run: npm run build
+      # No --with-deps: apt-get on this runner times out on azure.archive.ubuntu.com, and the image already has the Chromium libraries.
+      - run: npx playwright-core install chromium
+      - run: node --test --test-reporter=spec test/siwc-auth.test.js test/siwc-session.test.js test/siwc-no-paid-fallback.test.js test/e2e-siwc.test.js

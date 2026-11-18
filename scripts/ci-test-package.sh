@@ -72,6 +72,10 @@ pushd "$dir" >/dev/null
 if jq -e '.scripts.build' package.json >/dev/null 2>&1; then
   npm run build
 fi
+if [[ "$pkg" == "extension" ]]; then
+  # No --with-deps: apt-get on this runner times out on azure.archive.ubuntu.com, and the image already has the Chromium libraries.
+  npx playwright-core install chromium
+fi
 npm test
 popd >/dev/null
 

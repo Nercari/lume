@@ -1,0 +1,16 @@
+import time: self [us] | cumulative | imported package
+import time:       170 |        170 |   _io
+import time:        38 |         38 |   marshal
+import time:       338 |        338 |   posix
+import time:       622 |       1167 | _frozen_importlib_external
+import time:        85 |         85 |   time
+import time:       213 |        298 | zipimport
+import time:        46 |         46 |     _codecs
+import time:       566 |        611 |   codecs
+import time:       393 |        393 |   encodings.aliases
+import time:       480 |       1483 | encodings
+import time:       205 |        205 | encodings.utf_8
+import time:       106 |        106 | _signal
+import time:        27 |         27 |   _types
+import time:       170 |        197 | types
+import time:        30 |         30 | _json

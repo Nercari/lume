@@ -1,0 +1,32 @@
+name: parser-every-doc
+
+on:
+  pull_request:
+    paths:
+      - 'manual/**'
+      - '.github/workflows/parser-every-doc.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'manual/**'
+      - '.github/workflows/parser-every-doc.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: manual
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci
+      # No --with-deps: apt-get on this runner times out on azure.archive.ubuntu.com, and the image already has the Chromium libraries.
+      - run: npx playwright install chromium
+      - run: npm run build
+      - run: npm test

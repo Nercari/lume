@@ -62,7 +62,7 @@ Errors from the controller do not carry case ids, PJe case numbers, document ids
 - Tickets keep the draft and editor text in the local case store only. Tickets are not diagnostics.
 - Party names never go into a diagnostic. The controller does not copy the panel `ref`, the error text of a failed panel check, or any research data into an error.
 
-The #10 research query sanitizer (`source-panel/src/research.js`) is outside this module. It removes the case id and a non-CNJ case number only when the caller passes them in `caseTerms`.
+The #10 research query sanitizer (`source-panel/src/research.js`) is outside this module. It requires the case id and the open case number and removes both, so neither leaves the machine.
 
 ## Assumptions
 

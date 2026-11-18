@@ -2,14 +2,16 @@
 // The offline PDF page is the manual package's dist, copied under dist/manual/.
 import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { dirname, join, relative } from 'node:path';
+import { stageMethod } from './stage-method.mjs';
 
 const root = new URL('..', import.meta.url).pathname;
 const src = join(root, 'src');
 const dist = join(root, 'dist');
 const manualDist = join(root, '..', 'manual', 'dist');
 const MANUAL_FILES = ['lume-pdf.html', 'lume-pdf.js', 'pdf.worker.mjs'];
-const INLINE = ['sanitize.js', 'calibrate.js', 'profile.js', 'core.js'];
+const INLINE = ['page-trigger.js', 'sanitize.js', 'url-rules.js', 'timeline.js', 'chunks.js', 'calibrate.js', 'profile.js', 'core.js', 'collect.js'];
 // Run from the extension directory when manual/dist is not already built.
 const MANUAL_BUILD = 'npm --prefix ../manual ci && npm --prefix ../manual run build';
 
@@ -63,7 +65,45 @@ const bundled = [...INLINE.map((name) => toClassic(readFileSync(join(src, name),
 writeFileSync(join(dist, 'content.js'), `(() => {\n'use strict';\n${bundled.join('\n')}\n})();\n`);
 
 cpSync(manualDist, join(dist, 'manual'), { recursive: true });
+await stageMethod(join(dist, 'metodo'));
 if (!manualReady(join(dist, 'manual'))) throw new Error('failed to copy manual/dist into dist/manual');
+
+const requireManual = createRequire(join(root, '../manual/package.json'));
+const esbuild = requireManual('esbuild');
+await esbuild.build({
+  entryPoints: [join(src, 'study.js')],
+  bundle: true,
+  format: 'esm',
+  outfile: join(dist, 'study.js'),
+  platform: 'browser',
+  target: ['es2022'],
+  legalComments: 'none',
+  logLevel: 'warning',
+  plugins: [
+    {
+      name: 'no-ocr-cdn',
+      setup(build) {
+        build.onLoad({ filter: /node_modules\/tesseract\.js\/.*\.js$/ }, (args) => {
+          const source = readFileSync(args.path, 'utf8');
+          if (!source.includes('https://cdn.jsdelivr.net/npm/')) return null;
+          return { contents: source.replaceAll('https://cdn.jsdelivr.net/npm/', './'), loader: 'js' };
+        });
+      },
+    },
+  ],
+});
+function dropRemoteOcrUrls(file) {
+  const text = readFileSync(file, 'utf8');
+  const next = text
+    .replaceAll('https://cdn.jsdelivr.net/npm/', './')
+    .replaceAll('https://ocr.invalid/npm/', './');
+  if (next !== text) writeFileSync(file, next);
+}
+for (const rel of ['study.js', 'manual/lume-pdf.js', 'manual/ocr/worker.min.js']) dropRemoteOcrUrls(join(dist, rel));
+const bundledStudy = readFileSync(join(dist, 'study.js'), 'utf8');
+if (/https?:\/\/[^'"\s]*?(?:jsdelivr\.net|unpkg\.com|tesseract\.js@|tesseract\.js-core@|traineddata)/i.test(bundledStudy)) {
+  throw new Error('study.js still points a tesseract asset at a remote URL');
+}
 
 const m = JSON.parse(readFileSync(join(dist, 'manifest.json'), 'utf8'));
 const refs = [m.background.service_worker, m.side_panel.default_path, ...m.content_scripts.flatMap((c) => c.js)];

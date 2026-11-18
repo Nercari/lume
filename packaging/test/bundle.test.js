@@ -12,7 +12,25 @@ const packaging = join(dirname(fileURLToPath(import.meta.url)), '..');
 const repo = join(packaging, '..');
 const bundleScript = join(packaging, 'scripts/bundle.mjs');
 
-const EXPECTED_TOP = ['LICENSES', 'chatgpt', 'extension', 'guias', 'it', 'windows'];
+const EXPECTED_TOP = ['LICENSES', 'chatgpt', 'extension', 'guias', 'it', 'plugin', 'windows'];
+
+const PLUGIN_PATHS = [
+  'plugin/lume-jef/instalar/instalar-plugin.cmd',
+  'plugin/lume-jef/instalar/instalar-plugin.ps1',
+  'plugin/lume-jef/plugin.json',
+  'plugin/lume-jef-0.2.0.zip',
+  'plugin/lume-jef-projeto/COLE-NO-PROJETO.md',
+];
+
+function isPrivateBundlePath(rel) {
+  const norm = rel.replace(/\\/g, '/');
+  return (
+    /(?:^|\/)(private|lume-private)(?:\/|$)/.test(norm) ||
+    /(?:^|\/)private-eval[^/]*(?:\/|$)/i.test(norm) ||
+    /(?:^|\/)lume-calibracao(?:-[^/]+)?\.json$/i.test(norm) ||
+    norm.toLowerCase().endsWith('.pdf')
+  );
+}
 
 function walkFiles(dir, base = '') {
   const out = [];
@@ -30,6 +48,7 @@ test('bundle guards refuse pdf, private paths, calibration exports, runtime, and
   assert.throws(() => assertBundlePathAllowed('docs/segredo.pdf', 1), /refused blocked/);
   assert.throws(() => assertBundlePathAllowed('private/x.txt', 1), /refused blocked/);
   assert.throws(() => assertBundlePathAllowed('lume-calibracao-2026.json', 1), /refused blocked/);
+  assert.throws(() => assertBundlePathAllowed('lume-calibracao.json', 1), /refused blocked/);
   assert.throws(() => assertBundlePathAllowed('eval/private-eval-run/out.json', 1), /refused blocked/);
   assert.throws(() => assertBundlePathAllowed('runtime/node/node.exe', 1), /refused blocked/);
   assert.throws(() => assertBundlePathAllowed('big.bin', MAX_BUNDLE_BYTES + 1), /50 MB/);
@@ -66,6 +85,10 @@ test('bundle.mjs assembles Windows install tree with manifest and without pdf or
   assert.ok(files.some((f) => f === 'chatgpt/PROJETO-LUME.md'));
   assert.ok(files.some((f) => f === 'chatgpt/LEIA-ME.md'));
   assert.ok(files.some((f) => f.startsWith('chatgpt/plugin/')));
+  for (const required of PLUGIN_PATHS) {
+    assert.ok(files.includes(required), `bundle missing ${required}`);
+  }
+  assert.ok(!files.some((f) => isPrivateBundlePath(f)), 'bundle contains a private path');
   assert.ok(!files.some((f) => f.startsWith('comp' + 'anion/')));
   assert.ok(!files.some((f) => f.toLowerCase().endsWith('.pdf')));
 

@@ -1,0 +1,21 @@
+node:fs:3028
+    return binding.writeFileUtf8(
+                   ^
+
+Error: Unknown system error -122: Unknown system error -122, write
+    at writeFileSync (node:fs:3028:20)
+    at buildPack (file:///home/nercari/.t3/worktrees/lume/grok-integrate-pedro-pl-12f186c8dd7e22e2/audits/hillclimb/voto-timing/harness.mjs:96:3)
+    at file:///home/nercari/.t3/worktrees/lume/grok-integrate-pedro-pl-12f186c8dd7e22e2/audits/hillclimb/voto-timing/harness.mjs:202:23
+    at seg (file:///home/nercari/.t3/worktrees/lume/grok-integrate-pedro-pl-12f186c8dd7e22e2/audits/hillclimb/voto-timing/harness.mjs:193:70)
+    at run (file:///home/nercari/.t3/worktrees/lume/grok-integrate-pedro-pl-12f186c8dd7e22e2/audits/hillclimb/voto-timing/harness.mjs:202:3)
+    at file:///home/nercari/.t3/worktrees/lume/grok-integrate-pedro-pl-12f186c8dd7e22e2/audits/hillclimb/voto-timing/harness.mjs:245:18
+    at #evaluateSync (node:internal/modules/esm/module_job:702:24)
+    at ModuleJobSync.runSync (node:internal/modules/esm/module_job:717:43)
+    at node:internal/modules/esm/loader:383:11
+    at TracingChannel.traceSync (node:diagnostics_channel:557:14) {
+  errno: -122,
+  code: 'Unknown system error -122',
+  syscall: 'write'
+}
+
+Node.js v26.12.0

@@ -1,7 +1,8 @@
 // Legal research (#10). The research client is injected (the approved data route from #3); this
-// module makes no network call. Callers must pass known party names and any other known sensitive
-// terms: nothing here discovers names, and free-text addresses are not stripped. Identifier shapes
-// are removed. A case id, CPF, or CNPJ that is still present after that is not sent.
+// module makes no network call. The case id and the open case number are required: a query without
+// them is refused. Callers must also pass known party names and any other known sensitive terms:
+// nothing here discovers names, and free-text addresses are not stripped. Identifier shapes are
+// removed. A case id, CPF, or CNPJ that is still present after that is not sent.
 
 export class QueryLeakError extends Error {}
 
@@ -29,12 +30,25 @@ const RESIDUAL = [
 const fold = (s) => String(s).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-// Case terms: document IDs from the #6 ledger plus the names the caller passes. The ledger has no
-// party names. The caller must pass every known party name and any other known sensitive term
-// (a place, an address). This module does not infer them and does not strip free-text addresses.
-export function caseTermsOf(L, extra = []) {
+// The case id and the open case number (any format, CNJ or not) are required before any query.
+// Without them a query cannot be minimized, so their absence is a refusal, not a warning.
+function identityTerms({ caseId, caseNumber }) {
+  const terms = [];
+  for (const [name, value] of [['case id', caseId], ['open case number', caseNumber]]) {
+    if (typeof value !== 'string' || !value.trim()) throw new QueryLeakError(`a research query needs the ${name}`);
+    terms.push(value.trim());
+  }
+  return terms;
+}
+
+// Case terms: document IDs from the #6 ledger, the case identity, and the names the caller passes.
+// The ledger has no party names. The caller must pass every known party name and any other known
+// sensitive term (a place, an address). This module does not infer them and does not strip
+// free-text addresses.
+export function caseTermsOf(L, { caseId, caseNumber, extra = [] } = {}) {
   const ids = Object.values(L.passages ?? {}).map((p) => p.docId);
-  return [...new Set([...ids, ...extra].map(String).filter((t) => t.trim().length > 1))];
+  const named = [...ids, ...extra].map(String).filter((t) => t.trim().length > 1);
+  return [...new Set([...named, ...identityTerms({ caseId, caseNumber })])];
 }
 
 // Accent- and case-insensitive term match on word edges.
@@ -82,9 +96,11 @@ export function currencyOf(r, now, maxAgeDays) {
 // Runs one research request. client.search(query) -> [{ title, url, official, text, status, asOf }].
 // Each result becomes a record with source, checked text, currency and relevance. A record is
 // 'unverified' until a person confirms relevance; the client's ranking is not relevance.
-export async function research(client, { question, issue, caseTerms }, { now = Date.now(), maxAgeDays = 30, log = [] } = {}) {
-  const { query, removed } = minimizeQuery(question, caseTerms);
-  const left = leaks(query, caseTerms);
+export async function research(client, { question, issue, caseTerms, caseId, caseNumber }, { now = Date.now(), maxAgeDays = 30, log = [] } = {}) {
+  if (!Array.isArray(caseTerms)) throw new TypeError('caseTerms is required');
+  const terms = [...identityTerms({ caseId, caseNumber }), ...caseTerms];
+  const { query, removed } = minimizeQuery(question, terms);
+  const left = leaks(query, terms);
   if (left.length) throw new QueryLeakError(`query still contains: ${[...new Set(left)].join(', ')}`);
   if (!query) throw new QueryLeakError('nothing left to search after minimization');
   log.push({ query, removed, at: now }); // diagnostics: what left the case, never the removed values

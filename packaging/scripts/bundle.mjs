@@ -12,8 +12,9 @@ import {
 } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { buildZip, pluginRoot, projectDir } from '../../plugins/scripts/build-zip.mjs';
 import { assertBundlePathAllowed } from './bundle-guards.mjs';
 import { archiveBundleDir } from './bundle-zip.mjs';
 
@@ -21,7 +22,15 @@ const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const PACKAGING = join(SCRIPT_DIR, '..');
 const REPO = join(PACKAGING, '..');
 
-const BUNDLE_TOP_LEVEL = Object.freeze(['extension', 'chatgpt', 'guias', 'windows', 'it', 'LICENSES']);
+const BUNDLE_TOP_LEVEL = Object.freeze([
+  'extension',
+  'chatgpt',
+  'guias',
+  'windows',
+  'it',
+  'LICENSES',
+  'plugin',
+]);
 
 function parseArgs(argv) {
   const opts = { out: null, zip: null };
@@ -75,6 +84,14 @@ function copyTree(srcRoot, destRoot, manifestLines, manifestPrefix = '') {
   walk(srcRoot, destRoot, '');
 }
 
+function recordFile(dest, rel, bytes, manifestLines) {
+  mkdirSync(dirname(dest), { recursive: true });
+  writeFileSync(dest, bytes);
+  assertAllowedCopy(rel, bytes.length);
+  const hash = createHash('sha256').update(bytes).digest('hex');
+  manifestLines.push(`${rel}\t${hash}\t${bytes.length}`);
+}
+
 function buildPinHeader(outDir) {
   let commit = 'unknown';
   try {
@@ -95,7 +112,7 @@ function buildPinHeader(outDir) {
   ];
 }
 
-function main() {
+async function main() {
   const { out, zip } = parseArgs(process.argv);
   if (existsSync(out)) rmSync(out, { recursive: true, force: true });
   mkdirSync(out, { recursive: true });
@@ -103,6 +120,12 @@ function main() {
   const manifestLines = [];
 
   copyTree(ensureExtensionDist(), join(out, 'extension'), manifestLines, 'extension');
+
+  const pluginBuild = await buildZip();
+  copyTree(pluginRoot, join(out, 'plugin', 'lume-jef'), manifestLines, 'plugin/lume-jef');
+  const zipName = basename(pluginBuild.zipPath);
+  recordFile(join(out, 'plugin', zipName), `plugin/${zipName}`, pluginBuild.bytes, manifestLines);
+  copyTree(projectDir, join(out, 'plugin', 'lume-jef-projeto'), manifestLines, 'plugin/lume-jef-projeto');
 
   const chatgptRoot = join(REPO, 'chatgpt');
   if (!existsSync(chatgptRoot)) throw new Error('missing chatgpt/');
@@ -143,4 +166,7 @@ function main() {
   }
 }
 
-main();
+main().catch((error) => {
+  console.error(error instanceof Error ? error.stack : error);
+  process.exit(1);
+});

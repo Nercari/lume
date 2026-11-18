@@ -1,32 +1,31 @@
 # Lume — leia primeiro
 
-Pacote de instalacao offline para servidores da Justica Federal (PJe TRF1/SJDF + ChatGPT manual).
+Pacote do Lume para PJe (TRF1/SJDF) + ChatGPT. O passo a passo curto está em `guias\COMECE-AQUI.txt`.
 
 ## O que vem neste pacote
 
-- **extension/** — extensao Chrome (carregar sem compactacao).
-- **extension/manual/** — pagina do pacote do caso (aberta pelo painel **Gerar pacote do caso**).
-- **chatgpt/** — `PROJETO-LUME.md` (instrucoes do Projeto ChatGPT) e `LEIA-ME.md`.
-- **guias/** — guias em portugues e ingles para TI e usuarios.
+- **extension/** — extensão do Chrome (carregar sem compactação).
+- **plugin/lume-jef/** — plugin "Lume JEF", com `instalar\instalar-plugin.cmd` e `instalar-plugin.ps1`.
+- **plugin/lume-jef-0.2.0.zip** — o mesmo plugin compactado.
+- **plugin/lume-jef-projeto/** — fallback de Projeto na web (`COLE-NO-PROJETO.md`).
+- **guias/** — guias para usuários e TI.
 
-## Instalacao rapida (Windows)
+## Instalar e usar
 
-1. Descompacte o pacote `lume-install` se recebeu um ZIP.
-2. Execute `windows\instalar.ps1` (ou `instalar.bat`).
-3. Chrome → `chrome://extensions` → Modo do desenvolvedor → Carregar sem compactacao → pasta `extension` dentro de `%LOCALAPPDATA%\Lume`.
-4. ChatGPT → Projetos → novo projeto **Lume** → cole `chatgpt\PROJETO-LUME.md` nas Instrucoes.
+Descompacte o zip numa pasta fixa, por exemplo `Documentos\Lume` (botão direito → Extrair tudo). Não apague essa pasta depois.
 
-## Uso
+1. Instale a extensão: no Chrome, carregue a pasta extension (chrome://extensions > Modo do desenvolvedor > Carregar sem compactação). O plugin é opcional: dois cliques em plugin\lume-jef\instalar\instalar-plugin.cmd, reinicie o app ChatGPT e instale "Lume JEF" em Plugins > Lume.
+2. No painel do Lume, clique "Entrar com ChatGPT" uma vez e aprove.
+3. No processo do PJe, clique "Lume: Estudar processo" e depois "Gerar relatório e minuta".
 
-| Etapa | Acao |
-|-------|------|
-| PJe | Abra o processo logado no Chrome. |
-| Painel Lume | **Gerar pacote do caso** abre a pagina manual; baixe o PDF no PJe se ainda nao tiver. |
-| ChatGPT | Cole o `.md` no projeto Lume e peça minuta ou analise. |
+Plano B: sem entrar ou sem cota, use a aba do caso no painel lateral do ChatGPT com o plugin Lume JEF.
+Sem o app desktop: use a pasta plugin\lume-jef-projeto num Projeto (instruções em COLE-NO-PROJETO.md).
+Se o painel não achar a lista, use Calibrar PJe, salve lume-calibracao.json e envie o arquivo ao mantenedor.
+Nada além do ChatGPT sai do computador.
 
 ## Desinstalar
 
 - **Windows:** `windows\desinstalar.bat` remove `%LOCALAPPDATA%\Lume`.
-- Remova a extensao em `chrome://extensions`.
+- Remova a extensão em `chrome://extensions` e apague a pasta onde descompactou o zip.
 
-Nao cole tokens nem chaves de API. O Lume nao oferece fallback pago.
+Não cole tokens nem chaves de API. O Lume não oferece fallback pago.

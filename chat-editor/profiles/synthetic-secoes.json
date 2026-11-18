@@ -1,0 +1,38 @@
+{
+  "id": "synthetic-secoes",
+  "label": "Sintético B: 'Ementa:' em caixa baixa, seções RELATÓRIO/FUNDAMENTAÇÃO/DISPOSITIVO, 'CONHEÇO ... NEGO-LHE PROVIMENTO', 'É o voto.'",
+  "instructions": [
+    "Primeira linha: 'Ementa:' seguida de uma frase em caixa baixa (só a inicial maiúscula) que resume a matéria e termina com o resultado ('Recurso desprovido.', 'Recurso provido.' ou 'Recurso parcialmente provido.').",
+    "Depois, três seções com o título sozinho na linha, em maiúsculas: RELATÓRIO, FUNDAMENTAÇÃO, DISPOSITIVO.",
+    "Parágrafos sem numeração. Sem listas.",
+    "RELATÓRIO começa com 'Recurso inominado interposto por ...' e resume a sentença e as razões do recorrente ('Sustenta o recorrente que ...').",
+    "FUNDAMENTAÇÃO: a prova, citando os documentos, e a análise.",
+    "DISPOSITIVO: 'CONHEÇO do recurso e NEGO-LHE PROVIMENTO.' / 'CONHEÇO do recurso e DOU-LHE PROVIMENTO.' / 'CONHEÇO do recurso e DOU-LHE PARCIAL PROVIMENTO.' Em seguida, se desprovido: 'Honorários advocatícios pelo recorrente vencido, em 10% do valor da causa, observada a gratuidade.'; se provido ou parcialmente provido: 'Incabíveis honorários advocatícios.'",
+    "Termine com a linha 'É o voto.' Não use 'Trata-se', 'Recurso conhecido e' nem 'Condeno'."
+  ],
+  "examples": [
+    { "text": "Ementa: Previdenciário. Aposentadoria por idade urbana. Carência não cumprida. Recurso desprovido.\n\nRELATÓRIO\n\nRecurso inominado interposto pela parte autora contra sentença que julgou improcedente o pedido de aposentadoria por idade, por falta de carência. Sustenta o recorrente que vínculos anotados em carteira de trabalho devem ser computados.\n\nFUNDAMENTAÇÃO\n\nA carteira de trabalho juntada (Id 3333, fl. 5) registra vínculo de 1990 a 1992 com rasuras na data de saída, sem outro elemento que o confirme. O CNIS apresenta 150 contribuições, abaixo das 180 exigidas.\n\nSem prova idônea do vínculo controvertido, a carência não foi cumprida.\n\nDISPOSITIVO\n\nCONHEÇO do recurso e NEGO-LHE PROVIMENTO.\n\nHonorários advocatícios pelo recorrente vencido, em 10% do valor da causa, observada a gratuidade.\n\nÉ o voto." },
+    { "text": "Ementa: Previdenciário. Auxílio por incapacidade temporária. Data de início fixada pela perícia. Recurso provido.\n\nRELATÓRIO\n\nRecurso inominado interposto pela parte autora contra sentença que fixou o início do benefício na data da perícia. Sustenta o recorrente que a incapacidade já existia na data do requerimento.\n\nFUNDAMENTAÇÃO\n\nO laudo de 12/08/2025 fixou o início da incapacidade em 01/03/2025 (Id 4444, fl. 3), antes do requerimento de 20/03/2025.\n\nSe a incapacidade precede o requerimento, o benefício é devido desde então.\n\nDISPOSITIVO\n\nCONHEÇO do recurso e DOU-LHE PROVIMENTO para fixar o início do benefício em 20/03/2025.\n\nIncabíveis honorários advocatícios.\n\nÉ o voto." }
+  ],
+  "form": {
+    "ementa": "labeled",
+    "ementaLabel": "Ementa:",
+    "ementaEndsWithResult": true,
+    "body": "prose",
+    "headings": ["RELATÓRIO", "FUNDAMENTAÇÃO", "DISPOSITIVO"],
+    "opening": "^Recurso inominado interposto",
+    "args": "\\b(sustenta|alega|argumenta|defende)",
+    "closing": {
+      "desprovido": "CONHEÇO do recurso e NEGO-LHE PROVIMENTO",
+      "provido": "CONHEÇO do recurso e DOU-LHE PROVIMENTO",
+      "parcial": "CONHEÇO do recurso e DOU-LHE PARCIAL PROVIMENTO"
+    },
+    "fees": {
+      "desprovido": "Honorários advocatícios pelo recorrente vencido",
+      "provido": "Incabíveis honorários",
+      "parcial": "Incabíveis honorários"
+    },
+    "endFormula": "^É o voto\\.?$",
+    "forbid": ["Trata-se", "Recurso (\\S+ ){0,4}conhecido e", "Condeno"]
+  }
+}

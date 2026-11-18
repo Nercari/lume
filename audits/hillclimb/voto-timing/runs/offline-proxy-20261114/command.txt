@@ -1,0 +1,3 @@
+rev=995d919e6f3ea87f33bd6a730c47563bbf551ba2 node=v26.12.0
+cmd: node audits/hillclimb/voto-timing/harness.mjs --mode canned --out audits/hillclimb/voto-timing/runs/offline-proxy-20261114/canned
+exit=1

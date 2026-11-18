@@ -1,0 +1,28 @@
+name: bundle-plugin
+
+on:
+  pull_request:
+    paths:
+      - 'packaging/**'
+      - 'plugins/scripts/build-zip.mjs'
+      - '.github/workflows/bundle-plugin.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packaging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Build extension (bundle input)
+        run: npm --prefix extension run build
+        working-directory: ${{ github.workspace }}
+      - run: npm run build
+      - run: npm test

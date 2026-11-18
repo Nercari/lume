@@ -1,0 +1,1 @@
+{"jobCount":17,"regexTestCallsTotal":3123,"medianUsPerPass":346.07,"rounds":[356.15,347.35,346.66,346.07,342.98,339.32,342.31],"failingJobs":10}

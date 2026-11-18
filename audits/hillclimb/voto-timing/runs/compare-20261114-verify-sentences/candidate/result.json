@@ -1,0 +1,82 @@
+{
+  "label": "SYNTHETIC PROXY. Engineering proxy, not real upload-to-voto time and not human edit reduction. No model call.",
+  "module": "audits/hillclimb/voto-timing/harness.mjs",
+  "node": "v26.12.0",
+  "jobCount": 17,
+  "regexTestCallsTotal": 2735,
+  "regexTestCallsPerJob": {
+    "canned voto": 167,
+    "P3 precedent grants partially": 171,
+    "own decision cites precedent": 167,
+    "own denial after attributed opening": 173,
+    "own denial before attributed tail": 173,
+    "quoted precedent in own paragraph": 167,
+    "negated denial": 163,
+    "infinitive only": 168,
+    "precedent deve-se negar": 177,
+    "own denial then grant infinitive": 190,
+    "own denial then partial": 181,
+    "grant": 167,
+    "partial grant": 167,
+    "no dispositive": 169,
+    "ementa partial, body denies": 167,
+    "semicolon": 167,
+    "canned relatorio": 1
+  },
+  "usPerPassAllJobs": {
+    "rounds": [
+      285.55,
+      272.25,
+      268.47,
+      263.16,
+      261.02,
+      261.66,
+      259.23
+    ],
+    "median": 263.16,
+    "iterationsPerRound": 3000
+  },
+  "failuresPerJob": {
+    "canned voto": [],
+    "P3 precedent grants partially": [],
+    "own decision cites precedent": [],
+    "own denial after attributed opening": [],
+    "own denial before attributed tail": [],
+    "quoted precedent in own paragraph": [],
+    "negated denial": [
+      "dispositive absent, ambiguous or not DESPROVIMENTO (found: none)",
+      "an outcome phrase in the body contradicts or negates the oriented outcome"
+    ],
+    "infinitive only": [
+      "dispositive absent, ambiguous or not DESPROVIMENTO (found: none)"
+    ],
+    "precedent deve-se negar": [
+      "dispositive absent, ambiguous or not DESPROVIMENTO (found: none)"
+    ],
+    "own denial then grant infinitive": [
+      "an outcome phrase in the body contradicts or negates the oriented outcome"
+    ],
+    "own denial then partial": [
+      "dispositive absent, ambiguous or not DESPROVIMENTO (found: PARCIAL, DESPROVIMENTO)",
+      "an outcome phrase in the body contradicts or negates the oriented outcome"
+    ],
+    "grant": [
+      "dispositive absent, ambiguous or not DESPROVIMENTO (found: PROVIMENTO)",
+      "an outcome phrase in the body contradicts or negates the oriented outcome"
+    ],
+    "partial grant": [
+      "dispositive absent, ambiguous or not DESPROVIMENTO (found: PARCIAL)",
+      "an outcome phrase in the body contradicts or negates the oriented outcome"
+    ],
+    "no dispositive": [
+      "dispositive absent, ambiguous or not DESPROVIMENTO (found: none)"
+    ],
+    "ementa partial, body denies": [
+      "ementa outcome contradicts the oriented outcome"
+    ],
+    "semicolon": [
+      "forbidden format: heading, list or semicolon"
+    ],
+    "canned relatorio": []
+  }
+}
