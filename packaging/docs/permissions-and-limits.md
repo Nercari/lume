@@ -14,7 +14,7 @@ Aligned with `extension/`, `chatgpt/`, and `case-store/` behavior as of the pinn
 ## ChatGPT
 
 - Lume does **not** offer a paid API key. It does not silently switch the user to metered API billing.
-- The user works in **their own ChatGPT plan** (Project instructions from `PROJETO-LUME.md`).
+- The user works in **their own ChatGPT plan** (own Project instructions plus `LUME-ADENDO.md`).
 - Lume never receives ChatGPT tokens; nothing is stored in the extension for model access.
 
 ## Chrome extension

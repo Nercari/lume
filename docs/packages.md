@@ -8,7 +8,7 @@ Defines the **permitted real-case route** without putting case content on GitHub
 
 ## chatgpt (#5)
 
-Ships **ChatGPT Project instructions** (`PROJETO-LUME.md`), a short setup guide (`LEIA-ME.md`), and an optional **Agent Plugin** (`plugin/` with `skills/lume/`). The user pastes the local **pacote do caso** from the extension; citations use `[Id X, fl. Y]`. No Lume API, no paid fallback, no native host. See [`chatgpt/LEIA-ME.md`](../chatgpt/LEIA-ME.md).
+Ships a generic **adapter addendum** (`LUME-ADENDO.md`, no drafting method), a short setup guide (`LEIA-ME.md`), and an optional **Agent Plugin** (`plugin/` with `skills/lume/`). The user pastes the local **pacote do caso** from the extension; passages are tagged `[ID X, pág. Y]`. No Lume API, no paid fallback, no native host. See [`chatgpt/LEIA-ME.md`](../chatgpt/LEIA-ME.md).
 
 ## extension (#4)
 

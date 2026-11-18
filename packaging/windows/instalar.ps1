@@ -19,5 +19,5 @@ Write-Host '2. Ative "Modo do desenvolvedor"'
 Write-Host "3. Carregue sem compactacao: $InstallRoot\extension"
 Write-Host "4. Confira se o ID da extensao e $ExtensionId (quando empacotado com a chave fixa)."
 Write-Host ''
-Write-Host 'ChatGPT: copie chatgpt\PROJETO-LUME.md para um Projeto Lume (veja chatgpt\LEIA-ME.md).'
+Write-Host 'ChatGPT: adicione chatgpt\LUME-ADENDO.md ao seu Projeto do ChatGPT (veja chatgpt\LEIA-ME.md).'
 Write-Host ''

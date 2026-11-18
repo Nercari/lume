@@ -9,7 +9,7 @@ Product contract, delivery order, and acceptance gates live in [issue #1](https:
 - **Node.js** `>= 22` (repo packages use `node:test`; no root `package.json`).
 - Each package is independent: `cd <package> && npm install && npm test`. Several packages have no runtime dependencies; `npm run build` where `package.json` defines it (for example the MV3 extension).
 - **Chrome (extension):** from `extension/`, run `npm run build` and load `extension/dist/` as an unpacked extension. PJe selectors are placeholders until a permitted real case calibrates them ([#4](https://github.com/Nercari/lume/issues/4), [#3](https://github.com/Nercari/lume/issues/3)).
-- **ChatGPT (manual):** copy `chatgpt/PROJETO-LUME.md` into a ChatGPT Project once; generate the case package from the extension panel (**Gerar pacote do caso**). See `chatgpt/LEIA-ME.md` ([#5](https://github.com/Nercari/lume/issues/5)).
+- **ChatGPT (manual):** keep your own Project instructions and add `chatgpt/LUME-ADENDO.md` to the Project once; generate the case package from the extension panel (**Gerar pacote do caso**). See `chatgpt/LEIA-ME.md` ([#5](https://github.com/Nercari/lume/issues/5)).
 
 Do not commit real case data, party names, case numbers, credentials, or client IDs.
 

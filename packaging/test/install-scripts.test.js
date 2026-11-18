@@ -18,7 +18,7 @@ test('Windows install scripts stay user-level (HKCU) and offline', () => {
   assert.match(instalarBat, /ExecutionPolicy Bypass/i);
   const instalar = readPs1('instalar.ps1');
   assert.match(instalar, /odjfiioakpihgkikmjadmohgckkhkjhi/);
-  assert.match(instalar, /PROJETO-LUME/);
+  assert.match(instalar, /LUME-ADENDO/);
   const nm = 'Native' + 'Messaging';
   assert.ok(!instalar.includes(nm), 'installer must not register a native host');
   const desinstalar = readPs1('desinstalar.ps1');

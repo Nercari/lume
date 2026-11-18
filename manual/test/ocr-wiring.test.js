@@ -72,9 +72,9 @@ test('segmentAutos uses the session for a blank page and keeps almost-nothing OC
   assert.equal(read.pages[0].method, 'ocr');
   assert.match(read.pages[0].text, /LAUDO/);
   const pack = buildCasePack(read);
-  assert.match(pack, /\[Id pdfp1, fl\. 1\]/);
+  assert.match(pack, /\[ID pdfp1, pág\. 1\]/);
   assert.match(pack, /\(texto por OCR, pode conter erros\)/);
-  assert.match(pack, /\| sim \|/);
+  assert.match(pack, /\| OCR \|/);
 
   const thin = await segmentAutos(makePdf({ pages: [[]] }), {
     ocr: async () => ({ text: 'x' }),

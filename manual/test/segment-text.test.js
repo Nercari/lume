@@ -22,7 +22,7 @@ test('footer_num_pag keeps Num. and Pág. and groups pages of the same id', () =
   assert.deepEqual(result.pages.filter((page) => page.docId === '1001').map((page) => page.pageInDoc), [1, 2]);
   assert.equal(result.pages.find((page) => page.docId === '1002').pageInDoc, 1);
   assert.equal(result.passages.every((passage) => passage.pdfPage == null), true);
-  assert.match(buildCasePack(result), /\[Id 1001, fl\. 2\]/);
+  assert.match(buildCasePack(result), /\[ID 1001, pág\. 2\]/);
 });
 
 test('documents stay in source order when later ids are smaller', () => {
@@ -130,7 +130,7 @@ test('placeholder bodies become imagem/sem texto gaps and stay out of the pack t
   const pack = buildCasePack(result);
   assert.match(pack, /imagem\/sem texto/);
   assert.doesNotMatch(pack, /\[imagem\]/);
-  assert.match(pack, /\[Id 1003, fl\. 1\]/);
+  assert.match(pack, /\[ID 1003, pág\. 1\]/);
   assert.match(pack, new RegExp(BODY));
 });
 

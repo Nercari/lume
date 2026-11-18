@@ -191,9 +191,9 @@ test('Página N de M sets fl. N and keeps the same-line text', () => {
   assert.equal(pages[1].text, '');
   assert.equal(pages[2].text, 'texto da pagina tres');
   const pack = buildCasePack(result);
-  assert.match(pack, /\[Id 100000001, fl\. 1\]/);
-  assert.match(pack, /\[Id 100000001, fl\. 3\]/);
-  assert.doesNotMatch(pack, /\[Id 100000001, fl\. 2\]/);
+  assert.match(pack, /\[ID 100000001, pág\. 1\]/);
+  assert.match(pack, /\[ID 100000001, pág\. 3\]/);
+  assert.doesNotMatch(pack, /\[ID 100000001, pág\. 2\]/);
 });
 
 test('NUL stripping, UTF-16LE and CRLF still index the header', () => {

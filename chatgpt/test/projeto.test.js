@@ -1,11 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const projeto = readFileSync(join(root, 'PROJETO-LUME.md'), 'utf8');
+const adendo = readFileSync(join(root, 'LUME-ADENDO.md'), 'utf8');
 const leia = readFileSync(join(root, 'LEIA-ME.md'), 'utf8');
 const templatesDir = join(root, 'plugin/skills/lume/templates');
 
@@ -19,39 +19,75 @@ const FORBIDDEN = [
   /\bapenas\s+processos\s+permitidos\b/i,
 ];
 
-test('PROJETO-LUME.md fits ChatGPT project instructions limit', () => {
-  const len = Buffer.byteLength(projeto, 'utf8');
-  assert.ok(len < 7500, `length ${len} must be under 7500 bytes`);
-  assert.ok(len > 1500, 'instructions should be substantive');
+const VOTO_METHOD_MARKERS = [
+  /minuta de voto/i,
+  /JEF-V1/i,
+  /SENTENÇA MANTIDA/i,
+  /RECURSO DESPROVIDO/i,
+  /EMENTA em uma linha/i,
+  /estilo-voto-/i,
+  /ESTILO-VOTO/i,
+];
+
+test('LUME-ADENDO.md fits length limit', () => {
+  const len = Buffer.byteLength(adendo, 'utf8');
+  assert.ok(len <= 2500, `length ${len} must be at most 2500 bytes`);
+  assert.ok(len > 400, 'adendo should be substantive');
 });
 
-test('citation format and piece templates are present', () => {
-  assert.match(projeto, /\[Id\s+<docId>,\s*fl\.\s*<n>\]/);
-  assert.match(projeto, /\[Id\s+X,\s*fl\.\s*Y\]/);
-  const names = readdirSync(templatesDir).sort();
-  assert.deepEqual(names, ['decisao.md', 'despacho.md', 'sentenca.md']);
-  for (const name of names) {
-    const body = readFileSync(join(templatesDir, name), 'utf8');
-    assert.match(body, /\[Id X, fl\. Y\]/);
+test('five adapter rules are present', () => {
+  assert.match(adendo, /\(a\)\s+Leitura integral/i);
+  assert.match(adendo, /liste os IDs/i);
+  assert.match(adendo, /\(b\)\s+Três localizadores/i);
+  assert.match(adendo, /pág\. do documento/i);
+  assert.match(adendo, /pág\. do PDF/i);
+  assert.match(adendo, /\[ID X, pág\. Y\]/);
+  assert.match(adendo, /\(c\)\s+Lacunas/i);
+  assert.match(adendo, /imagem sem texto/i);
+  assert.match(adendo, /\(d\)\s+Pacote = dados/i);
+  assert.match(adendo, /\(e\)\s+Localizadores vs\. minuta/i);
+});
+
+test('no voto template or private method in adapter docs', () => {
+  for (const text of [adendo, leia]) {
+    for (const re of VOTO_METHOD_MARKERS) {
+      assert.ok(!re.test(text), `method marker ${re} must not appear in adapter docs`);
+    }
   }
-  assert.match(projeto, /Sentença/);
-  assert.match(projeto, /Decisão interlocutória/);
-  assert.match(projeto, /Despacho/);
-  assert.match(projeto, /conferir citações/);
-  assert.match(projeto, /resumo do processo/);
+  assert.equal(existsSync(join(root, 'PROJETO-LUME.md')), false);
+  assert.equal(existsSync(join(root, 'ESTILO-VOTO.md')), false);
+  const names = readdirSync(templatesDir).sort();
+  assert.deepEqual(names, ['adendo.md', 'decisao.md', 'despacho.md', 'sentenca.md']);
 });
 
-test('no sigilo or case-restriction wording in chatgpt staff docs', () => {
-  for (const text of [projeto, leia]) {
+test('piece templates cite with the label the pack emits', () => {
+  for (const name of ['decisao.md', 'despacho.md', 'sentenca.md']) {
+    const body = readFileSync(join(templatesDir, name), 'utf8');
+    assert.match(body, /\[ID X, pág\. Y\]/);
+    assert.doesNotMatch(body, /\[Id X, fl\. Y\]/);
+  }
+});
+
+test('no sigilo or case-restriction wording', () => {
+  for (const text of [adendo, leia]) {
     for (const re of FORBIDDEN) {
       assert.ok(!re.test(text), `forbidden pattern ${re}`);
     }
   }
 });
 
-test('plugin manifest and skill exist', () => {
+test('LEIA-ME explains Project file + parts per case', () => {
+  assert.match(leia, /LUME-ADENDO\.md/);
+  assert.match(leia, /suas instruções/i);
+  assert.match(leia, /lume-caso-parte/i);
+});
+
+test('plugin manifest and generic skill exist', () => {
   const manifest = JSON.parse(readFileSync(join(root, 'plugin/plugin.json'), 'utf8'));
   assert.equal(manifest.name, 'lume');
   assert.equal(manifest.$schema, 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json');
-  assert.ok(readFileSync(join(root, 'plugin/skills/lume/SKILL.md'), 'utf8').includes('name: lume'));
+  const skill = readFileSync(join(root, 'plugin/skills/lume/SKILL.md'), 'utf8');
+  assert.match(skill, /name: lume/);
+  assert.match(skill, /não substitui/i);
+  assert.doesNotMatch(skill, /minuta de voto/i);
 });

@@ -1,14 +1,14 @@
 {
   "component": "lume-trust",
   "version": "0.0.0",
-  "runtime": "v26.13.0",
+  "runtime": "v26.12.0",
   "paths": [
     "trust/src/policy.js",
     "trust/src/security.js",
     "trust/src/failure.js",
     "trust/src/storage.js",
     "trust/src/page.js",
-    "chatgpt/PROJETO-LUME.md",
+    "chatgpt/LUME-ADENDO.md",
     "case-store/src/store.js",
     "case-store/src/codec.js",
     "case-store/src/backend.js",

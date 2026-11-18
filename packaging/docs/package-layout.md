@@ -15,7 +15,7 @@ node packaging/scripts/bundle.mjs --out ./lume-install [--zip ./lume-install.zip
 
 **Extension input:** `extension/dist/` (includes `manual/lume-pdf.html` for the case package page).
 
-**ChatGPT input:** `chatgpt/PROJETO-LUME.md`, `LEIA-ME.md`, and `chatgpt/plugin/` stay in the tree. The start guide does not ask staff to paste that file.
+**ChatGPT input:** `chatgpt/LUME-ADENDO.md`, `LEIA-ME.md`, and `chatgpt/plugin/` stay in the tree. The start guide does not ask staff to paste that file.
 
 **Plugin input:** `bundle.mjs` runs `plugins/scripts/build-zip.mjs` and copies `plugin/lume-jef/`, `plugin/lume-jef-0.2.0.zip`, and `plugin/lume-jef-projeto/`.
 
