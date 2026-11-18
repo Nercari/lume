@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Fail when a workflow job runs Playwright (directly or through a scripts/*.sh it calls)
-# on ubuntu-latest. Playwright has no chromium build for ubuntu26.04, which ubuntu-latest now is.
+# Fail when a workflow job runs Playwright on ubuntu-latest. A job counts as a browser user when it
+# names playwright, calls a scripts/*.sh that does, or runs tests in a package whose package.json
+# mentions playwright. Playwright has no chromium build for ubuntu26.04, which ubuntu-latest now is.
 # Usage: scripts/ci-check-playwright-runners.sh [workflows-dir]   (default .github/workflows)
 set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -16,6 +17,15 @@ for f in "$dir"/*.yml; do
     for s in $(grep -o 'scripts/[A-Za-z0-9_.-]*\.sh' <<<"$body" || true); do
       [[ -f "$root/$s" ]] && grep -q playwright "$root/$s" && uses_pw=1
     done
+    if [[ "$body" == *"npm test"* || "$body" == *ci-test-package* ]]; then
+      for pj in "$root"/*/package.json; do
+        grep -q playwright "$pj" || continue
+        pdir="$(basename "$(dirname "$pj")")"
+        # tests run inside that package (cd / working-directory), or the package is in a for-loop list
+        [[ "$body" =~ (cd|working-directory:)[[:space:]]+\"?"$pdir"([^A-Za-z0-9_-]|$) ]] && uses_pw=1
+        [[ "$body" =~ for[[:space:]]+[A-Za-z_]+[[:space:]]+in[^\;]*[[:space:]]"$pdir"([[:space:]\;]) ]] && uses_pw=1
+      done
+    fi
     if [[ $uses_pw == 1 && "$runs" == "ubuntu-latest" ]]; then
       echo "FAIL: $(basename "$f") job '$job' runs playwright on ubuntu-latest; pin ubuntu-24.04"
       bad=1
