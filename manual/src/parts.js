@@ -51,9 +51,15 @@ function splitTagLine(blockText) {
   return { tag: blockText.slice(0, firstNewline), body: blockText.slice(firstNewline + 1) };
 }
 
-function splitOversizedBlock(block, maxBodyChars) {
+function splitOversizedBlock(block, maxUnitChars) {
   const { tag, body } = splitTagLine(block.text);
-  if (block.text.length <= maxBodyChars) return [block.text];
+  if (block.text.length <= maxUnitChars) return [block.text];
+  // A unit is `tag` plus a continuation marker plus the body chunk (and the OCR
+  // mark on the last chunk), so the body budget is what remains after them.
+  const tagAllowance = tag.length + ' (continuação)'.length + 1;
+  const ocrAllowance = body.includes(OCR_MARK) ? OCR_MARK.length + 1 : 0;
+  const maxBodyChars = maxUnitChars - tagAllowance - ocrAllowance;
+  if (maxBodyChars < 1) return [block.text];
   const paragraphs = body.split(/\n\n+/);
   const chunks = [];
   let current = [];
@@ -253,45 +259,36 @@ function estimateHeaders(caseResult, partCountGuess) {
 
 export function buildCasePackParts(caseResult, { maxChars = DEFAULT_PACK_PART_MAX_CHARS } = {}) {
   const blocks = collectPassageBlocks(caseResult);
-  const headersOne = estimateHeaders(caseResult, 1);
-  const bodyBudgetOther = Math.max(1000, maxChars - estimateHeaders(caseResult, 2).other - 64);
-  let units = blocks.map((block) => block.text);
-  const singlePassageBudget = Math.max(1000, maxChars - headersOne.part1 - 64);
-  units = blocks.flatMap((block) => {
-    if (block.text.length <= singlePassageBudget) return [block.text];
-    return splitOversizedBlock(block, bodyBudgetOther);
-  });
 
-  const singleMap = buildDocPartMap([units]);
-  const singleTexts = renderPartTexts(caseResult, [units], singleMap, 1);
+  const singleBodies = [blocks.map((block) => block.text)];
+  const singleTexts = renderPartTexts(caseResult, singleBodies, buildDocPartMap(singleBodies), 1);
   if (singleTexts[0].length <= maxChars) {
     return [{ name: partFileName(1, 1), text: singleTexts[0] }];
   }
 
-  const headers = headersOne;
-  const bodyBudget = Math.max(1000, maxChars - headers.part1 - 64);
-  units = blocks.flatMap((block) => splitOversizedBlock(block, bodyBudget));
-
-  let partBodies = packUnitsIntoParts(units, maxChars, [headers.part1, headers.other]);
-  let totalParts = partBodies.length;
-  let docPartMap = buildDocPartMap(partBodies);
-
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const sized = estimateHeaders(caseResult, totalParts);
-    partBodies = packUnitsIntoParts(units, maxChars, [sized.part1, sized.other]);
+  // The chrome around the passages (index rows, "IDs nesta parte", headers and
+  // footers) depends on the packing, and the packing depends on its size. Pack
+  // with an overhead guess, render, measure the real overhead per part and
+  // repack with it until every part fits. The guess never shrinks, so each pass
+  // either fits or leaves room the next pass accounts for.
+  const contentLen = blocks.reduce((sum, block) => sum + block.text.length, 0);
+  const firstGuess = estimateHeaders(caseResult, Math.max(2, Math.ceil(contentLen / maxChars)));
+  let part1Over = firstGuess.part1;
+  let otherOver = firstGuess.other;
+  let totalParts = 1;
+  let texts = singleTexts;
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const unitCap = Math.max(200, maxChars - Math.max(part1Over, otherOver));
+    const units = blocks.flatMap((block) => splitOversizedBlock(block, unitCap));
+    const partBodies = packUnitsIntoParts(units, maxChars, [part1Over, otherOver]);
     totalParts = partBodies.length;
-    docPartMap = buildDocPartMap(partBodies);
-    const texts = renderPartTexts(caseResult, partBodies, docPartMap, totalParts);
-    if (texts.every((text) => text.length <= maxChars)) {
-      return texts.map((text, index) => ({
-        name: partFileName(index + 1, totalParts),
-        text,
-      }));
-    }
-    headers.part1 = sized.part1 + 500;
+    const docPartMap = buildDocPartMap(partBodies);
+    texts = renderPartTexts(caseResult, partBodies, docPartMap, totalParts);
+    if (texts.every((text) => text.length <= maxChars)) break;
+    const overheads = partBodies.map((body, index) => texts[index].length - body.join('\n\n').length);
+    part1Over = Math.max(part1Over, overheads[0]);
+    otherOver = Math.max(otherOver, ...overheads.slice(1));
   }
-
-  const texts = renderPartTexts(caseResult, partBodies, docPartMap, totalParts);
   return texts.map((text, index) => ({
     name: partFileName(index + 1, totalParts),
     text,
