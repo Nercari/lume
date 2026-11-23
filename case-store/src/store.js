@@ -6,7 +6,7 @@
 //   keys/<caseId>                      per-case encryption key (owned by the codec)
 // A Case handle only builds keys under its own prefix, so one case cannot read or write another.
 
-import { plainCodec } from './codec.js';
+import { plainCodec, CorruptRecordError } from './codec.js';
 import { redact } from './redact.js';
 
 const CASE_ID = /^[A-Za-z0-9_-]{1,64}$/;
@@ -25,6 +25,26 @@ export class PausedError extends Error {
     super(`case paused: ${pause.reason}`);
     this.name = 'PausedError';
     this.pause = pause;
+  }
+}
+
+// The side effect finished but its result could not be written. It must not run again here:
+// the caller gets the result, and the record still shows the call as started.
+export class StepResultNotStoredError extends Error {
+  constructor(stepId, result, cause) {
+    super(`step ${stepId} finished but its result was not stored`, { cause });
+    this.name = 'StepResultNotStoredError';
+    this.stepId = stepId;
+    this.result = result;
+  }
+}
+
+// The case this work started in was deleted (and maybe reopened) meanwhile. Nothing was written.
+export class CaseLifetimeEndedError extends Error {
+  constructor(stepId) {
+    super(`case was deleted while step ${stepId} was running; nothing was written`);
+    this.name = 'CaseLifetimeEndedError';
+    this.stepId = stepId;
   }
 }
 
@@ -64,14 +84,64 @@ export class CaseStore {
   }) {
     if (!backend) throw new TypeError('backend is required');
     Object.assign(this, { backend, codec, now, sleep, caseTtlMs, browserSession });
+    this.locks = new Map();
+    this.inflight = new Map();
+    // Bumped when a case is deleted: work started in an earlier lifetime of a case id never
+    // shares a run with, or writes into, the next lifetime.
+    this.epochs = new Map();
+  }
+
+  // Runs one read-modify-write of a case at a time, so a user edit and a generated revision that
+  // arrive together both survive. shortcut: in-process only; two extension contexts (panel and
+  // service worker) need an IndexedDB transaction or a Web Lock, which belongs to the wiring in #4.
+  lock(caseId, fn) {
+    const run = (this.locks.get(caseId) ?? Promise.resolve()).then(fn);
+    const tail = run.catch(() => {});
+    this.locks.set(caseId, tail);
+    tail.then(() => this.locks.get(caseId) === tail && this.locks.delete(caseId));
+    return run;
+  }
+
+  // Alive means a readable, unexpired meta. Only a confirmed absence, a record that is proven
+  // corrupt, or an expired one is "not alive". A backend read error propagates: it must never
+  // lead to a deletion.
+  async #liveMeta(caseId) {
+    const key = `case/${caseId}/meta`;
+    const stored = await this.backend.get(key);
+    if (stored === undefined) return undefined;
+    let meta;
+    try {
+      meta = await this.codec.decode(caseId, key, stored);
+    } catch (err) {
+      if (err instanceof CorruptRecordError) return undefined;
+      throw err;
+    }
+    return meta?.expiresAt > this.now() ? meta : undefined;
+  }
+
+  // Every case id that has any record or key, including the left-overs of a stopped deletion.
+  async #ids() {
+    const ids = new Set();
+    for (const k of await this.backend.keys('case/')) ids.add(k.split('/')[1]);
+    for (const k of await this.backend.keys('keys/')) ids.add(k.slice('keys/'.length));
+    return [...ids].filter((id) => CASE_ID.test(id)).sort();
   }
 
   async openCase(caseId) {
     check(CASE_ID, caseId, 'case id');
-    const c = new Case(this, caseId);
-    const meta = (await c._getRaw('meta')) ?? { createdAt: this.now(), pause: null };
-    meta.expiresAt = this.now() + this.caseTtlMs;
-    await c._putRaw('meta', meta);
+    let c;
+    await this.lock(caseId, async () => {
+      let meta = await this.#liveMeta(caseId);
+      // Expired, damaged or left over: nothing of it may come back to life.
+      if (!meta) {
+        await this.#deleteCase(caseId);
+        meta = { createdAt: this.now(), pause: null };
+      }
+      meta.expiresAt = this.now() + this.caseTtlMs;
+      // The handle belongs to the lifetime that exists at this point, under the case lock.
+      c = new Case(this, caseId, this.epochs.get(caseId) ?? 0);
+      await c._putRaw('meta', meta);
+    });
     return c;
   }
 
@@ -80,10 +150,28 @@ export class CaseStore {
     return keys.filter((k) => k.endsWith('/meta')).map((k) => k.split('/')[1]);
   }
 
-  async deleteCase(caseId) {
-    check(CASE_ID, caseId, 'case id');
-    // Crypto-erase first: if deletion stops halfway, the remaining ciphertext is unreadable.
+  // The id check runs inside the lock so an invalid id rejects like every other failure.
+  deleteCase(caseId) {
+    return this.lock(caseId, async () => {
+      check(CASE_ID, caseId, 'case id');
+      await this.#deleteCase(caseId);
+    });
+  }
+
+  async #deleteCase(caseId) {
+    // Crypto-erase first. With the AES-GCM codec, if deletion stops halfway the remaining
+    // ciphertext is unreadable. The plain codec has no key to erase: its records stay readable
+    // until the deletes below finish.
     await this.codec.forget(caseId);
+    // The key is gone: its lifetime ends here, even if the cleanup below fails and has to be
+    // retried. With the AES-GCM codec the case is now unreadable; with the plain codec nothing is
+    // unreadable until the cleanup completes, but the lifetime ends at the same point. A step write from the old lifetime is refused
+    // from now on (it would recreate a key). If forget threw, the case is intact and this is
+    // not reached. Step writes take the same lock, so none interleaves.
+    this.epochs.set(caseId, (this.epochs.get(caseId) ?? 0) + 1);
+    // The meta record goes next, so a stopped deletion leaves a case that is no longer listed;
+    // expire() sweeps the rest.
+    await this.backend.delete(`case/${caseId}/meta`);
     for (const k of await this.backend.keys(`case/${caseId}/`)) await this.backend.delete(k);
   }
 
@@ -91,21 +179,35 @@ export class CaseStore {
   async expire() {
     const t = this.now();
     const removed = { cases: [], temp: 0 };
-    for (const id of await this.listCases()) {
-      const c = new Case(this, id);
-      const meta = await c._getRaw('meta');
-      if (meta.expiresAt <= t) {
-        await this.deleteCase(id);
-        removed.cases.push(id);
-        continue;
-      }
-      for (const name of await c.list('temp')) {
-        const rec = await c.get('temp', name);
-        if (rec.expiresAt <= t) {
-          await c.delete('temp', name);
-          removed.temp++;
+    const errors = [];
+    for (const id of await this.#ids()) {
+      // One critical section per case, shared with openCase: the liveness check and the delete
+      // cannot fall between openCase's key creation and its first meta write.
+      const sweep = this.lock(id, async () => {
+        if (!(await this.#liveMeta(id))) {
+          await this.#deleteCase(id);
+          removed.cases.push(id);
+          return;
         }
-      }
+        const c = new Case(this, id);
+        for (const name of await c.list('temp')) {
+          let rec;
+          try {
+            rec = await c.get('temp', name);
+          } catch (err) {
+            if (!(err instanceof CorruptRecordError)) throw err;
+          }
+          if (!rec || rec.expiresAt <= t) {
+            await c.delete('temp', name);
+            removed.temp++;
+          }
+        }
+      });
+      await sweep.catch((err) => errors.push(err));
+    }
+    // A failure on one case never stops the sweep of the others, and never deletes that case.
+    if (errors.length) {
+      throw Object.assign(new AggregateError(errors, `expire: ${errors.length} case(s) failed (${errors[0].message}); the others were swept`), { removed });
     }
     return removed;
   }
@@ -113,9 +215,13 @@ export class CaseStore {
   // Counts and states only. No record values, no draft or conversation text.
   async diagnostics() {
     const cases = [];
-    for (const id of await this.listCases()) {
+    for (const id of await this.#ids()) {
       const c = new Case(this, id);
-      const meta = await c._getRaw('meta');
+      const meta = await this.#liveMeta(id);
+      if (!meta) {
+        cases.push({ caseId: id, damaged: true });
+        continue;
+      }
       const counts = {};
       for (const kind of KINDS) counts[kind] = (await c.list(kind)).length;
       const steps = [];
@@ -132,9 +238,13 @@ export class CaseStore {
 export class Case {
   #store;
   #prefix;
+  #bound;
 
-  constructor(store, caseId) {
+  // `epoch` is the case lifetime this handle belongs to. Handles made for short internal reads
+  // take the current one.
+  constructor(store, caseId, epoch = store.epochs.get(caseId) ?? 0) {
     this.#store = store;
+    this.#bound = epoch;
     this.caseId = caseId;
     this.#prefix = `case/${caseId}/`;
   }
@@ -180,11 +290,13 @@ export class Case {
     await this.put('extraction', `${docId}@${version}`, value);
   }
 
-  async appendMessage(conversationId, message) {
-    const conv = (await this.get('conversation', conversationId)) ?? { messages: [] };
-    conv.messages.push(message);
-    await this.put('conversation', conversationId, conv);
-    return conv.messages.length;
+  appendMessage(conversationId, message) {
+    return this.#locked(async () => {
+      const conv = (await this.get('conversation', conversationId)) ?? { messages: [] };
+      conv.messages.push(message);
+      await this.put('conversation', conversationId, conv);
+      return conv.messages.length;
+    });
   }
 
   // Temporary entries (downloads, intermediate text). They expire on their own TTL and always
@@ -204,22 +316,43 @@ export class Case {
     return (await this._getRaw('meta'))?.pause ?? null;
   }
 
-  async #pause(reason) {
-    const meta = await this._getRaw('meta');
-    meta.pause = { reason, message: PAUSE_MESSAGES[reason], at: this.#store.now() };
-    await this._putRaw('meta', meta);
-    return meta.pause;
+  #locked(fn) {
+    return this.#store.lock(this.caseId, fn);
+  }
+
+  // Writes the pause unless the case lifetime changed. Runs under the case lock, like deleteCase.
+  #pause(reason, epoch = this.#epoch()) {
+    return this.#locked(async () => {
+      if (this.#current() !== epoch) return undefined;
+      const meta = await this._getRaw('meta');
+      meta.pause = { reason, message: PAUSE_MESSAGES[reason], at: this.#store.now() };
+      await this._putRaw('meta', meta);
+      return meta.pause;
+    });
+  }
+
+  // The only way a step writes its record. The lifetime check and the write sit in one critical
+  // section with deleteCase, so a step that began before a deletion can never write into the
+  // case that was reopened with the same id. Returns false (nothing written) when stale.
+  #stepPut(epoch, stepId, rec) {
+    return this.#locked(async () => {
+      if (this.#current() !== epoch) return false;
+      await this.put('call', stepId, rec);
+      return true;
+    });
   }
 
   // User action. Clears the pause and gives paused steps a fresh attempt budget.
-  async resume() {
-    const meta = await this._getRaw('meta');
-    meta.pause = null;
-    await this._putRaw('meta', meta);
-    for (const name of await this.list('call')) {
-      const s = await this.get('call', name);
-      if (s.status === 'paused') await this.put('call', name, { ...s, status: 'pending', attempts: 0 });
-    }
+  resume() {
+    return this.#locked(async () => {
+      const meta = await this._getRaw('meta');
+      meta.pause = null;
+      await this._putRaw('meta', meta);
+      for (const name of await this.list('call')) {
+        const s = await this.get('call', name);
+        if (s.status === 'paused') await this.put('call', name, { ...s, status: 'pending', attempts: 0 });
+      }
+    });
   }
 
   // User action. Allows a failed step to run again with a fresh attempt budget.
@@ -234,8 +367,29 @@ export class Case {
   // again, also after a worker or browser restart. The attempt count is written before each call,
   // so the retry budget holds across restarts. fn gets a stable idempotencyKey to pass to the
   // remote side: a call that completed remotely but was not recorded here can be deduplicated.
-  async runStep(stepId, fn, { maxAttempts = 3, needsBrowserSession = false, backoffMs = 500 } = {}) {
+  // The same step called twice at once shares one run.
+  runStep(stepId, fn, opts) {
     check(NAME, stepId, 'step id');
+    // A handle from an earlier lifetime of this case id never runs a step: no callback, no write.
+    if (this.#epoch() !== this.#current()) return Promise.reject(new CaseLifetimeEndedError(stepId));
+    const id = `${this.caseId}:${this.#epoch()}:${stepId}`;
+    const running = this.#store.inflight.get(id);
+    if (running) return running;
+    const p = this.#runStep(stepId, fn, opts).finally(() => this.#store.inflight.delete(id));
+    this.#store.inflight.set(id, p);
+    return p;
+  }
+
+  #epoch() {
+    return this.#bound;
+  }
+
+  #current() {
+    return this.#store.epochs.get(this.caseId) ?? 0;
+  }
+
+  async #runStep(stepId, fn, { maxAttempts = 3, needsBrowserSession = false, backoffMs = 500 } = {}) {
+    const epoch = this.#epoch();
     const paused = await this.pauseState();
     if (paused) throw new PausedError(paused);
 
@@ -244,30 +398,43 @@ export class Case {
     if (rec.status === 'failed') throw new StepFailedError(stepId, rec.attempts);
 
     if (needsBrowserSession && !this.#store.browserSession()) {
-      await this.put('call', stepId, { ...rec, status: 'paused' });
-      throw new PausedError(await this.#pause('pje_session_unavailable'));
+      if (!(await this.#stepPut(epoch, stepId, { ...rec, status: 'paused' }))) throw new CaseLifetimeEndedError(stepId);
+      const pause = await this.#pause('pje_session_unavailable', epoch);
+      if (!pause) throw new CaseLifetimeEndedError(stepId);
+      throw new PausedError(pause);
     }
 
     const idempotencyKey = `${this.caseId}:${stepId}`;
     while (rec.attempts < maxAttempts) {
       rec = { ...rec, status: 'running', attempts: rec.attempts + 1 };
-      await this.put('call', stepId, rec);
+      // A stale step stops here: it never calls fn for a case that no longer exists.
+      if (!(await this.#stepPut(epoch, stepId, rec))) throw new CaseLifetimeEndedError(stepId);
+      let result;
       try {
-        const result = await fn({ idempotencyKey, attempt: rec.attempts });
-        await this.put('call', stepId, { status: 'done', attempts: rec.attempts, result, at: this.#store.now() });
-        return result;
+        result = await fn({ idempotencyKey, attempt: rec.attempts });
       } catch (err) {
         const reason = pauseReasonFor(err);
         rec = { ...rec, error: redact(err?.message ?? err) };
+        // A stale step reports its own error to its own caller and writes nothing.
         if (reason) {
-          await this.put('call', stepId, { ...rec, status: 'paused' });
-          throw new PausedError(await this.#pause(reason));
+          if (!(await this.#stepPut(epoch, stepId, { ...rec, status: 'paused' }))) throw err;
+          const pause = await this.#pause(reason, epoch);
+          if (!pause) throw err;
+          throw new PausedError(pause);
         }
-        await this.put('call', stepId, rec);
+        if (!(await this.#stepPut(epoch, stepId, rec))) throw err;
         if (rec.attempts < maxAttempts) await this.#store.sleep(backoffMs * 2 ** (rec.attempts - 1));
+        continue;
       }
+      // Outside the try: a failed write must not retry a side effect that already happened.
+      try {
+        await this.#stepPut(epoch, stepId, { status: 'done', attempts: rec.attempts, result, at: this.#store.now() });
+      } catch (err) {
+        throw new StepResultNotStoredError(stepId, result, err);
+      }
+      return result; // stale (not stored): the old caller still gets its own result
     }
-    await this.put('call', stepId, { ...rec, status: 'failed' });
+    if (!(await this.#stepPut(epoch, stepId, { ...rec, status: 'failed' }))) throw new CaseLifetimeEndedError(stepId);
     throw new StepFailedError(stepId, rec.attempts);
   }
 
@@ -276,10 +443,14 @@ export class Case {
   // replaces the user's edit; when it arrives after an edit, the draft carries a conflict.
 
   async #draft(draftId) {
-    return (await this.get('draft', draftId)) ?? { generated: [], user: null, conflict: null };
+    return (await this.get('draft', draftId)) ?? { generated: [], user: null, conflict: null, discarded: [] };
   }
 
-  async addGeneratedRevision(draftId, text, { stepId } = {}) {
+  addGeneratedRevision(draftId, text, opts) {
+    return this.#locked(() => this.#addGeneratedRevision(draftId, text, opts));
+  }
+
+  async #addGeneratedRevision(draftId, text, { stepId } = {}) {
     const d = await this.#draft(draftId);
     // Idempotent per step: a replayed step after restart does not add a second revision.
     const existing = stepId && d.generated.find((g) => g.stepId === stepId);
@@ -291,13 +462,15 @@ export class Case {
     return { rev, conflict: d.conflict };
   }
 
-  async saveUserEdit(draftId, text, basedOn) {
-    const d = await this.#draft(draftId);
-    const latest = d.generated.at(-1)?.rev ?? 0;
-    const base = basedOn ?? latest;
-    d.user = { text, basedOn: base, at: this.#store.now() };
-    d.conflict = base === latest ? null : { userBasedOn: base, generatedRev: latest };
-    await this.put('draft', draftId, d);
+  saveUserEdit(draftId, text, basedOn) {
+    return this.#locked(async () => {
+      const d = await this.#draft(draftId);
+      const latest = d.generated.at(-1)?.rev ?? 0;
+      const base = basedOn ?? latest;
+      d.user = { text, basedOn: base, at: this.#store.now() };
+      d.conflict = base === latest ? null : { userBasedOn: base, generatedRev: latest };
+      await this.put('draft', draftId, d);
+    });
   }
 
   async getDraft(draftId) {
@@ -305,19 +478,25 @@ export class Case {
     const latest = d.generated.at(-1) ?? null;
     return {
       ...d,
+      discarded: d.discarded ?? [],
       current: d.user ? d.user.text : latest?.text ?? null,
       source: d.user ? 'user' : latest ? 'generated' : null,
     };
   }
 
-  // choice: 'keep-user' rebases the edit on the latest revision; 'take-generated' drops the edit.
-  async resolveConflict(draftId, choice) {
-    const d = await this.#draft(draftId);
-    if (!d.conflict) return;
-    if (choice === 'keep-user') d.user.basedOn = d.generated.at(-1).rev;
-    else if (choice === 'take-generated') d.user = null;
-    else throw new TypeError('invalid choice');
-    d.conflict = null;
-    await this.put('draft', draftId, d);
+  // choice: 'keep-user' rebases the edit on the latest revision; 'take-generated' sets the edit
+  // aside in `discarded`, so even that user choice does not destroy the text.
+  resolveConflict(draftId, choice) {
+    return this.#locked(async () => {
+      const d = await this.#draft(draftId);
+      if (!d.conflict) return;
+      if (choice === 'keep-user') d.user.basedOn = d.generated.at(-1).rev;
+      else if (choice === 'take-generated') {
+        d.discarded = [...(d.discarded ?? []), d.user];
+        d.user = null;
+      } else throw new TypeError('invalid choice');
+      d.conflict = null;
+      await this.put('draft', draftId, d);
+    });
   }
 }

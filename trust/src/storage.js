@@ -90,7 +90,9 @@ export async function runStorageChecks() {
     await store.deleteCase(CASE_A);
     await backend.put(`case/${CASE_A}/draft/d1`, leftover);
     const again = await store.openCase(CASE_A);
-    await assert.rejects(again.get('draft', 'd1'));
+    // openCase now sweeps the leftover; either way the old text never comes back.
+    const got = await again.get('draft', 'd1').catch(() => undefined);
+    assert.equal(got, undefined);
     pass('deleted-key-leaves-ciphertext-unreadable');
   }
 
