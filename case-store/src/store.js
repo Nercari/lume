@@ -77,6 +77,9 @@ export class CaseStore {
     Object.assign(this, { backend, codec, now, sleep, caseTtlMs, browserSession });
     this.locks = new Map();
     this.inflight = new Map();
+    // Bumped when a case is deleted: work started in an earlier lifetime of a case id never
+    // shares a run with, or writes into, the next lifetime.
+    this.epochs = new Map();
   }
 
   // Runs one read-modify-write of a case at a time, so a user edit and a generated revision that
@@ -136,12 +139,16 @@ export class CaseStore {
     return keys.filter((k) => k.endsWith('/meta')).map((k) => k.split('/')[1]);
   }
 
+  // The id check runs inside the lock so an invalid id rejects like every other failure.
   deleteCase(caseId) {
-    check(CASE_ID, caseId, 'case id');
-    return this.lock(caseId, () => this.#deleteCase(caseId));
+    return this.lock(caseId, async () => {
+      check(CASE_ID, caseId, 'case id');
+      await this.#deleteCase(caseId);
+    });
   }
 
   async #deleteCase(caseId) {
+    this.epochs.set(caseId, (this.epochs.get(caseId) ?? 0) + 1);
     // Crypto-erase first: if deletion stops halfway, the remaining ciphertext is unreadable.
     await this.codec.forget(caseId);
     // The meta record goes next, so a stopped deletion leaves a case that is no longer listed;
@@ -154,10 +161,11 @@ export class CaseStore {
   async expire() {
     const t = this.now();
     const removed = { cases: [], temp: 0 };
+    const errors = [];
     for (const id of await this.#ids()) {
       // One critical section per case, shared with openCase: the liveness check and the delete
       // cannot fall between openCase's key creation and its first meta write.
-      await this.lock(id, async () => {
+      const sweep = this.lock(id, async () => {
         if (!(await this.#liveMeta(id))) {
           await this.#deleteCase(id);
           removed.cases.push(id);
@@ -177,6 +185,11 @@ export class CaseStore {
           }
         }
       });
+      await sweep.catch((err) => errors.push(err));
+    }
+    // A failure on one case never stops the sweep of the others, and never deletes that case.
+    if (errors.length) {
+      throw Object.assign(new AggregateError(errors, `expire: ${errors.length} case(s) failed (${errors[0].message}); the others were swept`), { removed });
     }
     return removed;
   }
@@ -322,7 +335,7 @@ export class Case {
   // The same step called twice at once shares one run.
   runStep(stepId, fn, opts) {
     check(NAME, stepId, 'step id');
-    const id = `${this.caseId}:${stepId}`;
+    const id = `${this.caseId}:${this.#epoch()}:${stepId}`;
     const running = this.#store.inflight.get(id);
     if (running) return running;
     const p = this.#runStep(stepId, fn, opts).finally(() => this.#store.inflight.delete(id));
@@ -330,7 +343,12 @@ export class Case {
     return p;
   }
 
+  #epoch() {
+    return this.#store.epochs.get(this.caseId) ?? 0;
+  }
+
   async #runStep(stepId, fn, { maxAttempts = 3, needsBrowserSession = false, backoffMs = 500 } = {}) {
+    const epoch = this.#epoch();
     const paused = await this.pauseState();
     if (paused) throw new PausedError(paused);
 
@@ -351,6 +369,7 @@ export class Case {
       try {
         result = await fn({ idempotencyKey, attempt: rec.attempts });
       } catch (err) {
+        if (this.#epoch() !== epoch) throw err; // the case was deleted meanwhile: write nothing
         const reason = pauseReasonFor(err);
         rec = { ...rec, error: redact(err?.message ?? err) };
         if (reason) {
@@ -361,6 +380,7 @@ export class Case {
         if (rec.attempts < maxAttempts) await this.#store.sleep(backoffMs * 2 ** (rec.attempts - 1));
         continue;
       }
+      if (this.#epoch() !== epoch) return result; // deleted meanwhile: the caller gets it, the store does not
       // Outside the try: a failed write must not retry a side effect that already happened.
       try {
         await this.put('call', stepId, { status: 'done', attempts: rec.attempts, result, at: this.#store.now() });

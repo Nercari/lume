@@ -87,6 +87,13 @@ or a browser restart.
   a case "not alive". A backend read error reaches the caller and deletes nothing, so a transient
   failure cannot destroy a healthy case or its key. `expire()` takes the same per-case lock as
   `openCase`, so it cannot delete a key between `openCase` creating it and writing the first meta.
+  A read error on one case does not stop the sweep: `expire()` finishes the other cases, then
+  rejects with an `AggregateError` whose `removed` field lists what it did remove. The guarantee
+  is per case: the case whose read failed is never deleted; earlier and later cases are swept.
+- Deleting a case ends its lifetime (`CaseStore.epochs`). A step that still runs from the old
+  lifetime is not shared with the new one (the in-flight key carries the lifetime), and it writes
+  nothing into a reopened case; its caller still gets its own result or error.
+- `deleteCase` with an invalid id rejects (never throws synchronously).
 - `openCase` on an expired, damaged or left-over case deletes it first and starts empty. An
   expired case does not come back to life because `expire()` has not run yet.
 

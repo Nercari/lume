@@ -217,3 +217,45 @@ test('P2: expire() during the first meta write of openCase does not delete the n
   await a.saveUserEdit('d1', 'after');
   assert.equal((await (await make().openCase(CASE_A)).getDraft('d1')).current, 'after');
 });
+
+// ---- review findings at 265c2d8 ----
+
+test('R1: a step still running when its case is deleted and reopened does not leak into the new case', async () => {
+  const { make } = env({ encrypted: false });
+  const store = make();
+  const a = await store.openCase(CASE_A);
+  let releaseOld;
+  const old = a.runStep('s', () => new Promise((r) => (releaseOld = r)));
+  await new Promise((r) => setImmediate(r));
+  await store.deleteCase(CASE_A);
+  const a2 = await store.openCase(CASE_A);
+  let fresh = 0;
+  const blocked = Symbol('blocked');
+  const got = await Promise.race([a2.runStep('s', async () => (++fresh, 'fresh')), new Promise((r) => setTimeout(() => r(blocked), 200))]);
+  assert.equal(got, 'fresh');
+  assert.equal(fresh, 1);
+  releaseOld('old');
+  assert.equal(await old, 'old'); // the old caller still gets its own result
+  assert.equal((await a2.get('call', 's')).result, 'fresh'); // ...and it is not written into the new case
+});
+
+test('R2: deleteCase with an invalid id rejects instead of throwing synchronously', async () => {
+  const { make } = env();
+  let caught;
+  await make().deleteCase('bad id!').catch((e) => (caught = e));
+  assert.ok(caught instanceof TypeError);
+});
+
+test('R3: expire() finishes the sweep, then reports the failed case and what it removed', async () => {
+  const { backend, hooks, make } = disturbed();
+  const store = make();
+  const a = await store.openCase(CASE_A);
+  await a.saveUserEdit('d1', 'kept');
+  await backend.put('case/orphan-z/draft/x', 1); // left-over of a stopped deletion
+  hooks.failMetaGet = 1; // the first meta read (fixture-alpha) fails
+  const err = await store.expire().catch((e) => e);
+  assert.ok(err instanceof AggregateError, String(err));
+  assert.match(err.message, /transient read error/);
+  assert.deepEqual(err.removed.cases, ['orphan-z']);
+  assert.equal((await (await make().openCase(CASE_A)).getDraft('d1')).current, 'kept');
+});
