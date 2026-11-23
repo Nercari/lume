@@ -6,7 +6,7 @@
 //   keys/<caseId>                      per-case encryption key (owned by the codec)
 // A Case handle only builds keys under its own prefix, so one case cannot read or write another.
 
-import { plainCodec } from './codec.js';
+import { plainCodec, CorruptRecordError } from './codec.js';
 import { redact } from './redact.js';
 
 const CASE_ID = /^[A-Za-z0-9_-]{1,64}$/;
@@ -90,14 +90,21 @@ export class CaseStore {
     return run;
   }
 
-  // A case whose meta is missing, unreadable or expired is not alive.
+  // Alive means a readable, unexpired meta. Only a confirmed absence, a record that is proven
+  // corrupt, or an expired one is "not alive". A backend read error propagates: it must never
+  // lead to a deletion.
   async #liveMeta(caseId) {
+    const key = `case/${caseId}/meta`;
+    const stored = await this.backend.get(key);
+    if (stored === undefined) return undefined;
+    let meta;
     try {
-      const meta = await new Case(this, caseId)._getRaw('meta');
-      return meta && meta.expiresAt > this.now() ? meta : undefined;
-    } catch {
-      return undefined;
+      meta = await this.codec.decode(caseId, key, stored);
+    } catch (err) {
+      if (err instanceof CorruptRecordError) return undefined;
+      throw err;
     }
+    return meta?.expiresAt > this.now() ? meta : undefined;
   }
 
   // Every case id that has any record or key, including the left-overs of a stopped deletion.
@@ -115,7 +122,7 @@ export class CaseStore {
       let meta = await this.#liveMeta(caseId);
       // Expired, damaged or left over: nothing of it may come back to life.
       if (!meta) {
-        await this.deleteCase(caseId);
+        await this.#deleteCase(caseId);
         meta = { createdAt: this.now(), pause: null };
       }
       meta.expiresAt = this.now() + this.caseTtlMs;
@@ -129,8 +136,12 @@ export class CaseStore {
     return keys.filter((k) => k.endsWith('/meta')).map((k) => k.split('/')[1]);
   }
 
-  async deleteCase(caseId) {
+  deleteCase(caseId) {
     check(CASE_ID, caseId, 'case id');
+    return this.lock(caseId, () => this.#deleteCase(caseId));
+  }
+
+  async #deleteCase(caseId) {
     // Crypto-erase first: if deletion stops halfway, the remaining ciphertext is unreadable.
     await this.codec.forget(caseId);
     // The meta record goes next, so a stopped deletion leaves a case that is no longer listed;
@@ -144,19 +155,28 @@ export class CaseStore {
     const t = this.now();
     const removed = { cases: [], temp: 0 };
     for (const id of await this.#ids()) {
-      if (!(await this.#liveMeta(id))) {
-        await this.deleteCase(id);
-        removed.cases.push(id);
-        continue;
-      }
-      const c = new Case(this, id);
-      for (const name of await c.list('temp')) {
-        const rec = await c.get('temp', name).catch(() => undefined);
-        if (!rec || rec.expiresAt <= t) {
-          await c.delete('temp', name);
-          removed.temp++;
+      // One critical section per case, shared with openCase: the liveness check and the delete
+      // cannot fall between openCase's key creation and its first meta write.
+      await this.lock(id, async () => {
+        if (!(await this.#liveMeta(id))) {
+          await this.#deleteCase(id);
+          removed.cases.push(id);
+          return;
         }
-      }
+        const c = new Case(this, id);
+        for (const name of await c.list('temp')) {
+          let rec;
+          try {
+            rec = await c.get('temp', name);
+          } catch (err) {
+            if (!(err instanceof CorruptRecordError)) throw err;
+          }
+          if (!rec || rec.expiresAt <= t) {
+            await c.delete('temp', name);
+            removed.temp++;
+          }
+        }
+      });
     }
     return removed;
   }

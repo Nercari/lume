@@ -83,6 +83,10 @@ or a browser restart.
   or a key but no readable meta (a stopped deletion, or a stale handle that wrote after
   deletion), and it removes unreadable temp records. A damaged case never makes `expire()` or
   `diagnostics()` fail for the other cases (`test/hardening.test.js`).
+- Only a confirmed absence, an expired meta or a record proven corrupt (`CorruptRecordError`) makes
+  a case "not alive". A backend read error reaches the caller and deletes nothing, so a transient
+  failure cannot destroy a healthy case or its key. `expire()` takes the same per-case lock as
+  `openCase`, so it cannot delete a key between `openCase` creating it and writing the first meta.
 - `openCase` on an expired, damaged or left-over case deletes it first and starts empty. An
   expired case does not come back to life because `expire()` has not run yet.
 

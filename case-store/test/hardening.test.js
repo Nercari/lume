@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CASE_A, CASE_B, env } from './fixtures.js';
-import { CaseStore, MemoryBackend, redact } from '../src/index.js';
+import { CaseStore, MemoryBackend, createAesGcmCodec, redact } from '../src/index.js';
 
 // A backend that delegates to `backend` and lets a test fail one operation.
 const wrap = (backend, over) => ({
@@ -146,4 +146,74 @@ test('redaction covers JSON bodies, header lists and the case number', () => {
   for (const secret of ['abcDEF123456', 'hunter2hunter2', 'dXNlcjpwYXNz', 'aaa111', 'bbb222', 'ccc333', '0000001-02.2025.4.01.3400']) {
     assert.ok(!out.includes(secret), `${secret} leaked:\n${out}`);
   }
+});
+
+// ---- review findings P1 and P2 at 41fcc2c ----
+
+// An encrypted store on a backend whose reads and meta writes a test can disturb.
+function disturbed() {
+  const backend = new MemoryBackend();
+  const hooks = { failMetaGet: 0, holdMetaPut: null };
+  const flaky = wrap(backend, (b) => ({
+    get: async (k) => {
+      if (hooks.failMetaGet > 0 && k.endsWith('/meta')) {
+        hooks.failMetaGet--;
+        throw new Error('transient read error');
+      }
+      return b.get(k);
+    },
+    put: async (k, v) => {
+      if (hooks.holdMetaPut && k.endsWith('/meta')) await hooks.holdMetaPut();
+      return b.put(k, v);
+    },
+  }));
+  const make = () => new CaseStore({ backend: flaky, codec: createAesGcmCodec({ backend: flaky }), sleep: async () => {} });
+  return { backend, hooks, make };
+}
+
+test('P1: a transient meta read error in openCase never destroys the case or its key', async () => {
+  const { backend, hooks, make } = disturbed();
+  const a = await make().openCase(CASE_A);
+  await a.saveUserEdit('d1', 'precious edit');
+  hooks.failMetaGet = 1;
+  await assert.rejects(make().openCase(CASE_A), /transient read error/);
+  assert.ok(await backend.get(`case/${CASE_A}/meta`));
+  assert.ok(await backend.get(`keys/${CASE_A}`));
+  assert.equal((await (await make().openCase(CASE_A)).getDraft('d1')).current, 'precious edit');
+});
+
+test('P1: a transient meta read error in expire() deletes nothing', async () => {
+  const { backend, hooks, make } = disturbed();
+  const a = await make().openCase(CASE_A);
+  await a.saveUserEdit('d1', 'precious edit');
+  await a.putTemp('dl', 'bytes', 60_000);
+  hooks.failMetaGet = 1;
+  await assert.rejects(make().expire(), /transient read error/);
+  assert.ok(await backend.get(`keys/${CASE_A}`));
+  const again = await make().openCase(CASE_A);
+  assert.equal((await again.getDraft('d1')).current, 'precious edit');
+  assert.equal(await again.getTemp('dl'), 'bytes');
+});
+
+test('P2: expire() during the first meta write of openCase does not delete the new key', async () => {
+  const { backend, hooks, make } = disturbed();
+  let release;
+  let writing;
+  const started = new Promise((r) => (writing = r));
+  hooks.holdMetaPut = () => (writing(), new Promise((r) => (release = r)));
+  const store = make(); // the lock is per store instance (one JS context)
+  const opening = store.openCase(CASE_A);
+  await started; // the key exists, the meta record does not yet
+  hooks.holdMetaPut = null;
+  const expiring = store.expire();
+  await new Promise((r) => setImmediate(r));
+  release();
+  await Promise.all([opening, expiring]);
+  assert.ok(await backend.get(`keys/${CASE_A}`));
+  // After a restart (new codec, no cached key) the case is still readable.
+  const restarted = make();
+  assert.deepEqual((await restarted.diagnostics()).cases.map((c) => [c.caseId, c.damaged ?? false]), [[CASE_A, false]]);
+  const a = await restarted.openCase(CASE_A);
+  await a.saveUserEdit('d1', 'after');
+  assert.equal((await (await make().openCase(CASE_A)).getDraft('d1')).current, 'after');
 });

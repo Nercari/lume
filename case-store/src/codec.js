@@ -5,6 +5,15 @@
 // additional authenticated data, so a record copied to another case or key does not decrypt.
 // forget(caseId) deletes the case key, which makes any left-over ciphertext unreadable.
 
+// A record that cannot be decoded (key gone, bad ciphertext, bad JSON). A backend read error is
+// not this: it is transient and must reach the caller instead of being read as "corrupt".
+export class CorruptRecordError extends Error {
+  constructor(message, cause) {
+    super(message, { cause });
+    this.name = 'CorruptRecordError';
+  }
+}
+
 export const plainCodec = Object.freeze({
   encode: async (_caseId, _key, value) => value,
   decode: async (_caseId, _key, stored) => stored,
@@ -38,9 +47,13 @@ export function createAesGcmCodec({ backend, subtle = globalThis.crypto.subtle }
     },
     async decode(caseId, key, stored) {
       const k = await keyFor(caseId, false);
-      if (!k) throw new Error('case key missing: record is unreadable');
-      const pt = await subtle.decrypt({ name: 'AES-GCM', iv: stored.iv, additionalData: enc.encode(key) }, k, stored.ct);
-      return JSON.parse(dec.decode(pt));
+      if (!k) throw new CorruptRecordError('case key missing: record is unreadable');
+      try {
+        const pt = await subtle.decrypt({ name: 'AES-GCM', iv: stored.iv, additionalData: enc.encode(key) }, k, stored.ct);
+        return JSON.parse(dec.decode(pt));
+      } catch (err) {
+        throw new CorruptRecordError('record cannot be decrypted', err);
+      }
     },
     async forget(caseId) {
       cache.delete(caseId);
