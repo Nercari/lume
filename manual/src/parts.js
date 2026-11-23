@@ -51,15 +51,19 @@ function splitTagLine(blockText) {
   return { tag: blockText.slice(0, firstNewline), body: blockText.slice(firstNewline + 1) };
 }
 
-function splitOversizedBlock(block, maxUnitChars) {
+function splitOversizedBlock(block, maxUnitChars, firstUnitChars = maxUnitChars) {
   const { tag, body } = splitTagLine(block.text);
-  if (block.text.length <= maxUnitChars) return [block.text];
+  if (block.text.length <= Math.min(maxUnitChars, firstUnitChars)) return [block.text];
   // A unit is `tag` plus a continuation marker plus the body chunk (and the OCR
   // mark on the last chunk), so the body budget is what remains after them.
   const tagAllowance = tag.length + ' (continuação)'.length + 1;
   const ocrAllowance = body.includes(OCR_MARK) ? OCR_MARK.length + 1 : 0;
   const maxBodyChars = maxUnitChars - tagAllowance - ocrAllowance;
+  // The first chunk may target a tighter part (the index part), so it gets its
+  // own cap; every later chunk uses the regular one.
+  const firstBodyChars = Math.min(maxBodyChars, firstUnitChars - tagAllowance - ocrAllowance);
   if (maxBodyChars < 1) return [block.text];
+  const bodyCap = () => Math.max(1, chunks.length ? maxBodyChars : firstBodyChars);
   const paragraphs = body.split(/\n\n+/);
   const chunks = [];
   let current = [];
@@ -73,12 +77,18 @@ function splitOversizedBlock(block, maxUnitChars) {
   for (const paragraph of paragraphs) {
     const piece = paragraph.trim();
     if (!piece) continue;
+    let cap = bodyCap();
     const addLen = piece.length + (current.length ? 2 : 0);
-    if (currentLen + addLen > maxBodyChars && current.length) flush();
-    if (piece.length > maxBodyChars) {
+    if (currentLen + addLen > cap && current.length) {
       flush();
-      for (let offset = 0; offset < piece.length; offset += maxBodyChars) {
-        chunks.push(piece.slice(offset, offset + maxBodyChars));
+      cap = maxBodyChars;
+    }
+    if (piece.length > cap) {
+      flush();
+      for (let offset = 0; offset < piece.length;) {
+        const sliceCap = bodyCap();
+        chunks.push(piece.slice(offset, offset + sliceCap));
+        offset += sliceCap;
       }
       continue;
     }
@@ -278,8 +288,13 @@ export function buildCasePackParts(caseResult, { maxChars = DEFAULT_PACK_PART_MA
   let totalParts = 1;
   let texts = singleTexts;
   for (let attempt = 0; attempt < 12; attempt += 1) {
-    const unitCap = Math.max(200, maxChars - Math.max(part1Over, otherOver));
-    const units = blocks.flatMap((block) => splitOversizedBlock(block, unitCap));
+    // Units bound for parts after the first only pay the small chrome there;
+    // the unit that lands in part 1 (the first chunk of the first block, since
+    // packing is in order) must also fit beside the index.
+    const unitCap = Math.max(200, maxChars - otherOver);
+    const part1Cap = Math.max(200, maxChars - part1Over);
+    const units = blocks.flatMap((block, index) =>
+      index === 0 ? splitOversizedBlock(block, unitCap, part1Cap) : splitOversizedBlock(block, unitCap));
     const partBodies = packUnitsIntoParts(units, maxChars, [part1Over, otherOver]);
     totalParts = partBodies.length;
     const docPartMap = buildDocPartMap(partBodies);
