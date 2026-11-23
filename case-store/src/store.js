@@ -39,6 +39,15 @@ export class StepResultNotStoredError extends Error {
   }
 }
 
+// The case this work started in was deleted (and maybe reopened) meanwhile. Nothing was written.
+export class CaseLifetimeEndedError extends Error {
+  constructor(stepId) {
+    super(`case was deleted while step ${stepId} was running; nothing was written`);
+    this.name = 'CaseLifetimeEndedError';
+    this.stepId = stepId;
+  }
+}
+
 export class StepFailedError extends Error {
   constructor(stepId, attempts) {
     super(`step ${stepId} failed after ${attempts} attempts`);
@@ -298,12 +307,25 @@ export class Case {
     return this.#store.lock(this.caseId, fn);
   }
 
-  #pause(reason) {
+  // Writes the pause unless the case lifetime changed. Runs under the case lock, like deleteCase.
+  #pause(reason, epoch = this.#epoch()) {
     return this.#locked(async () => {
+      if (this.#epoch() !== epoch) return undefined;
       const meta = await this._getRaw('meta');
       meta.pause = { reason, message: PAUSE_MESSAGES[reason], at: this.#store.now() };
       await this._putRaw('meta', meta);
       return meta.pause;
+    });
+  }
+
+  // The only way a step writes its record. The lifetime check and the write sit in one critical
+  // section with deleteCase, so a step that began before a deletion can never write into the
+  // case that was reopened with the same id. Returns false (nothing written) when stale.
+  #stepPut(epoch, stepId, rec) {
+    return this.#locked(async () => {
+      if (this.#epoch() !== epoch) return false;
+      await this.put('call', stepId, rec);
+      return true;
     });
   }
 
@@ -357,39 +379,43 @@ export class Case {
     if (rec.status === 'failed') throw new StepFailedError(stepId, rec.attempts);
 
     if (needsBrowserSession && !this.#store.browserSession()) {
-      await this.put('call', stepId, { ...rec, status: 'paused' });
-      throw new PausedError(await this.#pause('pje_session_unavailable'));
+      if (!(await this.#stepPut(epoch, stepId, { ...rec, status: 'paused' }))) throw new CaseLifetimeEndedError(stepId);
+      const pause = await this.#pause('pje_session_unavailable', epoch);
+      if (!pause) throw new CaseLifetimeEndedError(stepId);
+      throw new PausedError(pause);
     }
 
     const idempotencyKey = `${this.caseId}:${stepId}`;
     while (rec.attempts < maxAttempts) {
       rec = { ...rec, status: 'running', attempts: rec.attempts + 1 };
-      await this.put('call', stepId, rec);
+      // A stale step stops here: it never calls fn for a case that no longer exists.
+      if (!(await this.#stepPut(epoch, stepId, rec))) throw new CaseLifetimeEndedError(stepId);
       let result;
       try {
         result = await fn({ idempotencyKey, attempt: rec.attempts });
       } catch (err) {
-        if (this.#epoch() !== epoch) throw err; // the case was deleted meanwhile: write nothing
         const reason = pauseReasonFor(err);
         rec = { ...rec, error: redact(err?.message ?? err) };
+        // A stale step reports its own error to its own caller and writes nothing.
         if (reason) {
-          await this.put('call', stepId, { ...rec, status: 'paused' });
-          throw new PausedError(await this.#pause(reason));
+          if (!(await this.#stepPut(epoch, stepId, { ...rec, status: 'paused' }))) throw err;
+          const pause = await this.#pause(reason, epoch);
+          if (!pause) throw err;
+          throw new PausedError(pause);
         }
-        await this.put('call', stepId, rec);
+        if (!(await this.#stepPut(epoch, stepId, rec))) throw err;
         if (rec.attempts < maxAttempts) await this.#store.sleep(backoffMs * 2 ** (rec.attempts - 1));
         continue;
       }
-      if (this.#epoch() !== epoch) return result; // deleted meanwhile: the caller gets it, the store does not
       // Outside the try: a failed write must not retry a side effect that already happened.
       try {
-        await this.put('call', stepId, { status: 'done', attempts: rec.attempts, result, at: this.#store.now() });
+        await this.#stepPut(epoch, stepId, { status: 'done', attempts: rec.attempts, result, at: this.#store.now() });
       } catch (err) {
         throw new StepResultNotStoredError(stepId, result, err);
       }
-      return result;
+      return result; // stale (not stored): the old caller still gets its own result
     }
-    await this.put('call', stepId, { ...rec, status: 'failed' });
+    if (!(await this.#stepPut(epoch, stepId, { ...rec, status: 'failed' }))) throw new CaseLifetimeEndedError(stepId);
     throw new StepFailedError(stepId, rec.attempts);
   }
 

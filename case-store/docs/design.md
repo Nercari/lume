@@ -91,8 +91,12 @@ or a browser restart.
   rejects with an `AggregateError` whose `removed` field lists what it did remove. The guarantee
   is per case: the case whose read failed is never deleted; earlier and later cases are swept.
 - Deleting a case ends its lifetime (`CaseStore.epochs`). A step that still runs from the old
-  lifetime is not shared with the new one (the in-flight key carries the lifetime), and it writes
-  nothing into a reopened case; its caller still gets its own result or error.
+  lifetime is not shared with the new one (the in-flight key carries the lifetime). Every step
+  write (attempt count, status, error, result, pause) checks the lifetime inside the same case
+  lock that `deleteCase` takes, so a late write from the old lifetime is dropped and never lands
+  in a reopened case. A stale retry loop stops without calling the callback again
+  (`CaseLifetimeEndedError`); a stale step that already has a result or error still hands it to
+  its own caller.
 - `deleteCase` with an invalid id rejects (never throws synchronously).
 - `openCase` on an expired, damaged or left-over case deletes it first and starts empty. An
   expired case does not come back to life because `expire()` has not run yet.

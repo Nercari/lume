@@ -259,3 +259,50 @@ test('R3: expire() finishes the sweep, then reports the failed case and what it 
   assert.deepEqual(err.removed.cases, ['orphan-z']);
   assert.equal((await (await make().openCase(CASE_A)).getDraft('d1')).current, 'kept');
 });
+
+// A store whose backoff sleeps wait until the test releases them.
+function heldSleeps() {
+  const backend = new MemoryBackend();
+  const waiting = [];
+  const store = new CaseStore({ backend, sleep: () => new Promise((r) => waiting.push(r)) });
+  return { backend, store, waiting };
+}
+const tick = () => new Promise((r) => setImmediate(r));
+const withTimeout = (p, ms = 200) => Promise.race([p, new Promise((r) => setTimeout(() => r('BLOCKED'), ms))]);
+
+test('R1b: a late failure from a deleted lifetime writes no error marker into the replacement case', async () => {
+  const { store } = heldSleeps();
+  const a = await store.openCase(CASE_A);
+  let failOld;
+  const old = a.runStep('s', () => new Promise((_, rej) => (failOld = rej)), { maxAttempts: 1 });
+  const oldOutcome = old.catch((e) => e);
+  await tick();
+  await store.deleteCase(CASE_A);
+  const a2 = await store.openCase(CASE_A);
+  let fresh = 0;
+  assert.equal(await withTimeout(a2.runStep('s', async () => (++fresh, 'fresh'))), 'fresh');
+  failOld(new Error('late network failure'));
+  assert.match((await oldOutcome).message, /late network failure/); // the old caller sees its own error
+  assert.equal(fresh, 1);
+  assert.deepEqual(await a2.get('call', 's'), { ...(await a2.get('call', 's')), status: 'done', attempts: 1, result: 'fresh' });
+  assert.equal((await a2.get('call', 's')).error, undefined);
+});
+
+test('R1b: a retry loop from a deleted lifetime stops after its backoff and writes nothing', async () => {
+  const { store, waiting } = heldSleeps();
+  const a = await store.openCase(CASE_A);
+  let oldCalls = 0;
+  const old = a.runStep('s', async () => (++oldCalls, Promise.reject(new Error('network reset'))), { maxAttempts: 3 });
+  const oldOutcome = old.catch((e) => e);
+  while (!waiting.length) await tick(); // the old step is sleeping before its second attempt
+  await store.deleteCase(CASE_A);
+  const a2 = await store.openCase(CASE_A);
+  let fresh = 0;
+  assert.equal(await withTimeout(a2.runStep('s', async () => (++fresh, 'fresh'))), 'fresh');
+  waiting.shift()(); // the old backoff ends
+  const outcome = await oldOutcome;
+  assert.equal(outcome.name, 'CaseLifetimeEndedError');
+  assert.equal(oldCalls, 1); // no second call for a case that is gone
+  const rec = await a2.get('call', 's');
+  assert.deepEqual([rec.status, rec.attempts, rec.result, rec.error], ['done', 1, 'fresh', undefined]);
+});
