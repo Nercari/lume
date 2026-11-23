@@ -75,7 +75,10 @@ or a browser restart.
 - Each case expires `caseTtlMs` (default 30 days) after it was last opened. `expire()` deletes
   expired cases and expired temp entries of the remaining cases.
 - `deleteCase(id)` first deletes the case key (crypto-erase), then every record under the
-  case prefix. If deletion stops halfway, the remaining records cannot be decrypted.
+  case prefix. With the AES-GCM codec, if deletion stops halfway the remaining records cannot be
+  decrypted. The plain codec (tests and inspection only) has no key to erase: its records stay
+  readable until the deletes finish, so the unreadability guarantee holds for encrypted storage
+  only. The lifetime ends at the same point with either codec.
 - Deletion and expiry use the case prefix only. Other cases are not touched
   (`test/expire.test.js`).
 - `deleteCase` removes the meta record right after the key, so a deletion that stops halfway
@@ -97,10 +100,14 @@ or a browser restart.
   in a reopened case. The lifetime ends when the case key is removed (the epoch is bumped right after
   `codec.forget`, inside the case lock). If `forget` throws, the case is intact, its lifetime goes
   on, and a result finished afterwards is stored. If the key is gone and a later cleanup delete
-  fails, the case is unreadable, old step writes are refused (they would recreate a key), and a
+  fails, the case is unreadable with the AES-GCM codec (with the plain codec it stays readable
+  until the cleanup finishes), old step writes are refused (they would recreate a key), and a
   retried `deleteCase` finishes the cleanup. A stale retry loop stops without calling the callback again
   (`CaseLifetimeEndedError`); a stale step that already has a result or error still hands it to
   its own caller.
+- A `Case` handle is bound to the lifetime that existed when `openCase` created it, under the case
+  lock. A handle from an earlier lifetime rejects `runStep` with `CaseLifetimeEndedError` before
+  any callback or write, and its in-flight key carries its own lifetime.
 - `deleteCase` with an invalid id rejects (never throws synchronously).
 - `openCase` on an expired, damaged or left-over case deletes it first and starts empty. An
   expired case does not come back to life because `expire()` has not run yet.

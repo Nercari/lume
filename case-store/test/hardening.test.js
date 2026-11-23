@@ -410,3 +410,49 @@ test('D: after a successful deletion the epoch is bumped and a late write is ref
   assert.equal(await step, 'late');
   assert.equal(await a2.get('call', 's'), undefined);
 });
+
+// ---- review finding at 2b55576: a handle belongs to the lifetime it was opened in ----
+
+test('H(a): a handle opened before a deletion cannot run a step afterwards', async () => {
+  const { backend, store } = failingDelete();
+  const old = await store.openCase(CASE_A);
+  await store.deleteCase(CASE_A);
+  let ran = 0;
+  await assert.rejects(old.runStep('s', async () => ++ran), (e) => e.name === 'CaseLifetimeEndedError');
+  assert.equal(ran, 0);
+  assert.deepEqual(await leftOf(backend, CASE_A), []); // no key and no record came back
+
+  const fresh = await store.openCase(CASE_A);
+  await assert.rejects(old.runStep('s', async () => ++ran), (e) => e.name === 'CaseLifetimeEndedError');
+  assert.equal(ran, 0);
+  assert.deepEqual(await fresh.list('call'), []); // nothing written into the new lifetime
+});
+
+test('H(b): a step queued on the old handle when the delete runs leaves the new lifetime clean', async () => {
+  const { backend, store } = failingDelete();
+  const old = await store.openCase(CASE_A);
+  let finish;
+  const queued = old.runStep('s', () => new Promise((r) => (finish = r)));
+  while (!finish) await tick();
+  await store.deleteCase(CASE_A);
+  const fresh = await store.openCase(CASE_A);
+  const keyBefore = await backend.get(`keys/${CASE_A}`);
+  finish('late');
+  assert.equal(await queued, 'late');
+  assert.deepEqual(await fresh.list('call'), []);
+  assert.equal(await fresh.pauseState(), null); // the new key still decrypts the new meta
+  assert.deepEqual(await backend.get(`keys/${CASE_A}`), keyBefore);
+});
+
+test('H(c): a handle from the reopened case runs its own step once and stores it', async () => {
+  const { store } = failingDelete();
+  await store.openCase(CASE_A);
+  await store.deleteCase(CASE_A);
+  // Opened while another delete is queued: still bound to the lifetime that exists after it.
+  const [, fresh] = await Promise.all([store.deleteCase(CASE_A), store.openCase(CASE_A)]);
+  let calls = 0;
+  assert.equal(await fresh.runStep('s', async () => (++calls, 'mine')), 'mine');
+  assert.equal(await fresh.runStep('s', async () => (++calls, 'again')), 'mine');
+  assert.equal(calls, 1);
+  assert.equal((await fresh.get('call', 's')).result, 'mine');
+});

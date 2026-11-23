@@ -129,7 +129,7 @@ export class CaseStore {
 
   async openCase(caseId) {
     check(CASE_ID, caseId, 'case id');
-    const c = new Case(this, caseId);
+    let c;
     await this.lock(caseId, async () => {
       let meta = await this.#liveMeta(caseId);
       // Expired, damaged or left over: nothing of it may come back to life.
@@ -138,6 +138,8 @@ export class CaseStore {
         meta = { createdAt: this.now(), pause: null };
       }
       meta.expiresAt = this.now() + this.caseTtlMs;
+      // The handle belongs to the lifetime that exists at this point, under the case lock.
+      c = new Case(this, caseId, this.epochs.get(caseId) ?? 0);
       await c._putRaw('meta', meta);
     });
     return c;
@@ -157,10 +159,13 @@ export class CaseStore {
   }
 
   async #deleteCase(caseId) {
-    // Crypto-erase first: if deletion stops halfway, the remaining ciphertext is unreadable.
+    // Crypto-erase first. With the AES-GCM codec, if deletion stops halfway the remaining
+    // ciphertext is unreadable. The plain codec has no key to erase: its records stay readable
+    // until the deletes below finish.
     await this.codec.forget(caseId);
-    // The key is gone, so the case can no longer be read: its lifetime ends here, even if the
-    // cleanup below fails and has to be retried. A step write from the old lifetime is refused
+    // The key is gone: its lifetime ends here, even if the cleanup below fails and has to be
+    // retried. With the AES-GCM codec the case is now unreadable; with the plain codec nothing is
+    // unreadable until the cleanup completes, but the lifetime ends at the same point. A step write from the old lifetime is refused
     // from now on (it would recreate a key). If forget threw, the case is intact and this is
     // not reached. Step writes take the same lock, so none interleaves.
     this.epochs.set(caseId, (this.epochs.get(caseId) ?? 0) + 1);
@@ -233,9 +238,13 @@ export class CaseStore {
 export class Case {
   #store;
   #prefix;
+  #bound;
 
-  constructor(store, caseId) {
+  // `epoch` is the case lifetime this handle belongs to. Handles made for short internal reads
+  // take the current one.
+  constructor(store, caseId, epoch = store.epochs.get(caseId) ?? 0) {
     this.#store = store;
+    this.#bound = epoch;
     this.caseId = caseId;
     this.#prefix = `case/${caseId}/`;
   }
@@ -314,7 +323,7 @@ export class Case {
   // Writes the pause unless the case lifetime changed. Runs under the case lock, like deleteCase.
   #pause(reason, epoch = this.#epoch()) {
     return this.#locked(async () => {
-      if (this.#epoch() !== epoch) return undefined;
+      if (this.#current() !== epoch) return undefined;
       const meta = await this._getRaw('meta');
       meta.pause = { reason, message: PAUSE_MESSAGES[reason], at: this.#store.now() };
       await this._putRaw('meta', meta);
@@ -327,7 +336,7 @@ export class Case {
   // case that was reopened with the same id. Returns false (nothing written) when stale.
   #stepPut(epoch, stepId, rec) {
     return this.#locked(async () => {
-      if (this.#epoch() !== epoch) return false;
+      if (this.#current() !== epoch) return false;
       await this.put('call', stepId, rec);
       return true;
     });
@@ -361,6 +370,8 @@ export class Case {
   // The same step called twice at once shares one run.
   runStep(stepId, fn, opts) {
     check(NAME, stepId, 'step id');
+    // A handle from an earlier lifetime of this case id never runs a step: no callback, no write.
+    if (this.#epoch() !== this.#current()) return Promise.reject(new CaseLifetimeEndedError(stepId));
     const id = `${this.caseId}:${this.#epoch()}:${stepId}`;
     const running = this.#store.inflight.get(id);
     if (running) return running;
@@ -370,6 +381,10 @@ export class Case {
   }
 
   #epoch() {
+    return this.#bound;
+  }
+
+  #current() {
     return this.#store.epochs.get(this.caseId) ?? 0;
   }
 
