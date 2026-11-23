@@ -4,7 +4,7 @@ This file is the merge evidence for this repo. Update it in the same PR when beh
 
 ## Commands
 
-- Test one package: `npm test --prefix <package>` (packages: intake, chatgpt, extension, case-store, extraction, analysis, chat-editor, source-panel, transfer, packaging, trust, validation). Packages that import `extraction` need `npm ci --omit=optional --prefix extraction` first.
+- Test one package: `npm test --prefix <package>` (packages: intake, chatgpt, extension, case-store, extraction, analysis, chat-editor, source-panel, transfer, packaging, trust, validation, manual). `manual` needs its own `npm ci --prefix manual` first (not run offline). Packages that import `extraction` need `npm ci --omit=optional --prefix extraction` first.
 - Hosted CI runs the same package tests in the per-package workflows under `.github/workflows/`.
 
 ## Essential check
@@ -64,7 +64,7 @@ after:  {"query":"tema do processo e","removed":["case_term"],"caseIdPresent":fa
 Target: Claude Chat (claude.ai web and the Chat tab in Claude Desktop). Cowork and Code are separate surfaces. A result on one surface does not stand in for another. Run ID `lume-claude-20261113T185757Z-fd8b0c59`. The tree is built from `plugins/lume-workspace` by `node plugins/scripts/build-lume-claude.mjs`; `--check` fails when the committed tree differs.
 
 ```
-cd plugins && node --test test/*.test.mjs        -> tests 35, pass 35, fail 0, skipped 0
+cd plugins && node --test test/*.test.mjs        -> tests 37, pass 37, fail 0, skipped 0
 node plugins/scripts/build-lume-claude.mjs --check -> PASS: 161 files match
 node plugins/test/scrub.mjs                       -> PASS: no matches under plugins/
 sha256sum -c lume-claude-chat.zip.sha256          -> lume-claude-chat.zip: OK (161 entries, 4b47bb5a…2f74)
@@ -91,7 +91,7 @@ node --test audits/hillclimb/voto-timing/harness.test.mjs -> tests 14, pass 14, 
 
 Second repair: a precedent's denial that is quoted or attributed in the reasoning is not this voto's dispositive. The check drops quoted spans and attribution sentences, then classifies each paragraph. Earlier missing-dispositive and contradictory-partial cases stay rejected; legitimate decisions stay accepted. Keyword limit: an own decision phrased with an attributed verb is a false reject, never a false accept. All usable-voto timing stays **UNCONFIRMED**; an independent evaluator approval is required before any climb.
 
-Measurement gates (`audits/hillclimb/voto-timing/gates.json`): independent evaluator, Law vetoes, held-out isolation and case readiness are all **UNMET**. A live run stops before any model call until each is VERIFIED by its owner with a GitHub link. The harness now also times model revisions into the total and labels timing `SYNTHETIC_PROXY`; upload and human review stay UNMEASURED. `node --test audits/hillclimb/voto-timing/harness.test.mjs` -> tests 17, pass 17, fail 0.
+Measurement gates (`audits/hillclimb/voto-timing/gates.json`): independent evaluator, Law vetoes, held-out isolation and case readiness are all **UNMET**. A live run stops before any model call until each is VERIFIED by its owner with a GitHub link. The harness now also times model revisions into the total and labels timing `SYNTHETIC_PROXY`; upload and human review stay UNMEASURED. `node --test audits/hillclimb/voto-timing/harness.test.mjs` -> tests 26, pass 26, fail 0.
 
 Third repair (independent review rv-integrate-pedro-plugin-a14f-6206 FAIL at 58674067): a bare infinitive ("No precedente da Turma, deve-se negar provimento ao recurso.") and a negated denial ("Não nego provimento ao recurso.") were accepted as the dispositive. The check now has two views. The operative view counts only decision forms (first person, participle, noun phrase, "voto por/no sentido de ...") and drops negated and "No precedente/julgado/acórdão" sentences. The loose view still sees infinitives, and flags a negated denial as INVERTIDO, so a contradiction cannot hide. Synthetic regressions: 20/20 tests pass; the new tests fail at 58674067. Known limit: an own decision phrased as an infinitive or opening with "No precedente" is a false reject, never a false accept. All four gates stay UNMET. The independent evaluator is not yet re-run at the repaired head.
 

@@ -1,0 +1,26 @@
+## Nercari HQ
+
+Managed by Nercari HQ; follow `hq/managed-projects.md` and `hq/claude.md` in `Nercari/nercari-control`. Keep engineering state in GitHub issues and PRs, read the crew board as a read-only view, and put Pedro's decisions on #114. Archive: Never merge, close, or edit #97. A PR merges when it is out of draft, conflict-free and green; the author merges it; Hermes only on Pedro's ask, at a reviewed head (`hq/rules/hermes-merges-on-demand.md`). A review is optional; a FAIL with a BLOCKER line (`hq/rules/review-rubric.md`) blocks the merge until fixed or disputed. A `RISK: high` PR also needs a PASS from another harness. Hard stops stay with Pedro: secrets, extra spend, sending as him, settings or permission changes, force-push, and deleting a shared repo or branch. Add `needs:pedro` only for one of those, any deletion, PR #97, or an explicit question to him; work that can proceed never gets it. Do not reinstall `guard-pr` or `guard-main`. `VERIFY.md` is the merge evidence. Generate it with `create-verification-skill`, keep it current with `maintain-verification-skill`, and paste its real output. Every failure becomes a skill, lint, test, or CI check that day. Ignore `Nercari/director-core`. Whoever Pedro talks to owns that request: search open issues, PRs and `cursor/` and `claude/` branches before a second one. A session he starts may open a draft early. An ownership change is the line `OWNER-CHANGE: <old> -> <new>, <reason>`. Grok bots do not use `@cursor` comments to get work done, except `CLAUDE-OUT`. A Grok bot may hand his own request to Cursor only through a cloud agent, and before launch sends HQ `RELAY RELAY-YYYYMMDD-N` (or `NIGHTLY`, once a night) via `t3_thread_send`. It never assigns work HQ started; agy requests go to HQ likewise. Route work to the pool with most room before reset. An agent near its limit writes `USAGE: <pool> <percent>, resets <date>` to the local usage report daily, from its usage command (Claude `/usage` or `claude_usage_line.py`; agy exposes no quota command). Nobody signs in to Claude or agy from a cloud browser. Write technical text in ASD-STE100 with /technical-writing and /unslop; code, commands and quotes stay unchanged. Reply in the language Pedro writes in.
+
+## Lume
+
+Lume is an open-source Chrome extension that helps court staff analyze one complete PJe TRF1/SJDF case. It reads the case, extracts text with provenance, reviews gaps and sources, and drafts. The user transfers a draft to PJe only by an explicit action. The model has no write tool to PJe (`README.md:3`). The product contract is in issue #1. Package tracking is in issue #15.
+
+Commands (from `VERIFY.md`):
+
+- Test one package: `npm test --prefix <package>`.
+- Essential check (offline, no install): `npm run build --prefix intake`, `npm run lint:public --prefix intake`, `npm test --prefix chatgpt`, `npm run build --prefix case-store`, `npm run build --prefix extension`.
+- Plugin tests: `node --test plugins/test/`. Privacy scrub: `node plugins/test/scrub.mjs`.
+
+## Lume holds
+
+These holds are in force until the named owner changes them. Each hold cites the repo text it comes from.
+
+1. **No private data in git.** Do not commit real case data, party names, case numbers, credentials or client IDs (`README.md:14`). Real-case evaluation uses private maintainer material, and GitHub stays non-identifying (`README.md:3`).
+2. **Private paths stay gitignored.** `private/`, `lume-private/`, `lume-cases/`, `cases/`, `casos/` and the private PDF patterns stay in `.gitignore` (`.gitignore:6-16`). Keep score sheets and manifests with real data in `intake/private/` (`intake/docs/rubric.md:5`). Check with `npm run lint:public --prefix intake` and `node plugins/test/scrub.mjs`.
+3. **Real-case work needs the named owners.** Permitted real-case intake is issue #3, and it holds `needs:pedro`. Real cases and live PJe checks stay BLOCKED until a maintainer supplies a permitted environment (`README.md:36-44`). Do not start real-case work without that approval.
+4. **Four readiness gates are UNMET.** The gates are `independent-evaluator`, `law-vetoes`, `heldout-isolation` and `case-readiness` (`audits/hillclimb/voto-timing/gates.json:4-7`, `VERIFY.md:94`). Only the owner named on each gate sets it to VERIFIED, with a GitHub link as evidence. The agent that runs the work never sets a gate (`gates.json:2`). Timings stay UNCONFIRMED until then.
+5. **The live harness stops.** `harness.mjs --mode live` stops before any model call and exits with code 2 while a gate is unmet (`audits/hillclimb/voto-timing/harness.mjs:198-200`, `:250`). Do not run live mode. Do not edit a gate or weaken this stop.
+6. **The public directory build is prepared, not published.** The public JEF build (`plugins/lume-jef-publico`, built by `plugins/scripts/build-public.mjs:7-9`) was merged as "prepare only, do not publish" (commit `9a78e4a`, #60). Do not submit it to a directory, upload it, or enable GitHub Pages.
+7. **Nothing is deployed.** Do not publish, deploy or release any part of Lume (extension, plugin, package or page). Pedro decides this, on issue #114.
+8. **Offline checks only.** The essential check is offline, runs in seconds and needs no installed dependencies (`VERIFY.md:12`). Do not add a network call, a model call or private data to it.
