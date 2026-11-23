@@ -157,13 +157,15 @@ export class CaseStore {
   }
 
   async #deleteCase(caseId) {
-    this.epochs.set(caseId, (this.epochs.get(caseId) ?? 0) + 1);
     // Crypto-erase first: if deletion stops halfway, the remaining ciphertext is unreadable.
     await this.codec.forget(caseId);
     // The meta record goes next, so a stopped deletion leaves a case that is no longer listed;
     // expire() sweeps the rest.
     await this.backend.delete(`case/${caseId}/meta`);
     for (const k of await this.backend.keys(`case/${caseId}/`)) await this.backend.delete(k);
+    // The old lifetime ends only when the deletion completed. A failed deletion leaves the case
+    // usable, and step writes cannot interleave with it: they take the same lock.
+    this.epochs.set(caseId, (this.epochs.get(caseId) ?? 0) + 1);
   }
 
   // Deletes expired cases and expired temp entries in the remaining cases.

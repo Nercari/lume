@@ -306,3 +306,79 @@ test('R1b: a retry loop from a deleted lifetime stops after its backoff and writ
   const rec = await a2.get('call', 's');
   assert.deepEqual([rec.status, rec.attempts, rec.result, rec.error], ['done', 1, 'fresh', undefined]);
 });
+
+// ---- review finding at cddf5a0: a failed deletion must not end the case lifetime ----
+
+// A store on a backend and codec that can each throw once during deleteCase.
+function failingDelete({ deleteFails = () => false } = {}) {
+  const backend = new MemoryBackend();
+  const armed = { codec: false, backend: false };
+  const flaky = wrap(backend, (b) => ({
+    delete: async (k) => {
+      if (armed.backend && deleteFails(k)) {
+        armed.backend = false;
+        throw new Error('delete failed');
+      }
+      return b.delete(k);
+    },
+  }));
+  const aes = createAesGcmCodec({ backend: flaky });
+  const codec = {
+    ...aes,
+    forget: async (id) => {
+      if (armed.codec) {
+        armed.codec = false;
+        throw new Error('forget failed');
+      }
+      return aes.forget(id);
+    },
+  };
+  const store = new CaseStore({ backend: flaky, codec, sleep: async () => {} });
+  return { backend, armed, store };
+}
+
+for (const [label, opts, arm] of [
+  ['codec.forget throws', {}, (armed) => (armed.codec = true)],
+  ['the meta delete throws', { deleteFails: (k) => k.endsWith('/meta') }, (armed) => (armed.backend = true)],
+  ['a record delete throws after the meta is gone', { deleteFails: (k) => k.includes('/draft/') }, (armed) => (armed.backend = true)],
+]) {
+  test(`D: a failed deletion (${label}) leaves the lifetime alone; a retry then completes`, async () => {
+    const { backend, armed, store } = failingDelete(opts);
+    const a = await store.openCase(CASE_A);
+    const b = await store.openCase(CASE_B);
+    await a.saveUserEdit('d1', 'alpha edit');
+    await b.saveUserEdit('d1', 'beta edit');
+    let finish;
+    const step = a.runStep('s', () => new Promise((r) => (finish = r)));
+    while (!finish) await tick();
+    const before = store.epochs.get(CASE_A) ?? 0;
+    arm(armed);
+    await assert.rejects(store.deleteCase(CASE_A), /(forget|delete) failed/);
+    assert.equal(store.epochs.get(CASE_A) ?? 0, before);
+    // The step finishes after the failed deletion: its result is stored, not dropped.
+    finish('done-result');
+    assert.equal(await step, 'done-result');
+    const rec = await a.get('call', 's').catch(() => 'unreadable');
+    assert.deepEqual([rec.status, rec.result], ['done', 'done-result']);
+    // A second deletion succeeds, ends the lifetime, and leaves nothing of the case.
+    await store.deleteCase(CASE_A);
+    assert.equal(store.epochs.get(CASE_A), before + 1);
+    assert.deepEqual((await backend.keys('')).filter((k) => k.includes(CASE_A)), []);
+    assert.equal((await (await store.openCase(CASE_B)).getDraft('d1')).current, 'beta edit');
+  });
+}
+
+test('D: after a successful deletion the epoch is bumped and a late write is refused', async () => {
+  const { store } = failingDelete();
+  const a = await store.openCase(CASE_A);
+  let finish;
+  const step = a.runStep('s', () => new Promise((r) => (finish = r)));
+  while (!finish) await tick();
+  const before = store.epochs.get(CASE_A) ?? 0;
+  await store.deleteCase(CASE_A);
+  assert.equal(store.epochs.get(CASE_A), before + 1);
+  const a2 = await store.openCase(CASE_A);
+  finish('late');
+  assert.equal(await step, 'late');
+  assert.equal(await a2.get('call', 's'), undefined);
+});
