@@ -64,7 +64,9 @@ or a browser restart.
   pause reason and expiry time. It gives no record values, no draft text and no conversation
   text. Error text is redacted (`src/redact.js`) before it is stored and again before it is
   shown, and it is cut to 200 characters. Redaction removes bearer tokens, JWTs, `sk-` keys,
-  `token=`/`cookie=`/`session=`/`password=`-style pairs, and long opaque strings.
+  `token=`/`session=`/`password=`-style pairs (also as JSON `"key": "value"`), whole
+  `Cookie`/`Set-Cookie`/`Authorization` header lines, CNJ case numbers, and long opaque strings.
+  Diagnostics show a case with no readable meta as `damaged: true`, with no other field.
 - **Credentials.** The store never receives PJe cookies, certificates, PJe credentials or model
   tokens. Manual ChatGPT mode (#5) keeps no model tokens in Lume. PJe access uses the open browser session.
 
@@ -76,6 +78,13 @@ or a browser restart.
   case prefix. If deletion stops halfway, the remaining records cannot be decrypted.
 - Deletion and expiry use the case prefix only. Other cases are not touched
   (`test/expire.test.js`).
+- `deleteCase` removes the meta record right after the key, so a deletion that stops halfway
+  leaves a case that is no longer listed. `expire()` also sweeps every case id that has records
+  or a key but no readable meta (a stopped deletion, or a stale handle that wrote after
+  deletion), and it removes unreadable temp records. A damaged case never makes `expire()` or
+  `diagnostics()` fail for the other cases (`test/hardening.test.js`).
+- `openCase` on an expired, damaged or left-over case deletes it first and starts empty. An
+  expired case does not come back to life because `expire()` has not run yet.
 
 ## 6. User edits and generated revisions
 
@@ -85,6 +94,9 @@ or a browser restart.
   a `conflict` that the editor shows. The user resolves it: `keep-user` or `take-generated`.
 - `addGeneratedRevision(..., { stepId })` is idempotent per step. A step replayed after a
   restart does not add a second revision.
+- `take-generated` does not destroy the edit: it moves the edit to `discarded`.
+- Draft, conversation, pause and resume updates run one at a time per case in one JS context
+  (`CaseStore.lock`), so an edit and a generated revision that arrive together both survive.
 
 ## 7. Retries, checkpoints and paused states
 
@@ -92,6 +104,9 @@ or a browser restart.
   - A step with status `done` returns its stored result. `fn` is not called again.
   - The attempt count is written before each call. The retry budget (`maxAttempts`, default 3)
     holds across worker and browser restarts.
+  - The same step called twice at once shares one run (no double side effect).
+  - If `fn` succeeded but the result write fails, the step throws `StepResultNotStoredError`
+    (with the result) and `fn` is not run again by the retry loop.
   - `fn` gets a stable `idempotencyKey` (`<caseId>:<stepId>`). If the worker stops after the
     remote call completed but before the result was stored, the remote side can deduplicate.
     Without remote deduplication, that one window is at-least-once.
@@ -116,6 +131,10 @@ or a browser restart.
 
 ## 9. Open items
 
+- The per-case lock and the in-flight step map live in one JS context. The panel and the service
+  worker need an IndexedDB transaction or a Web Lock on top; that belongs to the wiring in #4.
+- Per-case permissions beyond the pause state have no record yet. The permitted route from #3 is
+  not decided; add the record when it is.
 - The IndexedDB backend adapter and service-worker wiring belong to the extension (#4). They
   must use this contract.
 - Live checks with permitted real cases need #3.
