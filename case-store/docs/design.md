@@ -94,8 +94,11 @@ or a browser restart.
   lifetime is not shared with the new one (the in-flight key carries the lifetime). Every step
   write (attempt count, status, error, result, pause) checks the lifetime inside the same case
   lock that `deleteCase` takes, so a late write from the old lifetime is dropped and never lands
-  in a reopened case. The lifetime ends only when a deletion completes (the epoch is bumped last);
-  a deletion that fails leaves the case usable, and a result finished afterwards is stored. A stale retry loop stops without calling the callback again
+  in a reopened case. The lifetime ends when the case key is removed (the epoch is bumped right after
+  `codec.forget`, inside the case lock). If `forget` throws, the case is intact, its lifetime goes
+  on, and a result finished afterwards is stored. If the key is gone and a later cleanup delete
+  fails, the case is unreadable, old step writes are refused (they would recreate a key), and a
+  retried `deleteCase` finishes the cleanup. A stale retry loop stops without calling the callback again
   (`CaseLifetimeEndedError`); a stale step that already has a result or error still hands it to
   its own caller.
 - `deleteCase` with an invalid id rejects (never throws synchronously).
